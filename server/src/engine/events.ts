@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { MatchConfig, Tier } from './config.js'
-import type { PlayerId, Side, Stage, TraceResult, VoidReason, VoteTarget, WinReason } from './state.js'
+import type { PlayerId, Side, Stage, TraceResult, VoidReason, VoteRecord, VoteTarget, WinReason } from './state.js'
 
 const tier = z.union([z.literal(1), z.literal(2)])
 const playerId = z.string().min(1).max(64)
@@ -85,7 +85,7 @@ export type MatchEvent =
       type: 'VOTE_RESOLVED'
       tick: number
       round: number
-      votes: Record<PlayerId, VoteTarget>
+      votes: Record<PlayerId, VoteRecord>
       ejected: PlayerId | null
     }
   | { type: 'STAGE_ADVANCED'; tick: number; round: number; stage: Stage; endsAtTick: number }

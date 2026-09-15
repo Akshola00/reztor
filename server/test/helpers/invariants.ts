@@ -6,6 +6,7 @@ import {
 } from '../../src/engine/config.js'
 import { deriveImpostor } from '../../src/engine/rules.js'
 import type { MatchState, PlayerId, TokenBucket } from '../../src/engine/state.js'
+import { assertSecretsHidden } from './secrets.js'
 
 function fail(state: MatchState, message: string): never {
   const last = state.eventLog.at(-1)
@@ -16,8 +17,7 @@ function fail(state: MatchState, message: string): never {
 
 const isInt = Number.isInteger
 
-// CLAUDE.md §13.2. Called after every reduce. Secrets and vote-leak checks join this once
-// selectors exist (plan step 9).
+// CLAUDE.md §13.2. Called after every reduce.
 export function assertInvariants(prev: MatchState | null, next: MatchState): void {
   const { config, eventLog } = next
 
@@ -106,4 +106,6 @@ export function assertInvariants(prev: MatchState | null, next: MatchState): voi
     const logged = spentFromLog.get(p.id) ?? 0
     if (p.spent !== logged) fail(next, `credit conservation: player ${p.id} spent ${p.spent} ≠ logged ${logged}`)
   }
+
+  assertSecretsHidden(next)
 }

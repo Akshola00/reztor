@@ -8,8 +8,8 @@ import {
   ticksFor,
   type BucketParams,
 } from './config.js'
-import type { EventOf, Intent, IntentOf, Rejection, RejectionCode } from './events.js'
-import { err, ok, type Result } from './result.js'
+import type { EventOf, Intent, IntentOf, MatchEvent, Rejection, RejectionCode } from './events.js'
+import { assertNever, err, ok, type Result } from './result.js'
 import type {
   MatchState,
   PlayerId,
@@ -19,7 +19,7 @@ import type {
   Stage,
   TokenBucket,
   TraceResult,
-  VoteTarget,
+  VoteRecord,
   WinReason,
 } from './state.js'
 
@@ -269,15 +269,16 @@ export function decideVote(
 
 export function resolveVote(state: MatchState, tick: number): EventOf<'VOTE_RESOLVED'> {
   const living = Object.values(state.players).filter((p) => p.status !== 'ejected')
-  const votes: Record<PlayerId, VoteTarget> = {}
+  const votes: Record<PlayerId, VoteRecord> = {}
   const tally = new Map<PlayerId, number>()
 
   for (const voter of living) {
     const cast = state.votes[voter.id] ?? 'skip'
     // CLAUDE.md §5.5 [D]: validity is judged at close. A vote cast before the voter disconnected
-    // still counts; a vote for a player ejected since counts as skip.
+    // still counts; a vote for a player ejected since is tallied as skip but revealed as cast,
+    // so nobody is ever shown abstaining when they did not.
     const counted = cast !== 'skip' && isLiving(state, cast) ? cast : 'skip'
-    votes[voter.id] = counted
+    votes[voter.id] = { cast, counted }
     if (counted !== 'skip') tally.set(counted, (tally.get(counted) ?? 0) + 1)
   }
 
@@ -314,6 +315,29 @@ export function decideReconnect(
   }
   const event: EventOf<'PLAYER_RECONNECTED'> = { type: 'PLAYER_RECONNECTED', tick, playerId: player.id }
   return ok(event)
+}
+
+export function decide(state: MatchState, intent: Intent, tick: number): Result<MatchEvent, Rejection> {
+  switch (intent.kind) {
+    case 'TAP_BATCH':
+      return decideTap(state, intent, tick)
+    case 'SET_TIER':
+      return decideSetTier(state, intent, tick)
+    case 'SIPHON':
+      return decideSiphon(state, intent, tick)
+    case 'TRACE':
+      return decideTrace(state, intent, tick)
+    case 'CHAT':
+      return decideChat(state, intent, tick)
+    case 'VOTE':
+      return decideVote(state, intent, tick)
+    case 'DISCONNECT':
+      return decideDisconnect(state, intent, tick)
+    case 'RECONNECT':
+      return decideReconnect(state, intent, tick)
+    default:
+      return assertNever(intent)
+  }
 }
 
 // CLAUDE.md §6 [D]: expiries due in the same tick are applied in playerId order.

@@ -1,5 +1,5 @@
 import { MVP_CONFIG, ticksFor, type MatchConfig, type Tier } from '../../src/engine/config.js'
-import type { EventOf } from '../../src/engine/events.js'
+import type { EventOf, MatchEvent } from '../../src/engine/events.js'
 import { initialState } from '../../src/engine/reduce.js'
 import {
   decideChat,
@@ -131,6 +131,10 @@ export function runVote(state: MatchState, round: number, target: PlayerId | nul
     }
   }
   return closeVote(s, voteAt + ticksFor(voteSec))
+}
+
+export function logOf<T extends MatchEvent['type']>(state: MatchState, type: T): EventOf<T>[] {
+  return state.eventLog.filter((event): event is EventOf<T> => event.type === type)
 }
 
 // Commits every grace expiry due at `tick`, stopping once the match resolves.

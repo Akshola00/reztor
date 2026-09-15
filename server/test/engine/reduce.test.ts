@@ -154,7 +154,8 @@ describe('reduce', () => {
   it('VOTE_RESOLVED records the round and ejects the chosen player', () => {
     const s = newMatch()
     const [a, b, c] = crew(s)
-    const votes = { [a]: b, [c]: b, [s.impostorId]: b, [b]: 'skip' }
+    const as = (target: string) => ({ cast: target, counted: target })
+    const votes = { [a]: as(b), [c]: as(b), [s.impostorId]: as(b), [b]: as('skip') }
     const next = checkedReduce(s, { type: 'VOTE_RESOLVED', tick: 480, round: 1, votes, ejected: b })
     expect(next.voteHistory).toEqual([{ round: 1, votes, ejected: b }])
     expect(player(next, b).status).toBe('ejected')

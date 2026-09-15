@@ -50,7 +50,10 @@ export type LaneState = {
 
 export type ChatMessage = { from: PlayerId; text: string; tick: number }
 
-export type VoteRound = { round: number; votes: Record<PlayerId, VoteTarget>; ejected: PlayerId | null }
+// `cast` is what the player chose and is what gets revealed; `counted` is what the tally used.
+export type VoteRecord = { cast: VoteTarget; counted: VoteTarget }
+
+export type VoteRound = { round: number; votes: Record<PlayerId, VoteRecord>; ejected: PlayerId | null }
 
 export type WinReason =
   | 'BOARD_TARGET'

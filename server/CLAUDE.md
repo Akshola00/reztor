@@ -1,7 +1,7 @@
 # Reztor Server — CLAUDE.md
 
 Authoritative game server for Reztor, a 4-player social-deduction tapping game with
-Solana settlement. Read `docs/reztor-spec.md` for game design intent. **This file
+Solana settlement. Read `../docs/reztor-spec.md` for game design intent. **This file
 wins on any conflict with the spec** — it resolves ambiguities the spec left open.
 
 ---
@@ -302,8 +302,12 @@ see §15.
   legible bluff.
 - **A vote cast before the voter disconnects still counts. [D]** It was a valid vote when
   cast; the voter just cannot change it.
-- **Threshold and target validity are evaluated at stage close. [D]** A vote for a player
-  who is ejected by then counts as skip.
+- **Threshold and target validity are evaluated at stage close. [D]** Living players are
+  counted at close, so a grace expiry inside the vote window lowers the threshold.
+- **Each vote is recorded as `cast` and `counted`. [D]** The tally uses `counted`; the reveal
+  shows `cast`. A vote for a player ejected before the stage closed keeps its target in
+  `cast` and becomes skip in `counted`. The reveal is the social core of the match and must
+  never show someone abstaining when they did not.
 - All votes hidden until the stage timer expires, then revealed simultaneously in
   `VOTE_RESULT`. Never leak a partial tally — not in a count, not in a "3 of 4 have
   voted" indicator. **[D]**

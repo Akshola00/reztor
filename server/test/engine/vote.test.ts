@@ -2,13 +2,26 @@ import { describe, expect, it } from 'vitest'
 import { decideDisconnect, resolveVote } from '../../src/engine/rules.js'
 import type { MatchState } from '../../src/engine/state.js'
 import { accept, rejected } from '../helpers/checked.js'
-import { advanceStage, crew, disconnect, ejectByGrace, expireDue, newMatch, runVote, vote } from '../helpers/fixtures.js'
+import {
+  advanceStage,
+  closeVote,
+  crew,
+  disconnect,
+  ejectByGrace,
+  expireDue,
+  newMatch,
+  player,
+  runVote,
+  vote,
+} from '../helpers/fixtures.js'
 
 // Round 1 vote stage opens at 420 and closes at 480.
 function inVote(base: MatchState = newMatch()) {
   const [a, b, c] = crew(base)
   return { s: advanceStage(base, 420, 1, 'vote'), imp: base.impostorId, a, b, c }
 }
+
+const same = (target: string) => ({ cast: target, counted: target })
 
 describe('casting votes', () => {
   it('is only possible during the vote stage', () => {
@@ -50,7 +63,7 @@ describe('casting votes', () => {
     s = accept(s, vote(s, a, b, 421)).state
     s = accept(s, vote(s, a, c, 480)).state
     const result = resolveVote(s, 480)
-    expect(result.votes[a]).toBe(c)
+    expect(result.votes[a]).toEqual(same(c))
     expect(result.ejected).toBe(c)
   })
 })
@@ -85,6 +98,27 @@ describe('resolving votes', () => {
     expect(resolveVote(s, 480).ejected).toBe(b)
   })
 
+  it('majority threshold shifts mid-vote-stage', () => {
+    // c drops at 80s (tick 320, chat stage). Grace expires at 110s (tick 440), inside the 420–480
+    // vote window: four living at stage open, three at close, so the threshold falls from 3 to 2.
+    const base = newMatch()
+    const [, , c] = crew(base)
+    let { s, imp, a, b } = inVote(disconnect(base, c, 320))
+    s = accept(s, vote(s, a, imp, 421)).state
+    s = accept(s, vote(s, b, imp, 421)).state
+
+    const atOpen = resolveVote(s, 421)
+    expect(Object.keys(atOpen.votes)).toHaveLength(4)
+    expect(atOpen.ejected).toBeNull()
+
+    s = expireDue(s, 440)
+    expect(player(s, c).status).toBe('ejected')
+    const atClose = resolveVote(s, 480)
+    expect(Object.keys(atClose.votes)).toHaveLength(3)
+    expect(atClose.ejected).toBe(imp)
+    expect(closeVote(s, 480).resolution).toMatchObject({ winner: 'crew', reason: 'IMPOSTOR_EJECTED' })
+  })
+
   it('a 2–2 tie ejects nobody', () => {
     let { s, imp, a, b, c } = inVote()
     s = accept(s, vote(s, a, c, 421)).state
@@ -101,10 +135,10 @@ describe('resolving votes', () => {
     expect(resolveVote(s, 480).ejected).toBeNull()
   })
 
-  it('reveals every living player’s vote, recording non-voters as skip', () => {
+  it('records every living player’s vote, with non-voters as skip', () => {
     let { s, imp, a, b, c } = inVote()
     s = accept(s, vote(s, a, b, 421)).state
-    expect(resolveVote(s, 480).votes).toEqual({ [a]: b, [b]: 'skip', [c]: 'skip', [imp]: 'skip' })
+    expect(resolveVote(s, 480).votes).toEqual({ [a]: same(b), [b]: same('skip'), [c]: same('skip'), [imp]: same('skip') })
   })
 
   it('disconnect during the vote stage', () => {
@@ -113,18 +147,24 @@ describe('resolving votes', () => {
     s = accept(s, decideDisconnect(s, { kind: 'DISCONNECT', playerId: a }, 430)).state
     expect(rejected(vote(s, a, b, 440))).toBe('NOT_ALIVE')
     const result = resolveVote(s, 480)
-    expect(result.votes[a]).toBe(c)
+    expect(result.votes[a]).toEqual(same(c))
     expect(result.ejected).toBe(c)
   })
 
-  it('judges targets and the threshold at close: a vote for a player ejected since counts as skip', () => {
+  it('a vote for a player ejected before close keeps its target in cast and is skip in counted', () => {
     const base = newMatch()
     const [, , c] = crew(base)
     let { s, imp, a, b } = inVote(disconnect(base, c, 330))
     for (const voter of [a, b, imp]) s = accept(s, vote(s, voter, c, 421)).state
     s = expireDue(s, 450)
     const result = resolveVote(s, 480)
-    expect(result).toMatchObject({ ejected: null, votes: { [a]: 'skip', [b]: 'skip', [imp]: 'skip' } })
-    expect(Object.keys(result.votes)).toHaveLength(3)
+    const ejectedTarget = { cast: c, counted: 'skip' }
+    expect(result).toEqual({
+      type: 'VOTE_RESOLVED',
+      tick: 480,
+      round: 1,
+      votes: { [a]: ejectedTarget, [b]: ejectedTarget, [imp]: ejectedTarget },
+      ejected: null,
+    })
   })
 })
