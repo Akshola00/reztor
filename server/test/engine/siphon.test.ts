@@ -48,21 +48,29 @@ describe('siphon', () => {
   })
 
   it('siphon into a lane at 998', () => {
+    // 998 leaves 2 units of headroom and a delivery is 6, so the siphon does not execute:
+    // clipping would pay 2.5x the usual net destruction per credit and erase the sink's surge.
     let { s, imp, a, b } = setup()
     s = seedLane(s, a, 20, 1)
-    s = seedLane(s, b, 998, 1)
-    const { state, event } = accept(s, siphon(s, imp, a, b, 2))
-    expect(event).toMatchObject({ pulled: 10, delivered: 2, destroyed: 8, cost: 6 })
-    expect(lane(state, b)).toMatchObject({ units: 1000, roundDelta: { received: 2 } })
-    expect(lane(state, a)).toMatchObject({ units: 10, roundDelta: { drained: 10 } })
+    const nearFull = seedLane(s, b, 998, 1)
+    expect(rejected(siphon(nearFull, imp, a, b, 2))).toBe('SINK_FULL')
+    expect(lane(nearFull, a).units).toBe(20)
+
+    const full = seedLane(s, b, 1000, 1)
+    expect(rejected(siphon(full, imp, a, b, 2))).toBe('SINK_FULL')
   })
 
-  it('a full sink receives nothing, destroys all 10, and still costs full price', () => {
+  it('accepts a sink with exactly 6 units of headroom and rejects one with 5', () => {
     let { s, imp, a, b } = setup()
     s = seedLane(s, a, 20, 1)
-    s = seedLane(s, b, 1000, 1)
-    const { event } = accept(s, siphon(s, imp, a, b, 2))
-    expect(event).toMatchObject({ delivered: 0, destroyed: 10, cost: 6 })
+
+    const exact = seedLane(s, b, 994, 1)
+    const { state, event } = accept(exact, siphon(exact, imp, a, b, 2))
+    expect(event).toMatchObject({ pulled: 10, delivered: 6, destroyed: 4 })
+    expect(lane(state, b)).toMatchObject({ units: 1000, roundDelta: { received: 6 } })
+
+    const tooFull = seedLane(s, b, 995, 1)
+    expect(rejected(siphon(tooFull, imp, a, b, 2))).toBe('SINK_FULL')
   })
 
   it('rejects a siphon from a lane into itself', () => {
@@ -132,10 +140,14 @@ describe('siphon', () => {
     expect(rejected(siphon(s, a, b, b, 1))).toBe('NOT_IMPOSTOR')
     expect(rejected(siphon(s, imp, 'ghost', a, 1))).toBe('UNKNOWN_PLAYER')
     expect(rejected(siphon(s, imp, a, a, 1))).toBe('SAME_LANE')
-    s = seedLane(s, b, 1000, 1)
-    for (let i = 0; i < 4; i++) s = accept(s, siphon(s, imp, b, a, 1)).state
-    expect(rejected(siphon(s, imp, c, b, 1))).toBe('SOURCE_TOO_LOW')
-    expect(rejected(siphon(s, imp, b, c, 1))).toBe('RATE_LIMITED')
+
+    s = seedLane(seedLane(s, b, 1000, 1), c, 1000, 1)
+    // An empty source into a full sink reports the source first.
+    expect(rejected(siphon(s, imp, a, c, 1))).toBe('SOURCE_TOO_LOW')
+    // Drain the bucket, then a full sink still outranks the rate limit.
+    for (let i = 0; i < 4; i++) s = accept(s, siphon(s, imp, b, imp, 1)).state
+    expect(rejected(siphon(s, imp, b, c, 1))).toBe('SINK_FULL')
+    expect(rejected(siphon(s, imp, b, imp, 1))).toBe('RATE_LIMITED')
   })
 
   it('rejects siphons outside the tap stage', () => {

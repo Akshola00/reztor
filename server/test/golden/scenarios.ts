@@ -1,4 +1,5 @@
 import type { Intent } from '../../src/engine/events.js'
+import type { MatchState } from '../../src/engine/state.js'
 import {
   CREW,
   EVERYONE,
@@ -17,12 +18,18 @@ import {
   type Golden,
 } from './script.js'
 
+const ROUND_TICKS = 480
 const skipAll = { p1: 'skip', p2: 'skip', p3: 'skip', p4: 'skip' }
 
-// Rounds 1–2: crew tap 240 each (1440). p1 traces the idle impostor in round 2 (natural, −200).
-// Round 3: crew switch to tier 2, +9 per tick. After 106 ticks the board is 2394; on tick 1067 p1
-// takes it to 2397 and p3 to 2400, which latches the win, so p4's tap in that tick is MATCH_OVER.
-// Pot 1108 + 908 + 904 = 2920 → 973 each, 1 dust.
+// True for the first `n` ticks of the current round's tap stage. Only "crew board win" runs a full
+// match; every other scenario taps for a few ticks, just enough to drive its rule path.
+const tapping = (state: MatchState, tick: number, n: number): boolean =>
+  state.stage === 'tap' && tick - (state.round - 1) * ROUND_TICKS <= n
+
+// The one full-length record: rounds 1–2 crew tap 240 each (1440). p1 traces the idle impostor in
+// round 2 (natural, −200). Round 3 the crew switch to tier 2, +9 per tick; after 106 ticks the
+// board is 2394, and on tick 1067 p1 takes it to 2397 and p3 to 2400, which latches the win, so
+// p4's tap in that same tick is MATCH_OVER. Pot 1108 + 908 + 904 = 2920 → 973 each, 1 dust.
 const crewBoardWin: Golden = {
   scenario: {
     name: 'crew-board-win',
@@ -72,10 +79,10 @@ const crewBoardWin: Golden = {
   },
 }
 
-// Round 1: crew tap 240 each; the impostor frames p1→p3 every 10 ticks (24 siphons), so p1 always
-// has exactly 10 to give and ends the round at 0 (natural 240 = drained 240). p3 ends at 384.
-// Round 2: p4 traces p1 — the tie reads drained. The impostor self-sinks p3→p2 once at tick 500.
-// Three crew vote the impostor out at the round 2 close. Pot 1796 → 598 each, 2 dust.
+// Round 1: crew tap 30 each while the impostor frames p1→p3 on ticks 10, 20 and 30 — p1 has
+// exactly 10 to give each time, the source floor's boundary, and ends the round at 0 with
+// natural 30 = drained 30. Round 2: p4's trace on p1 reads that tie as drained, and the impostor
+// self-sinks p3→p2. Three crew vote the impostor out. Pot 320 → 106 each, 2 dust.
 const crewEjectionWin: Golden = {
   scenario: {
     name: 'crew-ejection-win',
@@ -83,12 +90,12 @@ const crewEjectionWin: Golden = {
     lastTick: LAST_TICK,
     intentsAt: (tick, state) => {
       const intents: Intent[] = []
-      if (state.stage === 'tap') {
-        if (tick === 481) intents.push({ kind: 'TRACE', playerId: 'p4', target: 'p1' })
+      if (state.round === 1 && tapping(state, tick, 30)) {
         for (const id of CREW) intents.push(tapOwn(id))
-        if (state.round === 1 && tick % 10 === 0) intents.push(siphon('p1', 'p3'))
-        if (tick === 500) intents.push(siphon('p3', IMPOSTOR))
+        if (tick % 10 === 0) intents.push(siphon('p1', 'p3'))
       }
+      if (tick === 481) intents.push({ kind: 'TRACE', playerId: 'p4', target: 'p1' })
+      if (tick === 482) intents.push(siphon('p3', IMPOSTOR))
       if (tick === 901) {
         intents.push(castVote('p1', IMPOSTOR), castVote('p3', IMPOSTOR), castVote('p4', IMPOSTOR), castVote(IMPOSTOR, 'p1'))
       }
@@ -98,29 +105,29 @@ const crewEjectionWin: Golden = {
   expected: {
     rejections: [],
     resolution: { kind: 'won', winner: 'crew', reason: 'IMPOSTOR_EJECTED', tick: 960 },
-    boardTotal: 1340,
+    boardTotal: 74,
     settlement: {
       matchId: 'crew-ejection-win',
       resolution: { kind: 'won', winner: 'crew', reason: 'IMPOSTOR_EJECTED', tick: 960 },
       escrowCredits: 4800,
-      potCredits: 1796,
+      potCredits: 320,
       rakeBps: 0,
       rakeCredits: 0,
       dustCredits: 2,
       winners: ['p1', 'p3', 'p4'],
-      lines: [pay('p1', 480, 720, 598), pay('p2', 156, 1044, 0), pay('p3', 480, 720, 598), pay('p4', 680, 520, 598)],
+      lines: [pay('p1', 30, 1170, 106), pay('p2', 30, 1170, 0), pay('p3', 30, 1170, 106), pay('p4', 230, 970, 106)],
     },
     matchEnd: {
       ...common('crew-ejection-win'),
       resolution: { kind: 'won', winner: 'crew', reason: 'IMPOSTOR_EJECTED', tick: 960 },
-      board: board(1340),
+      board: board(74),
       players: [
-        endPlayer('p1', 'alive', 480, 480, 240),
-        endPlayer('p2', 'ejected', 156, 0, 6),
-        endPlayer('p3', 'alive', 480, 480, 614),
-        endPlayer('p4', 'alive', 680, 480, 480),
+        endPlayer('p1', 'alive', 30, 30, 0),
+        endPlayer('p2', 'ejected', 30, 0, 6),
+        endPlayer('p3', 'alive', 30, 30, 38),
+        endPlayer('p4', 'alive', 230, 30, 30),
       ],
-      impostor: { unitsDestroyed: 100, siphons: 25, selfSinks: 1 },
+      impostor: { unitsDestroyed: 16, siphons: 4, selfSinks: 1 },
       traces: [{ round: 2, tick: 481, purchaser: 'p4', target: 'p1', result: 'drained' }],
       voteHistory: [
         { round: 1, votes: skipAll, ejected: null },
@@ -130,9 +137,8 @@ const crewEjectionWin: Golden = {
   },
 }
 
-// Crew tap 240 a round for three rounds (2160). In round 3 the impostor frames p4→p1 ten times
-// (−40 net). Votes in rounds 2 and 3 split, so round 3's close resolves at 2120 < 2400.
-// Pot 2160 + 60 = 2220, all to the impostor.
+// Crew tap 20 a round for three rounds (60 each). In round 3 the impostor frames p4→p1 twice.
+// Votes in rounds 2 and 3 split, so round 3's close resolves below target. Pot 192, all impostor.
 const impostorTimeoutWin: Golden = {
   scenario: {
     name: 'impostor-timeout-win',
@@ -140,9 +146,9 @@ const impostorTimeoutWin: Golden = {
     lastTick: LAST_TICK,
     intentsAt: (tick, state) => {
       const intents: Intent[] = []
-      if (state.stage === 'tap') {
+      if (tapping(state, tick, 20)) {
         for (const id of CREW) intents.push(tapOwn(id))
-        if (tick >= 1000 && tick <= 1090 && tick % 10 === 0) intents.push(siphon('p4', 'p1'))
+        if (tick === 970 || tick === 980) intents.push(siphon('p4', 'p1'))
       }
       if (tick === 901) intents.push(castVote('p1', 'p4'), castVote('p3', 'p4'), castVote('p4', 'p1'))
       if (tick === 1381) {
@@ -154,29 +160,29 @@ const impostorTimeoutWin: Golden = {
   expected: {
     rejections: [],
     resolution: { kind: 'won', winner: 'impostor', reason: 'ROUNDS_EXHAUSTED', tick: 1440 },
-    boardTotal: 2120,
+    boardTotal: 172,
     settlement: {
       matchId: 'impostor-timeout-win',
       resolution: { kind: 'won', winner: 'impostor', reason: 'ROUNDS_EXHAUSTED', tick: 1440 },
       escrowCredits: 4800,
-      potCredits: 2220,
+      potCredits: 192,
       rakeBps: 0,
       rakeCredits: 0,
       dustCredits: 0,
       winners: [IMPOSTOR],
-      lines: [pay('p1', 720, 480, 0), pay('p2', 60, 1140, 2220), pay('p3', 720, 480, 0), pay('p4', 720, 480, 0)],
+      lines: [pay('p1', 60, 1140, 0), pay('p2', 12, 1188, 192), pay('p3', 60, 1140, 0), pay('p4', 60, 1140, 0)],
     },
     matchEnd: {
       ...common('impostor-timeout-win'),
       resolution: { kind: 'won', winner: 'impostor', reason: 'ROUNDS_EXHAUSTED', tick: 1440 },
-      board: board(2120),
+      board: board(172),
       players: [
-        endPlayer('p1', 'alive', 720, 720, 780),
-        endPlayer('p2', 'alive', 60, 0, 0),
-        endPlayer('p3', 'alive', 720, 720, 720),
-        endPlayer('p4', 'alive', 720, 720, 620),
+        endPlayer('p1', 'alive', 60, 60, 72),
+        endPlayer('p2', 'alive', 12, 0, 0),
+        endPlayer('p3', 'alive', 60, 60, 60),
+        endPlayer('p4', 'alive', 60, 60, 40),
       ],
-      impostor: { unitsDestroyed: 40, siphons: 10, selfSinks: 0 },
+      impostor: { unitsDestroyed: 8, siphons: 2, selfSinks: 0 },
       traces: [],
       voteHistory: [
         { round: 1, votes: skipAll, ejected: null },
@@ -187,9 +193,9 @@ const impostorTimeoutWin: Golden = {
   },
 }
 
-// Round 1: crew tap 240 each; p1 is voted out 3–1. Round 2: p3 taps its own lane, p4 taps p1's
-// dormant lane (240 tier-1 taps at 50% → 120 units), the impostor taps cover. p3 is voted out
-// 2 of 3 at the round 2 close. Pot 1440, all to the impostor.
+// Round 1: crew tap 20 each and p1 is voted out 3–1. Round 2: p3 taps its own lane, p4 taps p1's
+// dormant lane (20 tier-1 taps at 50% → 10 units), the impostor taps cover. p3 goes 2 of 3 at the
+// round 2 close, which is the second crew ejection. Pot 120, all impostor.
 const impostorDoubleEjectionWin: Golden = {
   scenario: {
     name: 'impostor-double-ejection-win',
@@ -197,8 +203,10 @@ const impostorDoubleEjectionWin: Golden = {
     lastTick: LAST_TICK,
     intentsAt: (tick, state) => {
       const intents: Intent[] = []
-      if (state.stage === 'tap' && state.round === 1) for (const id of CREW) intents.push(tapOwn(id))
-      if (state.stage === 'tap' && state.round === 2) intents.push(tapOwn('p3'), tapInto('p4', 'p1'), tapOwn(IMPOSTOR))
+      if (state.round === 1 && tapping(state, tick, 20)) for (const id of CREW) intents.push(tapOwn(id))
+      if (state.round === 2 && tapping(state, tick, 20)) {
+        intents.push(tapOwn('p3'), tapInto('p4', 'p1'), tapOwn(IMPOSTOR))
+      }
       if (tick === 421) intents.push(castVote(IMPOSTOR, 'p1'), castVote('p3', 'p1'), castVote('p4', 'p1'), castVote('p1', 'p3'))
       if (tick === 901) intents.push(castVote(IMPOSTOR, 'p3'), castVote('p4', 'p3'), castVote('p3', IMPOSTOR))
       return intents
@@ -207,27 +215,27 @@ const impostorDoubleEjectionWin: Golden = {
   expected: {
     rejections: [],
     resolution: { kind: 'won', winner: 'impostor', reason: 'CREW_EJECTED', tick: 960 },
-    boardTotal: 1320,
+    boardTotal: 110,
     settlement: {
       matchId: 'impostor-double-ejection-win',
       resolution: { kind: 'won', winner: 'impostor', reason: 'CREW_EJECTED', tick: 960 },
       escrowCredits: 4800,
-      potCredits: 1440,
+      potCredits: 120,
       rakeBps: 0,
       rakeCredits: 0,
       dustCredits: 0,
       winners: [IMPOSTOR],
-      lines: [pay('p1', 240, 960, 0), pay('p2', 240, 960, 1440), pay('p3', 480, 720, 0), pay('p4', 480, 720, 0)],
+      lines: [pay('p1', 20, 1180, 0), pay('p2', 20, 1180, 120), pay('p3', 40, 1160, 0), pay('p4', 40, 1160, 0)],
     },
     matchEnd: {
       ...common('impostor-double-ejection-win'),
       resolution: { kind: 'won', winner: 'impostor', reason: 'CREW_EJECTED', tick: 960 },
-      board: board(1320),
+      board: board(110),
       players: [
-        endPlayer('p1', 'ejected', 240, 240, 360),
-        endPlayer('p2', 'alive', 240, 240, 240),
-        endPlayer('p3', 'ejected', 480, 480, 480),
-        endPlayer('p4', 'alive', 480, 360, 240),
+        endPlayer('p1', 'ejected', 20, 20, 30),
+        endPlayer('p2', 'alive', 20, 20, 20),
+        endPlayer('p3', 'ejected', 40, 40, 40),
+        endPlayer('p4', 'alive', 40, 30, 20),
       ],
       impostor: { unitsDestroyed: 0, siphons: 0, selfSinks: 0 },
       traces: [],
@@ -239,8 +247,8 @@ const impostorDoubleEjectionWin: Golden = {
   },
 }
 
-// Everyone taps while alive. p1 drops at tick 100 and p3 at 150; their grace periods expire at 220
-// and 270. The first expiry resolves nothing; the second voids the match in the chat stage.
+// Everyone taps for 20 ticks while alive. p1 drops on tick 10 and p3 on 30; their grace periods
+// expire on 130 and 150. The first expiry resolves nothing; the second voids the match.
 const voidByAbandonment: Golden = {
   scenario: {
     name: 'void-by-abandonment',
@@ -248,36 +256,36 @@ const voidByAbandonment: Golden = {
     lastTick: LAST_TICK,
     intentsAt: (tick, state) => {
       const intents: Intent[] = []
-      if (state.stage === 'tap') for (const id of EVERYONE) if (isAlive(state, id)) intents.push(tapOwn(id))
-      if (tick === 100) intents.push({ kind: 'DISCONNECT', playerId: 'p1' })
-      if (tick === 150) intents.push({ kind: 'DISCONNECT', playerId: 'p3' })
+      if (tapping(state, tick, 20)) for (const id of EVERYONE) if (isAlive(state, id)) intents.push(tapOwn(id))
+      if (tick === 10) intents.push({ kind: 'DISCONNECT', playerId: 'p1' })
+      if (tick === 30) intents.push({ kind: 'DISCONNECT', playerId: 'p3' })
       return intents
     },
   },
   expected: {
     rejections: [],
-    resolution: { kind: 'voided', reason: 'ABANDONED', tick: 270 },
-    boardTotal: 730,
+    resolution: { kind: 'voided', reason: 'ABANDONED', tick: 150 },
+    boardTotal: 70,
     settlement: {
       matchId: 'void-by-abandonment',
-      resolution: { kind: 'voided', reason: 'ABANDONED', tick: 270 },
+      resolution: { kind: 'voided', reason: 'ABANDONED', tick: 150 },
       escrowCredits: 4800,
       potCredits: 0,
       rakeBps: 0,
       rakeCredits: 0,
       dustCredits: 0,
       winners: [],
-      lines: [pay('p1', 100, 1200, 0), pay('p2', 240, 1200, 0), pay('p3', 150, 1200, 0), pay('p4', 240, 1200, 0)],
+      lines: [pay('p1', 10, 1200, 0), pay('p2', 20, 1200, 0), pay('p3', 20, 1200, 0), pay('p4', 20, 1200, 0)],
     },
     matchEnd: {
       ...common('void-by-abandonment'),
-      resolution: { kind: 'voided', reason: 'ABANDONED', tick: 270 },
-      board: board(730),
+      resolution: { kind: 'voided', reason: 'ABANDONED', tick: 150 },
+      board: board(70),
       players: [
-        endPlayer('p1', 'ejected', 100, 100, 100),
-        endPlayer('p2', 'alive', 240, 240, 240),
-        endPlayer('p3', 'ejected', 150, 150, 150),
-        endPlayer('p4', 'alive', 240, 240, 240),
+        endPlayer('p1', 'ejected', 10, 10, 10),
+        endPlayer('p2', 'alive', 20, 20, 20),
+        endPlayer('p3', 'ejected', 20, 20, 20),
+        endPlayer('p4', 'alive', 20, 20, 20),
       ],
       impostor: { unitsDestroyed: 0, siphons: 0, selfSinks: 0 },
       traces: [],
@@ -286,9 +294,9 @@ const voidByAbandonment: Golden = {
   },
 }
 
-// p1 taps 1–100, drops at 100, and rejoins at 160 (grace would have expired at 220), then taps
-// 160–240: 181 taps. The impostor's siphon out of p1's frozen lane at 130 is rejected; the same
-// siphon at 200 lands. Crew vote the impostor out at the round 1 close. Pot 667 → 222 each, 1 dust.
+// p1 taps ticks 1–10, drops on tick 10, and rejoins on tick 40 (grace would have expired on 130),
+// then taps 40–49: 20 taps in all. The impostor's siphon out of p1's frozen lane on tick 20 is
+// rejected; the same siphon on tick 50 lands. Crew vote the impostor out at the round 1 close.
 const reconnectMidRound: Golden = {
   scenario: {
     name: 'reconnect-mid-round',
@@ -296,40 +304,41 @@ const reconnectMidRound: Golden = {
     lastTick: LAST_TICK,
     intentsAt: (tick, state) => {
       const intents: Intent[] = []
-      if (tick === 160) intents.push({ kind: 'RECONNECT', playerId: 'p1' })
-      if (state.stage === 'tap') {
-        for (const id of CREW) if (isAlive(state, id) || (id === 'p1' && tick === 160)) intents.push(tapOwn(id))
+      if (tick === 40) intents.push({ kind: 'RECONNECT', playerId: 'p1' })
+      if (state.round === 1 && state.stage === 'tap') {
+        if (tick <= 10 || (tick >= 40 && tick <= 49)) intents.push(tapOwn('p1'))
+        if (tick <= 20) intents.push(tapOwn('p3'), tapOwn('p4'))
       }
-      if (tick === 100) intents.push({ kind: 'DISCONNECT', playerId: 'p1' })
-      if (tick === 130 || tick === 200) intents.push(siphon('p1', 'p3'))
+      if (tick === 10) intents.push({ kind: 'DISCONNECT', playerId: 'p1' })
+      if (tick === 20 || tick === 50) intents.push(siphon('p1', 'p3'))
       if (tick === 421) intents.push(castVote('p1', IMPOSTOR), castVote('p3', IMPOSTOR), castVote('p4', IMPOSTOR))
       return intents
     },
   },
   expected: {
-    rejections: [{ tick: 130, action: 'SIPHON', code: 'LANE_FROZEN' }],
+    rejections: [{ tick: 20, action: 'SIPHON', code: 'LANE_FROZEN' }],
     resolution: { kind: 'won', winner: 'crew', reason: 'IMPOSTOR_EJECTED', tick: 480 },
-    boardTotal: 657,
+    boardTotal: 56,
     settlement: {
       matchId: 'reconnect-mid-round',
       resolution: { kind: 'won', winner: 'crew', reason: 'IMPOSTOR_EJECTED', tick: 480 },
       escrowCredits: 4800,
-      potCredits: 667,
+      potCredits: 66,
       rakeBps: 0,
       rakeCredits: 0,
-      dustCredits: 1,
+      dustCredits: 0,
       winners: ['p1', 'p3', 'p4'],
-      lines: [pay('p1', 181, 1019, 222), pay('p2', 6, 1194, 0), pay('p3', 240, 960, 222), pay('p4', 240, 960, 222)],
+      lines: [pay('p1', 20, 1180, 22), pay('p2', 6, 1194, 0), pay('p3', 20, 1180, 22), pay('p4', 20, 1180, 22)],
     },
     matchEnd: {
       ...common('reconnect-mid-round'),
       resolution: { kind: 'won', winner: 'crew', reason: 'IMPOSTOR_EJECTED', tick: 480 },
-      board: board(657),
+      board: board(56),
       players: [
-        endPlayer('p1', 'alive', 181, 181, 171),
+        endPlayer('p1', 'alive', 20, 20, 10),
         endPlayer('p2', 'ejected', 6, 0, 0),
-        endPlayer('p3', 'alive', 240, 240, 246),
-        endPlayer('p4', 'alive', 240, 240, 240),
+        endPlayer('p3', 'alive', 20, 20, 26),
+        endPlayer('p4', 'alive', 20, 20, 20),
       ],
       impostor: { unitsDestroyed: 4, siphons: 1, selfSinks: 0 },
       traces: [],

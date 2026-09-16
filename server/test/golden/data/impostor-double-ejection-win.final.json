@@ -48,18 +48,18 @@
       "id": "p1",
       "name": "Player p1",
       "wallet": null,
-      "credits": 960,
-      "spent": 240,
+      "credits": 1180,
+      "spent": 20,
       "tier": 1,
       "status": "ejected",
       "disconnectedAtTick": null,
       "traceUsed": false,
-      "tapsAccepted": 240,
+      "tapsAccepted": 20,
       "tapsDropped": 0,
-      "unitsTapped": 240,
+      "unitsTapped": 20,
       "tapBucket": {
         "tokens": 20,
-        "updatedAtTick": 240
+        "updatedAtTick": 20
       },
       "siphonBucket": {
         "tokens": 16,
@@ -71,18 +71,18 @@
       "id": "p2",
       "name": "Player p2",
       "wallet": null,
-      "credits": 960,
-      "spent": 240,
+      "credits": 1180,
+      "spent": 20,
       "tier": 1,
       "status": "alive",
       "disconnectedAtTick": null,
       "traceUsed": false,
-      "tapsAccepted": 240,
+      "tapsAccepted": 20,
       "tapsDropped": 0,
-      "unitsTapped": 240,
+      "unitsTapped": 20,
       "tapBucket": {
         "tokens": 20,
-        "updatedAtTick": 720
+        "updatedAtTick": 500
       },
       "siphonBucket": {
         "tokens": 16,
@@ -94,18 +94,18 @@
       "id": "p3",
       "name": "Player p3",
       "wallet": null,
-      "credits": 720,
-      "spent": 480,
+      "credits": 1160,
+      "spent": 40,
       "tier": 1,
       "status": "ejected",
       "disconnectedAtTick": null,
       "traceUsed": false,
-      "tapsAccepted": 480,
+      "tapsAccepted": 40,
       "tapsDropped": 0,
-      "unitsTapped": 480,
+      "unitsTapped": 40,
       "tapBucket": {
         "tokens": 20,
-        "updatedAtTick": 720
+        "updatedAtTick": 500
       },
       "siphonBucket": {
         "tokens": 16,
@@ -117,18 +117,18 @@
       "id": "p4",
       "name": "Player p4",
       "wallet": null,
-      "credits": 720,
-      "spent": 480,
+      "credits": 1160,
+      "spent": 40,
       "tier": 1,
       "status": "alive",
       "disconnectedAtTick": null,
       "traceUsed": false,
-      "tapsAccepted": 480,
+      "tapsAccepted": 40,
       "tapsDropped": 0,
-      "unitsTapped": 360,
+      "unitsTapped": 30,
       "tapBucket": {
         "tokens": 20,
-        "updatedAtTick": 720
+        "updatedAtTick": 500
       },
       "siphonBucket": {
         "tokens": 16,
@@ -140,17 +140,17 @@
   "lanes": {
     "p1": {
       "owner": "p1",
-      "units": 360,
+      "units": 30,
       "dormant": true,
-      "roundStartUnits": 240,
+      "roundStartUnits": 20,
       "roundDelta": {
         "natural": 0,
-        "foreign": 120,
+        "foreign": 10,
         "received": 0,
         "drained": 0
       },
       "prevRoundDelta": {
-        "natural": 240,
+        "natural": 20,
         "foreign": 0,
         "received": 0,
         "drained": 0
@@ -161,11 +161,11 @@
     },
     "p2": {
       "owner": "p2",
-      "units": 240,
+      "units": 20,
       "dormant": false,
       "roundStartUnits": 0,
       "roundDelta": {
-        "natural": 240,
+        "natural": 20,
         "foreign": 0,
         "received": 0,
         "drained": 0
@@ -180,17 +180,17 @@
     },
     "p3": {
       "owner": "p3",
-      "units": 480,
+      "units": 40,
       "dormant": true,
-      "roundStartUnits": 240,
+      "roundStartUnits": 20,
       "roundDelta": {
-        "natural": 240,
+        "natural": 20,
         "foreign": 0,
         "received": 0,
         "drained": 0
       },
       "prevRoundDelta": {
-        "natural": 240,
+        "natural": 20,
         "foreign": 0,
         "received": 0,
         "drained": 0
@@ -199,9 +199,9 @@
     },
     "p4": {
       "owner": "p4",
-      "units": 240,
+      "units": 20,
       "dormant": false,
-      "roundStartUnits": 240,
+      "roundStartUnits": 20,
       "roundDelta": {
         "natural": 0,
         "foreign": 0,
@@ -209,7 +209,7 @@
         "drained": 0
       },
       "prevRoundDelta": {
-        "natural": 240,
+        "natural": 20,
         "foreign": 0,
         "received": 0,
         "drained": 0

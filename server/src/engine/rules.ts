@@ -164,15 +164,19 @@ export function decideSiphon(
   if (source.units < config.siphon.pull) {
     return reject(intent.kind, 'SOURCE_TOO_LOW', `The source lane needs at least ${config.siphon.pull} units`)
   }
+  // CLAUDE.md §5.2 [D]: no partial deliveries either. Clipping into a nearly full lane would pay
+  // 2.5x the usual net destruction per credit, exactly when round-3 lanes are near cap, and would
+  // erase the beneficiary surge the crew reads as evidence.
+  if (config.laneCapacity - sink.units < config.siphon.deliver) {
+    return reject(intent.kind, 'SINK_FULL', `The sink lane needs room for ${config.siphon.deliver} units`)
+  }
   // CLAUDE.md §5.2 [D!]: the siphon bucket keeps sabotage visible as motion on the board.
   const available = refill(player.siphonBucket, siphonBucketParams(config), tick)
   if (available < TOKEN_SCALE) return reject(intent.kind, 'RATE_LIMITED', 'Siphoning too fast')
   const cost = sink.owner === player.id ? config.siphon.costSelf : config.siphon.costOther
   if (player.credits < cost) return reject(intent.kind, 'INSUFFICIENT_CREDITS', 'Not enough credits to siphon')
 
-  // CLAUDE.md §5.2 [D]: a near-full sink clips the delivery, destroys the rest, and still costs
-  // full price, because the impostor chose the target.
-  const delivered = Math.min(config.siphon.deliver, config.laneCapacity - sink.units)
+  const delivered = config.siphon.deliver
   const event: EventOf<'SIPHONED'> = {
     type: 'SIPHONED',
     tick,

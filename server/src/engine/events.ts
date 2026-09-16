@@ -106,6 +106,7 @@ export type RejectionCode =
   | 'SAME_LANE'
   | 'LANE_FROZEN'
   | 'SOURCE_TOO_LOW'
+  | 'SINK_FULL'
   | 'RATE_LIMITED'
   | 'TRACE_USED'
   | 'NO_PREVIOUS_ROUND'

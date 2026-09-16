@@ -90,26 +90,6 @@ describe('reduce', () => {
     expect(player(s, imp)).toMatchObject({ credits: 1194, siphonBucket: { tokens: 12, updatedAtTick: 2 } })
   })
 
-  it('SIPHONED into a near-full sink records only what landed as received', () => {
-    let s = newMatch()
-    const [a, b] = crew(s)
-    s = seedLane(s, a, 20, 1)
-    s = seedLane(s, b, 997, 1)
-    s = checkedReduce(s, {
-      type: 'SIPHONED',
-      tick: 2,
-      playerId: s.impostorId,
-      source: a,
-      sink: b,
-      pulled: 10,
-      delivered: 3,
-      destroyed: 7,
-      cost: 6,
-      tokensAfter: 12,
-    })
-    expect(lane(s, b)).toMatchObject({ units: 1000, roundDelta: { received: 3 } })
-  })
-
   it('TRACED charges the purchaser and marks the trace used', () => {
     const s = newMatch()
     const [a, b] = crew(s)

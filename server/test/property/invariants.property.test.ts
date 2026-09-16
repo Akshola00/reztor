@@ -45,7 +45,10 @@ const intent: fc.Arbitrary<Intent> = fc.oneof(
 )
 
 // One queue per tick, so scripts are dense enough for lanes to fill, wallets to empty and votes to
-// carry. A sparse list of (tick, intent) pairs shrinks toward doing nothing at all.
+// carry. Do not swap this for `fc.array(fc.tuple(tick, intent), { maxLength: n })`: fast-check
+// biases array length toward the low end when only maxLength is given, and that version was
+// measured at 0.9 accepted taps and zero accepted siphons per run, with 195 of 200 runs ending in
+// ROUNDS_EXHAUSTED having done nothing. The property passed and tested almost nothing.
 const script = fc.array(fc.array(intent, { maxLength: 3 }), { minLength: TICKS, maxLength: TICKS })
 
 describe('invariants hold for any stream of intents', () => {

@@ -48,18 +48,18 @@
       "id": "p1",
       "name": "Player p1",
       "wallet": null,
-      "credits": 1019,
-      "spent": 181,
+      "credits": 1180,
+      "spent": 20,
       "tier": 1,
       "status": "alive",
       "disconnectedAtTick": null,
       "traceUsed": false,
-      "tapsAccepted": 181,
+      "tapsAccepted": 20,
       "tapsDropped": 0,
-      "unitsTapped": 181,
+      "unitsTapped": 20,
       "tapBucket": {
         "tokens": 20,
-        "updatedAtTick": 240
+        "updatedAtTick": 49
       },
       "siphonBucket": {
         "tokens": 16,
@@ -86,7 +86,7 @@
       },
       "siphonBucket": {
         "tokens": 12,
-        "updatedAtTick": 200
+        "updatedAtTick": 50
       },
       "lastChatTick": null
     },
@@ -94,18 +94,18 @@
       "id": "p3",
       "name": "Player p3",
       "wallet": null,
-      "credits": 960,
-      "spent": 240,
+      "credits": 1180,
+      "spent": 20,
       "tier": 1,
       "status": "alive",
       "disconnectedAtTick": null,
       "traceUsed": false,
-      "tapsAccepted": 240,
+      "tapsAccepted": 20,
       "tapsDropped": 0,
-      "unitsTapped": 240,
+      "unitsTapped": 20,
       "tapBucket": {
         "tokens": 20,
-        "updatedAtTick": 240
+        "updatedAtTick": 20
       },
       "siphonBucket": {
         "tokens": 16,
@@ -117,18 +117,18 @@
       "id": "p4",
       "name": "Player p4",
       "wallet": null,
-      "credits": 960,
-      "spent": 240,
+      "credits": 1180,
+      "spent": 20,
       "tier": 1,
       "status": "alive",
       "disconnectedAtTick": null,
       "traceUsed": false,
-      "tapsAccepted": 240,
+      "tapsAccepted": 20,
       "tapsDropped": 0,
-      "unitsTapped": 240,
+      "unitsTapped": 20,
       "tapBucket": {
         "tokens": 20,
-        "updatedAtTick": 240
+        "updatedAtTick": 20
       },
       "siphonBucket": {
         "tokens": 16,
@@ -140,11 +140,11 @@
   "lanes": {
     "p1": {
       "owner": "p1",
-      "units": 171,
+      "units": 10,
       "dormant": false,
       "roundStartUnits": 0,
       "roundDelta": {
-        "natural": 181,
+        "natural": 20,
         "foreign": 0,
         "received": 0,
         "drained": 10
@@ -168,11 +168,11 @@
     },
     "p3": {
       "owner": "p3",
-      "units": 246,
+      "units": 26,
       "dormant": false,
       "roundStartUnits": 0,
       "roundDelta": {
-        "natural": 240,
+        "natural": 20,
         "foreign": 0,
         "received": 6,
         "drained": 0
@@ -182,11 +182,11 @@
     },
     "p4": {
       "owner": "p4",
-      "units": 240,
+      "units": 20,
       "dormant": false,
       "roundStartUnits": 0,
       "roundDelta": {
-        "natural": 240,
+        "natural": 20,
         "foreign": 0,
         "received": 0,
         "drained": 0

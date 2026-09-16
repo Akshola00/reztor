@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { beforeAll, describe, expect, it } from 'vitest'
 import type { MatchEvent } from '../../src/engine/events.js'
 import { matchEndView, publicView } from '../../src/engine/selectors.js'
@@ -13,6 +13,11 @@ const UPDATE = process.env.UPDATE_GOLDEN === '1'
 const DATA = new URL('./data/', import.meta.url)
 
 const withoutLog = ({ eventLog: _eventLog, ...rest }: MatchState) => rest
+
+// Logs stay small enough to read in a diff. "crew board win" is the deliberate exception: it is the
+// one full-length match kept as a realistic record. Every other scenario taps only as long as its
+// rule path needs, and this ceiling stops that creeping back up.
+const sizeLimitKb = (name: string): number => (name === 'crew-board-win' ? 320 : 200)
 
 function readGolden(file: string): string {
   const url = new URL(file, DATA)
@@ -62,6 +67,11 @@ for (const { scenario, expected } of GOLDENS) {
         .split('\n')
         .map((line) => JSON.parse(line))
       expect(run.state.eventLog).toEqual(committed)
+    })
+
+    it(`keeps its committed log under ${sizeLimitKb(scenario.name)} KB`, () => {
+      const kb = statSync(new URL(logFile, DATA)).size / 1024
+      expect(kb).toBeLessThan(sizeLimitKb(scenario.name))
     })
 
     it('replays the committed log, checking every step, to the committed final state', () => {

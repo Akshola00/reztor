@@ -221,11 +221,14 @@ see §15.
   which is strictly worse than framing and adds nothing but confusion.
 - **The impostor's own lane may be a source. [D]** Draining yourself into a crew lane is
   a legitimate (if expensive) cover play. Allow it.
-- **Sink at or near cap: clip the delivery, destroy the remainder, charge full cost. [D]**
-  Delivering 6 into a lane at 997 adds 3 and destroys 7 total. Do not reject — the
-  impostor chose the target.
-- **`received` records what landed (3 in the example above), not 6. [D]** This keeps
-  `units == roundStartUnits + natural + foreign + received − drained` exact.
+- **Reject if the sink lane has less than `deliver` units of headroom → `SINK_FULL`. [D]**
+  A lane at 998 cannot take a delivery of 6, so the siphon does not execute. Clipping
+  instead would make framing into a nearly full lane 1.67 net units destroyed per credit
+  against 0.67 — a 2.5x gain arriving exactly when crew lanes are near cap in round 3 —
+  and it would erase the beneficiary surge, which is half the crew's evidence (spec §1).
+  The 10-for-6 ratio holds on every executed siphon.
+- **`received` is always `deliver`, because partial deliveries are rejected. [D]** This
+  keeps `units == roundStartUnits + natural + foreign + received − drained` exact.
 - **Siphon rate limit: separate token bucket, capacity 4, refill 4 per second. [D!]**
   The spec gives siphon no cooldown, and credits alone permit 200 siphons in a burst —
   1200 units of destruction in under a second, which is unreadable on the board and
@@ -237,7 +240,8 @@ see §15.
   (Spec §12, explicit.)
 - **Rejection precedence [D]:** match over → wrong stage → unknown/not-alive sender →
   `NOT_IMPOSTOR` → unknown lane → `SAME_LANE` → `LANE_FROZEN` → `SOURCE_TOO_LOW` →
-  `RATE_LIMITED` → `INSUFFICIENT_CREDITS`. A fixed order gives one reason per failure.
+  `SINK_FULL` → `RATE_LIMITED` → `INSUFFICIENT_CREDITS`. A fixed order gives one reason
+  per failure.
   A rejected siphon spends no token.
 
 ### 5.3 Trace
@@ -527,6 +531,34 @@ const MVP_CONFIG: MatchConfig = {
   disconnectGraceSec: 30, lobbyFillTimeoutSec: 60,
 }
 ```
+
+### 12.1 Balance rationale — replaces spec §11's 850/2550 figures
+
+Spec §11 mixes two meanings of "85%": 85% of the 1000-unit lane cap (850) and 85% of a
+tap rate. They are not the same number, and tier-1-only play reaches neither.
+
+**The crew baseline is the mixed-tier optimum, not tier 1 alone.** At the assumed 4 taps
+per second and 85% efficiency a player gets 612 taps in a match and holds 1200 credits:
+
+```
+maximise  t1 + 3·t2   subject to   t1 + t2 ≤ 612 (taps)
+                                   t1 + 4·t2 ≤ 1200 (credits)
+→ t1 = 416, t2 = 196 → 1004 units, exactly 1200 credits spent
+```
+
+That hits the lane cap. Three crew playing well put ~3000 on the board against a 2400
+target, so the impostor must destroy 600 net units: roughly 900 credits of framing,
+leaving ~300 for cover. That is spec §11's conclusion, reached by correct arithmetic.
+
+**Tier 2 is load-bearing, not a luxury.** It converts credits into units at 3 per tap, so
+the binding constraint is the fixed 1200 credits rather than the thumb. Tier-1-only play
+leaves 588 credits unspent and finishes around 1836 — a losing line, not a baseline.
+
+**The win target is insensitive to the tap rate.** The optimum is 1004 units per lane at
+4 taps/sec, 953 at 3, and 926 at 2.5. **Do not lower the win target from 2400** on the
+strength of a tap-rate measurement; dial #1 in spec §16 matters far less than it claims.
+
+`test/probes/balance.probe.test.ts` prints both lines every run and asserts nothing.
 
 ---
 
