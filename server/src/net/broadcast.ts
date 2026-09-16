@@ -1,6 +1,6 @@
 import type { MatchEvent, Rejection } from '../engine/events.js'
 import { matchEndPayload } from '../engine/match-end.js'
-import { privateView, publicView } from '../engine/selectors.js'
+import { boardView, privateView } from '../engine/selectors.js'
 import type { PlayerId } from '../engine/state.js'
 import type { RuntimeMatch } from '../match/registry.js'
 import type { ConnectionRegistry } from './auth.js'
@@ -64,10 +64,21 @@ export function broadcastTick(
   match: RuntimeMatch,
   events: readonly MatchEvent[],
 ): void {
-  emitter.toRoom(match.matchId, 'BOARD_UPDATE', { ...envelope(match), board: publicView(match.state) })
+  emitter.toRoom(match.matchId, 'BOARD_UPDATE', { ...envelope(match), board: boardView(match.state, match.tick) })
 
   for (const event of events) {
     switch (event.type) {
+      case 'CHAT_POSTED':
+        // Pushed once, when it is posted. Clients accumulate their own history; only a reconnecting
+        // player needs the backlog, and RESUME_STATE carries it.
+        emitter.toRoom(match.matchId, 'CHAT_MESSAGE', {
+          ...envelope(match),
+          from: event.playerId,
+          text: event.text,
+          tick: event.tick,
+        })
+        break
+
       case 'TAPS_APPLIED':
         sendCredits(emitter, connections, match, event.playerId)
         break

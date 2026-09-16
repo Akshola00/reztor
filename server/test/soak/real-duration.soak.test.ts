@@ -12,6 +12,20 @@ const MAX_WAIT_MS = 8 * 60 * 1000
 
 const mb = (bytes: number): string => `${(bytes / 1024 / 1024).toFixed(1)} MB`
 
+// Broken down by code: next week these are the main signal for client bugs, so a lump total
+// would hide exactly what matters.
+function rejectionSummary(bots: readonly Bot[]): string {
+  const byCode = new Map<string, number>()
+  for (const bot of bots) {
+    for (const [code, count] of Object.entries(bot.stats().rejections)) {
+      byCode.set(code, (byCode.get(code) ?? 0) + count)
+    }
+  }
+  if (byCode.size === 0) return '0'
+  const total = [...byCode.values()].reduce((sum, count) => sum + count, 0)
+  return `${total}  (${[...byCode].map(([code, count]) => `${code} ${count}`).join(', ')})`
+}
+
 describe('one full match at real duration', () => {
   it('holds its clock for 1440 ticks with four bots on real sockets', async () => {
     const warnings: { level: Level; message: string; fields: LogFields }[] = []
@@ -75,7 +89,7 @@ describe('one full match at real duration', () => {
         `  broadcasts         ${metrics.roomBroadcasts} to rooms + ${metrics.privateSends} private = ${metrics.roomBroadcasts + metrics.privateSends}`,
         `  peak RSS           ${mb(peakRss)}`,
         `  bot activity       ${bots.map((bot) => `${bot.stats().taps}t/${bot.stats().siphons}s`).join('  ')}`,
-        `  rejections         ${bots.reduce((sum, bot) => sum + bot.stats().rejections, 0)}`,
+        `  rejections         ${rejectionSummary(bots)}`,
         `  warnings logged    ${warnings.length}${warnings.length === 0 ? '' : `  (${[...new Set(warnings.map((w) => w.message))].join('; ')})`}`,
         '',
       ].join('\n'),

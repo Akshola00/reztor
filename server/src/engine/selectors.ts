@@ -1,4 +1,4 @@
-import type { MatchConfig, Tier } from './config.js'
+import { TICKS_PER_SEC, type MatchConfig, type Tier } from './config.js'
 import type {
   ChatMessage,
   MatchPhase,
@@ -29,6 +29,16 @@ export type PublicView = {
 }
 
 export type RevealedVoteRound = { round: number; votes: Record<PlayerId, VoteTarget>; ejected: PlayerId | null }
+
+// What BOARD_UPDATE carries, 4 times a second. Everything here changes tick to tick.
+export type BoardView = {
+  round: number
+  stage: Stage
+  secondsLeft: number
+  lanes: { owner: PlayerId; units: number; dormant: boolean }[]
+  boardTotal: number
+  players: { id: PlayerId; name: string; status: PlayerStatus }[]
+}
 
 export type SiphonActivity = { siphons: number; selfSinks: number; destroyed: number }
 
@@ -107,6 +117,26 @@ export function publicView(state: MatchState): PublicView {
     chat: state.chat,
     voteHistory: revealVotes(state.voteHistory),
     resolution: state.resolution,
+  }
+}
+
+// The per-tick frame, and only what changes per tick. `config` is frozen at match start and rides
+// on MATCH_STARTED once; chat arrives as its own CHAT_MESSAGE event and clients keep their own
+// history. Resending either 4 times a second cost more than the lanes did.
+//
+// Deliberately a projection of publicView rather than a second read of state: it can therefore
+// never expose anything publicView does not, and the scramble differential in the secrets test
+// covers it for free.
+export function boardView(state: MatchState, tick: number): BoardView {
+  const { round, stage, lanes, boardTotal, players } = publicView(state)
+  return {
+    round,
+    stage,
+    // Whole seconds remaining, so a client renders a countdown without knowing what a tick is.
+    secondsLeft: Math.max(0, Math.ceil((state.stageEndsAtTick - tick) / TICKS_PER_SEC)),
+    lanes,
+    boardTotal,
+    players,
   }
 }
 

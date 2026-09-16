@@ -103,7 +103,11 @@
 <script>
 (function () {
   var socket = io({ transports: ['websocket'] });
-  var me = null, matchId = null, token = null, role = null, board = null;
+  var me = null, matchId = null, token = null, role = null;
+  // BOARD_UPDATE no longer carries these, so the client holds them itself: config arrives once on
+  // MATCH_STARTED, and chat accumulates from CHAT_MESSAGE. A reconnect reseeds both from
+  // RESUME_STATE, which is the only frame that still carries the backlog.
+  var board = null, config = null, chat = [];
 
   var $ = function (id) { return document.getElementById(id); };
 
@@ -133,24 +137,41 @@
     });
   }
 
-  ['MATCH_STARTED','RESUME_STATE','BOARD_UPDATE','STAGE_CHANGE','CREDITS','SIPHON_RESULT',
-   'TRACE_RESULT','VOTE_RESULT','MATCH_END','ACTION_REJECTED'].forEach(function (event) {
+  ['MATCH_STARTED','RESUME_STATE','BOARD_UPDATE','CHAT_MESSAGE','STAGE_CHANGE','CREDITS',
+   'SIPHON_RESULT','TRACE_RESULT','VOTE_RESULT','MATCH_END','ACTION_REJECTED'].forEach(function (event) {
     socket.on(event, function (payload) {
       log(event === 'ACTION_REJECTED' ? 'err' : 'in', event, payload);
+
       if (event === 'BOARD_UPDATE') { board = payload.board; render(); }
+
       if (event === 'MATCH_STARTED' || event === 'RESUME_STATE') {
         role = payload.view.you.role;
         me = payload.view.you.id;
-        board = payload.view;
+        config = payload.view.config;
+        chat = (payload.view.chat || []).slice();
         $('impostor').className = role === 'impostor' ? 'on' : '';
         $('who').textContent = me + ' — ' + role;
         wallet(payload.view.you);
-        render();
+        renderChat(true);
       }
+
+      if (event === 'CHAT_MESSAGE') {
+        chat.push({ from: payload.from, text: payload.text, tick: payload.tick });
+        renderChat(true);
+      }
+
       if (event === 'CREDITS') wallet(payload);
       notable(event, payload);
     });
   });
+
+  socket.on('connect', function () { log('in', 'connect', { id: socket.id }); });
+  socket.on('disconnect', function (reason) { log('err', 'disconnect', { reason: reason }); });
+
+  function wallet(you) {
+    $('wallet').textContent = 'credits ' + you.credits + '   spent ' + you.spent +
+      '   tier ' + you.tier + (you.traceUsed ? '   trace used' : '');
+  }
 
   function say(text) { $('status').textContent = text; }
 
@@ -192,9 +213,8 @@
   }
 
   var chatShown = -1;
-  function renderChat() {
-    var chat = (board && board.chat) || [];
-    if (chat.length === chatShown) return;
+  function renderChat(force) {
+    if (!force && chat.length === chatShown) return;
     chatShown = chat.length;
     $('chatlog').innerHTML = chat.map(function (message) {
       return '<div>' + escapeHtml(nameOf(message.from)) + ': ' + escapeHtml(message.text) + '</div>';
@@ -202,37 +222,29 @@
     $('chatlog').scrollTop = $('chatlog').scrollHeight;
   }
 
-  socket.on('connect', function () { log('in', 'connect', { id: socket.id }); });
-  socket.on('disconnect', function (reason) { log('err', 'disconnect', { reason: reason }); });
-
-  function wallet(you) {
-    $('wallet').textContent = 'credits ' + you.credits + '   spent ' + you.spent +
-      '   tier ' + you.tier + (you.traceUsed ? '   trace used' : '');
-  }
-
   function render() {
     if (!board) return;
     $('stage').textContent = 'round ' + board.round + ' / ' + board.stage +
-      '   ends at tick ' + board.stageEndsAtTick;
+      '   ' + board.secondsLeft + 's left' +
+      '   board ' + board.boardTotal + ' / ' + (config ? config.winTarget : '?');
 
-    var total = 0;
     $('lanes').innerHTML = '';
+    var cap = config ? config.laneCapacity : 1000;
     board.lanes.forEach(function (lane) {
-      total += lane.units;
       var player = (board.players || []).filter(function (p) { return p.id === lane.owner; })[0];
       var wrap = document.createElement('div');
       wrap.className = 'lane';
-      wrap.innerHTML = '<div class="meta">' + (player ? player.name : lane.owner) +
+      wrap.innerHTML = '<div class="meta">' + escapeHtml(player ? player.name : lane.owner) +
         (lane.owner === me ? ' (you)' : '') + ' — ' + lane.units +
         (lane.dormant ? ' DORMANT' : '') + (player && player.status !== 'alive' ? ' ' + player.status : '') +
         '</div><div class="bar ' + (lane.owner === me ? 'mine' : '') + (lane.dormant ? ' dormant' : '') +
-        '"><i style="width:' + Math.min(100, lane.units / 10) + '%"></i></div>';
+        '"><i style="width:' + Math.min(100, (lane.units / cap) * 100) + '%"></i></div>';
       $('lanes').appendChild(wrap);
     });
-    $('stage').textContent += '   board ' + total + ' / ' + (board.config ? board.config.winTarget : '?');
 
     fillTargets();
     renderChat();
+
     var voting = board.stage === 'vote';
     $('votes').innerHTML = voting ? '<span class="meta">vote</span>' : '';
     if (voting) {

@@ -350,7 +350,8 @@ tick():
     check disconnect grace expiries
     check win conditions
     if match.tick >= stageEndsAtTick: advance stage (emit STAGE_CHANGE)
-    broadcast BOARD_UPDATE to the room
+    broadcast BOARD_UPDATE to the room  -- only what changed this tick, see §7
+    push CHAT_MESSAGE to the room for any chat posted this tick
     per-player private deltas (CREDITS, SIPHON_RESULT, TRACE_RESULT) to individual sockets
   sweep lobby fill timeouts
 ```
@@ -409,9 +410,24 @@ HEARTBEAT   {}
 **Server → client, added:**
 
 ```
-RESUME_STATE { fullPrivateView }   // sent on successful reconnect, see §8
+MATCH_STARTED  { fullPrivateView }   // carries config — the only time it is ever sent
+BOARD_UPDATE   { round, stage, secondsLeft, lanes, boardTotal, players }
+CHAT_MESSAGE   { from, text, tick }  // pushed once, when posted
+RESUME_STATE   { fullPrivateView }   // sent on successful reconnect, see §8
 ACTION_REJECTED { action, reason, code }
 ```
+
+**BOARD_UPDATE carries only what changes per tick. [D]** No `config`, no chat history. It
+goes out 4 times a second to every player, so anything constant on it is paid for 1440
+times a match: `config` alone is 410 bytes of a 1247-byte frame and never changes after
+the match starts, and carrying the chat backlog made the frame grow with the conversation
+— 6.5 KB and 35 MB a match by 60 messages, on a game whose middle stage is talking.
+`config` rides on MATCH_STARTED once; chat is pushed as CHAT_MESSAGE when posted and
+clients keep their own history. **RESUME_STATE still carries the full backlog [D]**, since
+a reconnecting player has none.
+
+`secondsLeft` is whole seconds, computed server-side, so a client renders a countdown
+without knowing what a tick is.
 
 `ACTION_REJECTED` is mandatory. A silently dropped action is indistinguishable from a
 bug on the client and will cost days of debugging. The one exception is clamp-dropped

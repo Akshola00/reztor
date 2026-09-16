@@ -22,7 +22,19 @@ const SKIP_VOTE_CHANCE = 0.3
 
 type Lane = { owner: string; units: number; dormant: boolean }
 type Player = { id: string; name: string; status: 'alive' | 'disconnected' | 'ejected' }
-type Board = { round: number; stage: 'tap' | 'chat' | 'vote'; lanes: Lane[]; players: Player[] }
+type Board = {
+  round: number
+  stage: 'tap' | 'chat' | 'vote'
+  secondsLeft: number
+  lanes: Lane[]
+  players: Player[]
+}
+
+// Credits the impostor holds back during round 2 so round 3 can still be spent on self-sinks.
+// 25 sinks at 12 credits: enough to be read as a pattern, not so much that framing is skipped.
+const SELF_SINK_RESERVE = 25 * 12
+const TAP_COST = { 1: 1, 2: 4 } as const
+const TRACE_COST = 200
 
 type Ticket = { code: string; matchId: string; playerId: string; sessionToken: string; started: boolean }
 
@@ -37,7 +49,14 @@ export type BotOptions = {
   onLog?: (line: string) => void
 }
 
-export type BotStats = { taps: number; siphons: number; traces: number; votes: number; rejections: number }
+export type BotStats = {
+  taps: number
+  siphons: number
+  traces: number
+  votes: number
+  // By rejection code: a bot driver whose rejections are not near zero is noise, not a signal.
+  rejections: Record<string, number>
+}
 
 export type Bot = {
   name: string
@@ -60,7 +79,7 @@ async function ackOf<T>(socket: Socket, event: string, payload: unknown): Promis
 
 export async function createBot(options: BotOptions): Promise<Bot> {
   const { url, name, strategy, rate, jitter, onLog = () => {} } = options
-  const stats: BotStats = { taps: 0, siphons: 0, traces: 0, votes: 0, rejections: 0 }
+  const stats: BotStats = { taps: 0, siphons: 0, traces: 0, votes: 0, rejections: {} }
 
   // No reconnection: a bot driver pointed at a dead port should say so immediately rather than
   // retry in the background while engine.io prints stack traces over the output.
@@ -84,23 +103,35 @@ export async function createBot(options: BotOptions): Promise<Bot> {
   let tapsSent = 0
   let stageKey = ''
   let tracedInRound2 = false
+  let credits = 0
+  // Costs emitted since the last CREDITS frame. Subtracting them is conservative — an action the
+  // server has already charged for is counted twice until the next frame — and under-spending by a
+  // few credits is the right way to be wrong when the point is to keep rejections at zero.
+  let pending = 0
   let running = true
   let resolveEnd: (value: unknown) => void = () => {}
   const ended = new Promise<unknown>((resolve) => {
     resolveEnd = resolve
   })
 
-  socket.on('MATCH_STARTED', (message: { view: { you: { role: string } } }) => {
+  socket.on('MATCH_STARTED', (message: { view: { you: { role: string; credits: number } } }) => {
     // A bot cannot choose to be the impostor — the seed does. Whoever it lands on plays the
     // impostor script regardless of the strategy they were configured with.
     isImpostor = message.view.you.role === 'impostor'
+    credits = message.view.you.credits
     onLog(`${name} is ${isImpostor ? 'IMPOSTOR' : 'crew'}`)
   })
   socket.on('BOARD_UPDATE', (message: { board: Board }) => {
     board = message.board
   })
+  // The server's number is authoritative and arrives after every accepted action, which also
+  // clears whatever was in flight when it was computed.
+  socket.on('CREDITS', (message: { credits: number }) => {
+    credits = message.credits
+    pending = 0
+  })
   socket.on('ACTION_REJECTED', (message: { action: string; code: string }) => {
-    stats.rejections += 1
+    stats.rejections[message.code] = (stats.rejections[message.code] ?? 0) + 1
     onLog(`${name} rejected ${message.action}: ${message.code}`)
   })
   socket.on('MATCH_END', (message: unknown) => {
@@ -132,12 +163,18 @@ export async function createBot(options: BotOptions): Promise<Bot> {
     }
   }
 
+  const affordable = (cost: number, reserve = 0): boolean => credits - pending - reserve >= cost
+
   const tap = (): void => {
-    if (board === null || board.stage !== 'tap') return
+    if (board === null || board.stage !== 'tap' || board.secondsLeft <= 0) return
     if (isImpostor && board.round > 1) return
     if (!wantsToTap(board.round)) return
     if (strategy === 'optimal') setTier(tapsSent < TIER_2_TAPS ? 2 : 1)
+    // Stop when broke rather than sending batches the server can only refuse.
+    const cost = TAP_COST[tier]
+    if (!affordable(cost)) return
     socket.emit('TAP_BATCH', { tier, count: 1, clientTs: Date.now() })
+    pending += cost
     tapsSent += 1
     stats.taps += 1
   }
@@ -152,36 +189,47 @@ export async function createBot(options: BotOptions): Promise<Bot> {
     }, jittered(1000 / rate, jitter))
   let timer = tapTimer()
 
+  // MVP_CONFIG siphon costs. The bot only needs them to avoid overspending; the server charges.
+  const costOther = 6
+  const costSelf = 12
+
   const otherLanes = (): Lane[] => (board?.lanes ?? []).filter((lane) => lane.owner !== playerId)
   const fullest = (lanes: Lane[]): Lane | undefined => [...lanes].sort((a, b) => b.units - a.units)[0]
 
   const sabotage = (): void => {
     if (!isImpostor || board === null || board.stage !== 'tap' || board.round < 2) return
+    if (board.secondsLeft <= 0) return
     const targets = otherLanes().filter((lane) => !lane.dormant)
     const source = fullest(targets)
     if (source === undefined) return
 
     if (board.round === 2) {
-      // Frame: move units from the fullest crew lane into another crew lane, so the beneficiary
-      // surge points at someone who did nothing.
-      const sink = fullest(targets.filter((lane) => lane.owner !== source.owner))
-      if (sink !== undefined) {
-        socket.emit('SIPHON', { source: source.owner, sink: sink.owner })
-        stats.siphons += 1
-      }
-      if (!tracedInRound2) {
+      // Round 2 spends down to the reserve and no further, so round 3 still has self-sinks to make.
+      if (!tracedInRound2 && affordable(TRACE_COST, SELF_SINK_RESERVE)) {
         tracedInRound2 = true
         const target = pick(targets)
         if (target !== undefined) {
           socket.emit('TRACE', { target: target.owner })
+          pending += TRACE_COST
           stats.traces += 1
         }
+        return
+      }
+      // Frame: move units from the fullest crew lane into another crew lane, so the beneficiary
+      // surge points at someone who did nothing.
+      const sink = fullest(targets.filter((lane) => lane.owner !== source.owner))
+      if (sink !== undefined && affordable(costOther, SELF_SINK_RESERVE)) {
+        socket.emit('SIPHON', { source: source.owner, sink: sink.owner })
+        pending += costOther
+        stats.siphons += 1
       }
       return
     }
 
     // Round 3: sink into own lane. Costs double and looks terrible if traced, which is the point.
+    if (!affordable(costSelf)) return
     socket.emit('SIPHON', { source: source.owner, sink: playerId })
+    pending += costSelf
     stats.siphons += 1
   }
 
@@ -278,7 +326,12 @@ async function main(): Promise<void> {
   console.log(`match over: ${summary.reveal?.resolution.reason ?? 'voided'}`)
   for (const bot of bots) {
     const { taps, siphons, traces, votes, rejections } = bot.stats()
-    console.log(`  ${bot.name}: taps=${taps} siphons=${siphons} traces=${traces} votes=${votes} rejected=${rejections}`)
+    const refused = Object.entries(rejections)
+      .map(([code, n]) => `${code}:${n}`)
+      .join(' ')
+    console.log(
+      `  ${bot.name}: taps=${taps} siphons=${siphons} traces=${traces} votes=${votes} rejected=${refused || 'none'}`,
+    )
   }
   for (const bot of bots) bot.stop()
   process.exit(0)
