@@ -1,0 +1,301 @@
+{
+  "matchId": "impostor-timeout-win",
+  "config": {
+    "laneCapacity": 1000,
+    "winTarget": 2400,
+    "tapTiers": {
+      "1": {
+        "cost": 1,
+        "units": 1
+      },
+      "2": {
+        "cost": 4,
+        "units": 3
+      }
+    },
+    "tapRatePerSec": 6,
+    "siphon": {
+      "pull": 10,
+      "deliver": 6,
+      "costOther": 6,
+      "costSelf": 12,
+      "ratePerSec": 4
+    },
+    "trace": {
+      "cost": 200,
+      "perPlayer": 1
+    },
+    "dormantEfficiencyPct": 50,
+    "rounds": 3,
+    "stageDurations": {
+      "tap": 60,
+      "chat": 45,
+      "vote": 15
+    },
+    "buyInSkr": 12,
+    "creditsPerSkr": 100,
+    "rakeBps": 0,
+    "disconnectGraceSec": 30,
+    "lobbyFillTimeoutSec": 60
+  },
+  "phase": "SETTLING",
+  "round": 3,
+  "stage": "vote",
+  "stageEndsAtTick": 1440,
+  "tick": 1440,
+  "players": {
+    "p1": {
+      "id": "p1",
+      "name": "Player p1",
+      "wallet": null,
+      "credits": 480,
+      "spent": 720,
+      "tier": 1,
+      "status": "alive",
+      "disconnectedAtTick": null,
+      "traceUsed": false,
+      "tapsAccepted": 720,
+      "tapsDropped": 0,
+      "unitsTapped": 720,
+      "tapBucket": {
+        "tokens": 20,
+        "updatedAtTick": 1200
+      },
+      "siphonBucket": {
+        "tokens": 16,
+        "updatedAtTick": 0
+      },
+      "lastChatTick": null
+    },
+    "p2": {
+      "id": "p2",
+      "name": "Player p2",
+      "wallet": null,
+      "credits": 1140,
+      "spent": 60,
+      "tier": 1,
+      "status": "alive",
+      "disconnectedAtTick": null,
+      "traceUsed": false,
+      "tapsAccepted": 0,
+      "tapsDropped": 0,
+      "unitsTapped": 0,
+      "tapBucket": {
+        "tokens": 24,
+        "updatedAtTick": 0
+      },
+      "siphonBucket": {
+        "tokens": 12,
+        "updatedAtTick": 1090
+      },
+      "lastChatTick": null
+    },
+    "p3": {
+      "id": "p3",
+      "name": "Player p3",
+      "wallet": null,
+      "credits": 480,
+      "spent": 720,
+      "tier": 1,
+      "status": "alive",
+      "disconnectedAtTick": null,
+      "traceUsed": false,
+      "tapsAccepted": 720,
+      "tapsDropped": 0,
+      "unitsTapped": 720,
+      "tapBucket": {
+        "tokens": 20,
+        "updatedAtTick": 1200
+      },
+      "siphonBucket": {
+        "tokens": 16,
+        "updatedAtTick": 0
+      },
+      "lastChatTick": null
+    },
+    "p4": {
+      "id": "p4",
+      "name": "Player p4",
+      "wallet": null,
+      "credits": 480,
+      "spent": 720,
+      "tier": 1,
+      "status": "alive",
+      "disconnectedAtTick": null,
+      "traceUsed": false,
+      "tapsAccepted": 720,
+      "tapsDropped": 0,
+      "unitsTapped": 720,
+      "tapBucket": {
+        "tokens": 20,
+        "updatedAtTick": 1200
+      },
+      "siphonBucket": {
+        "tokens": 16,
+        "updatedAtTick": 0
+      },
+      "lastChatTick": null
+    }
+  },
+  "lanes": {
+    "p1": {
+      "owner": "p1",
+      "units": 780,
+      "dormant": false,
+      "roundStartUnits": 480,
+      "roundDelta": {
+        "natural": 240,
+        "foreign": 0,
+        "received": 60,
+        "drained": 0
+      },
+      "prevRoundDelta": {
+        "natural": 240,
+        "foreign": 0,
+        "received": 0,
+        "drained": 0
+      },
+      "dormantRemainder": {}
+    },
+    "p2": {
+      "owner": "p2",
+      "units": 0,
+      "dormant": false,
+      "roundStartUnits": 0,
+      "roundDelta": {
+        "natural": 0,
+        "foreign": 0,
+        "received": 0,
+        "drained": 0
+      },
+      "prevRoundDelta": {
+        "natural": 0,
+        "foreign": 0,
+        "received": 0,
+        "drained": 0
+      },
+      "dormantRemainder": {}
+    },
+    "p3": {
+      "owner": "p3",
+      "units": 720,
+      "dormant": false,
+      "roundStartUnits": 480,
+      "roundDelta": {
+        "natural": 240,
+        "foreign": 0,
+        "received": 0,
+        "drained": 0
+      },
+      "prevRoundDelta": {
+        "natural": 240,
+        "foreign": 0,
+        "received": 0,
+        "drained": 0
+      },
+      "dormantRemainder": {}
+    },
+    "p4": {
+      "owner": "p4",
+      "units": 620,
+      "dormant": false,
+      "roundStartUnits": 480,
+      "roundDelta": {
+        "natural": 240,
+        "foreign": 0,
+        "received": 0,
+        "drained": 100
+      },
+      "prevRoundDelta": {
+        "natural": 240,
+        "foreign": 0,
+        "received": 0,
+        "drained": 0
+      },
+      "dormantRemainder": {}
+    }
+  },
+  "roleSeed": "5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed",
+  "impostorId": "p2",
+  "chat": [],
+  "votes": {
+    "p1": "p2",
+    "p3": "p4",
+    "p4": "p3",
+    "p2": "p1"
+  },
+  "voteHistory": [
+    {
+      "round": 1,
+      "votes": {
+        "p1": {
+          "cast": "skip",
+          "counted": "skip"
+        },
+        "p2": {
+          "cast": "skip",
+          "counted": "skip"
+        },
+        "p3": {
+          "cast": "skip",
+          "counted": "skip"
+        },
+        "p4": {
+          "cast": "skip",
+          "counted": "skip"
+        }
+      },
+      "ejected": null
+    },
+    {
+      "round": 2,
+      "votes": {
+        "p1": {
+          "cast": "p4",
+          "counted": "p4"
+        },
+        "p2": {
+          "cast": "skip",
+          "counted": "skip"
+        },
+        "p3": {
+          "cast": "p4",
+          "counted": "p4"
+        },
+        "p4": {
+          "cast": "p1",
+          "counted": "p1"
+        }
+      },
+      "ejected": null
+    },
+    {
+      "round": 3,
+      "votes": {
+        "p1": {
+          "cast": "p2",
+          "counted": "p2"
+        },
+        "p2": {
+          "cast": "p1",
+          "counted": "p1"
+        },
+        "p3": {
+          "cast": "p4",
+          "counted": "p4"
+        },
+        "p4": {
+          "cast": "p3",
+          "counted": "p3"
+        }
+      },
+      "ejected": null
+    }
+  ],
+  "resolution": {
+    "kind": "won",
+    "winner": "impostor",
+    "reason": "ROUNDS_EXHAUSTED",
+    "tick": 1440
+  }
+}

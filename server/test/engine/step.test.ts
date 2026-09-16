@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { Intent } from '../../src/engine/events.js'
-import type { PlayerId, VoteTarget } from '../../src/engine/state.js'
+import type { Intent, MatchEvent } from '../../src/engine/events.js'
+import type { MatchState, PlayerId, VoteTarget } from '../../src/engine/state.js'
 import { processTick } from '../../src/engine/step.js'
 import { checkedTick, runTicks } from '../helpers/checked.js'
 import { crew, lane, logOf, newMatch, player, seedLane } from '../helpers/fixtures.js'
@@ -145,6 +145,41 @@ describe('processTick order of operations', () => {
       expect(t.resolution).toMatchObject({ winner: 'crew', reason: 'IMPOSTOR_TIMED_OUT' })
       expect(logOf(t, 'GRACE_EXPIRED').map((e) => e.playerId)).toEqual(member < imp ? [member, imp] : [imp])
     }
+  })
+
+  it('calls onCommit after every commit, in order, with each prev chained to the last next', () => {
+    let s = newMatch()
+    const [a, b] = crew(s)
+    s = checkedTick(s, 120, [drop(a)]).state
+    const calls: [MatchState, MatchState, MatchEvent][] = []
+    const { state } = processTick(s, 240, [tapOnce(b), tapOnce('ghost')], (prev, next, event) =>
+      calls.push([prev, next, event]),
+    )
+    expect(calls.map(([, , event]) => event.type)).toEqual(['TAPS_APPLIED', 'GRACE_EXPIRED', 'STAGE_ADVANCED'])
+    expect(calls[0]?.[0]).toBe(s)
+    calls.slice(1).forEach(([prev], i) => expect(prev).toBe(calls[i]?.[1]))
+    expect(calls.at(-1)?.[1]).toBe(state)
+  })
+
+  it('onCommit sees the triggering event with its resolution already applied in next', () => {
+    const s = runTicks(newMatch(), 1, 1439)
+    const calls: [MatchState, MatchEvent][] = []
+    processTick(s, 1440, [], (_prev, next, event) => calls.push([next, event]))
+    expect(calls.map(([, event]) => event.type)).toEqual(['VOTE_RESOLVED'])
+    expect(calls[0]?.[0].eventLog.slice(-2).map((e) => e.type)).toEqual(['VOTE_RESOLVED', 'MATCH_RESOLVED'])
+  })
+
+  it('onCommit observes intermediate states that no tick-boundary check could see', () => {
+    const s = runTicks(newMatch(), 1, 479)
+    const seen: { stage: string; closedRounds: number }[] = []
+    const { state } = processTick(s, 480, [], (_prev, next) =>
+      seen.push({ stage: next.stage, closedRounds: next.voteHistory.length }),
+    )
+    expect(seen).toEqual([
+      { stage: 'vote', closedRounds: 1 },
+      { stage: 'tap', closedRounds: 1 },
+    ])
+    expect(state.stage).toBe('tap')
   })
 
   it('refuses a tick behind the match clock', () => {

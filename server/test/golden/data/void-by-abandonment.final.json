@@ -1,0 +1,208 @@
+{
+  "matchId": "void-by-abandonment",
+  "config": {
+    "laneCapacity": 1000,
+    "winTarget": 2400,
+    "tapTiers": {
+      "1": {
+        "cost": 1,
+        "units": 1
+      },
+      "2": {
+        "cost": 4,
+        "units": 3
+      }
+    },
+    "tapRatePerSec": 6,
+    "siphon": {
+      "pull": 10,
+      "deliver": 6,
+      "costOther": 6,
+      "costSelf": 12,
+      "ratePerSec": 4
+    },
+    "trace": {
+      "cost": 200,
+      "perPlayer": 1
+    },
+    "dormantEfficiencyPct": 50,
+    "rounds": 3,
+    "stageDurations": {
+      "tap": 60,
+      "chat": 45,
+      "vote": 15
+    },
+    "buyInSkr": 12,
+    "creditsPerSkr": 100,
+    "rakeBps": 0,
+    "disconnectGraceSec": 30,
+    "lobbyFillTimeoutSec": 60
+  },
+  "phase": "VOIDING",
+  "round": 1,
+  "stage": "chat",
+  "stageEndsAtTick": 420,
+  "tick": 270,
+  "players": {
+    "p1": {
+      "id": "p1",
+      "name": "Player p1",
+      "wallet": null,
+      "credits": 1100,
+      "spent": 100,
+      "tier": 1,
+      "status": "ejected",
+      "disconnectedAtTick": null,
+      "traceUsed": false,
+      "tapsAccepted": 100,
+      "tapsDropped": 0,
+      "unitsTapped": 100,
+      "tapBucket": {
+        "tokens": 20,
+        "updatedAtTick": 100
+      },
+      "siphonBucket": {
+        "tokens": 16,
+        "updatedAtTick": 0
+      },
+      "lastChatTick": null
+    },
+    "p2": {
+      "id": "p2",
+      "name": "Player p2",
+      "wallet": null,
+      "credits": 960,
+      "spent": 240,
+      "tier": 1,
+      "status": "alive",
+      "disconnectedAtTick": null,
+      "traceUsed": false,
+      "tapsAccepted": 240,
+      "tapsDropped": 0,
+      "unitsTapped": 240,
+      "tapBucket": {
+        "tokens": 20,
+        "updatedAtTick": 240
+      },
+      "siphonBucket": {
+        "tokens": 16,
+        "updatedAtTick": 0
+      },
+      "lastChatTick": null
+    },
+    "p3": {
+      "id": "p3",
+      "name": "Player p3",
+      "wallet": null,
+      "credits": 1050,
+      "spent": 150,
+      "tier": 1,
+      "status": "ejected",
+      "disconnectedAtTick": null,
+      "traceUsed": false,
+      "tapsAccepted": 150,
+      "tapsDropped": 0,
+      "unitsTapped": 150,
+      "tapBucket": {
+        "tokens": 20,
+        "updatedAtTick": 150
+      },
+      "siphonBucket": {
+        "tokens": 16,
+        "updatedAtTick": 0
+      },
+      "lastChatTick": null
+    },
+    "p4": {
+      "id": "p4",
+      "name": "Player p4",
+      "wallet": null,
+      "credits": 960,
+      "spent": 240,
+      "tier": 1,
+      "status": "alive",
+      "disconnectedAtTick": null,
+      "traceUsed": false,
+      "tapsAccepted": 240,
+      "tapsDropped": 0,
+      "unitsTapped": 240,
+      "tapBucket": {
+        "tokens": 20,
+        "updatedAtTick": 240
+      },
+      "siphonBucket": {
+        "tokens": 16,
+        "updatedAtTick": 0
+      },
+      "lastChatTick": null
+    }
+  },
+  "lanes": {
+    "p1": {
+      "owner": "p1",
+      "units": 100,
+      "dormant": true,
+      "roundStartUnits": 0,
+      "roundDelta": {
+        "natural": 100,
+        "foreign": 0,
+        "received": 0,
+        "drained": 0
+      },
+      "prevRoundDelta": null,
+      "dormantRemainder": {}
+    },
+    "p2": {
+      "owner": "p2",
+      "units": 240,
+      "dormant": false,
+      "roundStartUnits": 0,
+      "roundDelta": {
+        "natural": 240,
+        "foreign": 0,
+        "received": 0,
+        "drained": 0
+      },
+      "prevRoundDelta": null,
+      "dormantRemainder": {}
+    },
+    "p3": {
+      "owner": "p3",
+      "units": 150,
+      "dormant": true,
+      "roundStartUnits": 0,
+      "roundDelta": {
+        "natural": 150,
+        "foreign": 0,
+        "received": 0,
+        "drained": 0
+      },
+      "prevRoundDelta": null,
+      "dormantRemainder": {}
+    },
+    "p4": {
+      "owner": "p4",
+      "units": 240,
+      "dormant": false,
+      "roundStartUnits": 0,
+      "roundDelta": {
+        "natural": 240,
+        "foreign": 0,
+        "received": 0,
+        "drained": 0
+      },
+      "prevRoundDelta": null,
+      "dormantRemainder": {}
+    }
+  },
+  "roleSeed": "5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed",
+  "impostorId": "p2",
+  "chat": [],
+  "votes": {},
+  "voteHistory": [],
+  "resolution": {
+    "kind": "voided",
+    "reason": "ABANDONED",
+    "tick": 270
+  }
+}

@@ -5,8 +5,8 @@ import {
   tapBucketParams,
 } from '../../src/engine/config.js'
 import { deriveImpostor } from '../../src/engine/rules.js'
+import { matchEndView } from '../../src/engine/selectors.js'
 import type { MatchState, PlayerId, TokenBucket } from '../../src/engine/state.js'
-import { assertSecretsHidden } from './secrets.js'
 
 function fail(state: MatchState, message: string): never {
   const last = state.eventLog.at(-1)
@@ -107,5 +107,8 @@ export function assertInvariants(prev: MatchState | null, next: MatchState): voi
     if (p.spent !== logged) fail(next, `credit conservation: player ${p.id} spent ${p.spent} ≠ logged ${logged}`)
   }
 
-  assertSecretsHidden(next)
+  // The reveal exists exactly once the match is over, never before.
+  if ((matchEndView(next) === null) !== (next.resolution === null)) {
+    fail(next, 'matchEndView must be null exactly when resolution is null')
+  }
 }

@@ -15,6 +15,7 @@ import {
 import type { LaneState, MatchState, PlayerId, PlayerState, Stage, VoteTarget } from '../../src/engine/state.js'
 import { accept, checkedCommit } from './checked.js'
 import { assertInvariants } from './invariants.js'
+import { assertSecretsHidden } from './secrets.js'
 
 export const PLAYER_IDS: readonly PlayerId[] = ['p1', 'p2', 'p3', 'p4']
 export const SEED = '5eed'.repeat(16)
@@ -36,6 +37,7 @@ export function matchStarted(config: Partial<MatchConfig> = {}, roleSeed = SEED)
 export function newMatch(config: Partial<MatchConfig> = {}): MatchState {
   const state = initialState(matchStarted(config))
   assertInvariants(null, state)
+  assertSecretsHidden(state)
   return state
 }
 

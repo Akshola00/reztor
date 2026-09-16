@@ -2,8 +2,9 @@ import type { Intent, MatchEvent, Rejection, RejectionCode } from '../../src/eng
 import { reduce } from '../../src/engine/reduce.js'
 import type { Result } from '../../src/engine/result.js'
 import type { MatchState } from '../../src/engine/state.js'
-import { commit, processTick, type TickResult } from '../../src/engine/step.js'
+import { commit, processTick, type CommitHook, type TickResult } from '../../src/engine/step.js'
 import { assertInvariants } from './invariants.js'
+import { assertSecretsHidden } from './secrets.js'
 
 // Freezing the input turns any accidental mutation inside the engine into a thrown TypeError.
 export function deepFreeze<T>(value: T): T {
@@ -14,11 +15,19 @@ export function deepFreeze<T>(value: T): T {
   return value
 }
 
+// Every CLAUDE.md §13.2 check, run after each individual commit. Freezing `next` means the commit
+// after it in the same tick is mutation-checked too.
+export const verifyCommit: CommitHook = (prev, next) => {
+  deepFreeze(next)
+  assertInvariants(prev, next)
+  assertSecretsHidden(next)
+}
+
 export function checkedReduce(state: MatchState, event: MatchEvent): MatchState {
   deepFreeze(state)
   deepFreeze(event)
   const next = reduce(state, event)
-  assertInvariants(state, next)
+  verifyCommit(state, next, event)
   return next
 }
 
@@ -26,15 +35,15 @@ export function checkedCommit(state: MatchState, event: MatchEvent): MatchState 
   deepFreeze(state)
   deepFreeze(event)
   const next = commit(state, event)
-  assertInvariants(state, next)
+  verifyCommit(state, next, event)
   return next
 }
 
+// Checks after every commit inside the tick, not at its boundary, so a violation cannot be
+// repaired by a later commit in the same tick before anyone looks.
 export function checkedTick(state: MatchState, tick: number, intents: Intent[] = []): TickResult {
   deepFreeze(state)
-  const result = processTick(state, tick, intents)
-  if (result.state !== state) assertInvariants(state, result.state)
-  return result
+  return processTick(state, tick, intents, verifyCommit)
 }
 
 export function runTicks(

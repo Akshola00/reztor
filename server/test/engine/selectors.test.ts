@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { privateView, publicView } from '../../src/engine/selectors.js'
+import { matchEndView, privateView, publicView } from '../../src/engine/selectors.js'
 import type { MatchState, PlayerId } from '../../src/engine/state.js'
 import { accept } from '../helpers/checked.js'
 import { assertSecretsHidden } from '../helpers/secrets.js'
 import {
+  SEED,
   advanceStage,
   closeVote,
   crew,
   disconnect,
+  ejectByGrace,
   expireDue,
   newMatch,
   seedLane,
@@ -95,6 +97,58 @@ describe('privateView', () => {
 
   it('returns null for an unknown player', () => {
     expect(privateView(newMatch(), 'ghost')).toBeNull()
+  })
+})
+
+describe('matchEndView', () => {
+  it('is null while the match is live', () => {
+    expect(matchEndView(newMatch())).toBeNull()
+    expect(matchEndView(busyMatch().s)).toBeNull()
+  })
+
+  it('reveals everything in spec §15 once the match resolves', () => {
+    // p2 is the impostor for the fixture seed.
+    let s = newMatch()
+    s = seedLane(s, 'p1', 40, 1)
+    s = accept(s, siphon(s, 'p2', 'p1', 'p3', 2)).state
+    s = accept(s, siphon(s, 'p2', 'p1', 'p2', 2)).state
+    s = accept(s, siphon(s, 'p2', 'p1', 'p3', 2)).state
+    s = startRound(s, 2)
+    s = accept(s, trace(s, 'p3', 'p1', 481)).state
+    s = advanceStage(s, 900, 2, 'vote')
+    s = accept(s, vote(s, 'p1', 'p2', 901)).state
+    s = accept(s, vote(s, 'p3', 'p4', 901)).state
+    s = accept(s, vote(s, 'p4', 'p2', 902)).state
+    s = accept(s, vote(s, 'p3', 'p2', 903)).state
+    s = closeVote(s, 960)
+
+    expect(matchEndView(s)).toEqual({
+      matchId: 'match-1',
+      resolution: { kind: 'won', winner: 'crew', reason: 'IMPOSTOR_EJECTED', tick: 960 },
+      impostorId: 'p2',
+      roleSeed: SEED,
+      board: { total: 28, capacity: 4000, winTarget: 2400, basisPoints: 70 },
+      players: [
+        { id: 'p1', name: 'Player p1', role: 'crew', status: 'alive', creditsSpent: 40, unitsContributed: 40, finalLane: 10 },
+        { id: 'p2', name: 'Player p2', role: 'impostor', status: 'ejected', creditsSpent: 24, unitsContributed: 0, finalLane: 6 },
+        { id: 'p3', name: 'Player p3', role: 'crew', status: 'alive', creditsSpent: 200, unitsContributed: 0, finalLane: 12 },
+        { id: 'p4', name: 'Player p4', role: 'crew', status: 'alive', creditsSpent: 0, unitsContributed: 0, finalLane: 0 },
+      ],
+      impostor: { unitsDestroyed: 12, siphons: 3, selfSinks: 1 },
+      traces: [{ round: 2, tick: 481, purchaser: 'p3', target: 'p1', result: 'natural' }],
+      voteHistory: [{ round: 2, votes: { p1: 'p2', p2: 'skip', p3: 'p2', p4: 'p2' }, ejected: 'p2' }],
+    })
+  })
+
+  it('reveals a voided match too, with the vote shown as cast', () => {
+    let s = newMatch()
+    s = advanceStage(disconnect(s, 'p4', 330), 420, 1, 'vote')
+    s = accept(s, vote(s, 'p1', 'p4', 421)).state
+    s = closeVote(expireDue(s, 450), 480)
+    s = ejectByGrace(s, 'p3', 500)
+    const view = matchEndView(s)
+    expect(view?.resolution).toEqual({ kind: 'voided', reason: 'ABANDONED', tick: 620 })
+    expect(view?.voteHistory).toEqual([{ round: 1, votes: { p1: 'p4', p2: 'skip', p3: 'skip' }, ejected: null }])
   })
 })
 

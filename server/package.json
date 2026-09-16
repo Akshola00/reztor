@@ -10,7 +10,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:update-golden": "UPDATE_GOLDEN=1 vitest run test/golden"
   },
   "dependencies": {
     "zod": "^4.6.5"
