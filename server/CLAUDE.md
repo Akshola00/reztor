@@ -66,10 +66,8 @@ src/
   match/
     registry.ts      # Map<matchId, RuntimeMatch>
     tick.ts          # the single 250ms loop
-    lobby.ts         # matchmaking + fill timeout
-  db/
-    schema.ts
-    snapshot.ts
+    lobby.ts         # invite-code lobbies + fill timeout
+    escrow.ts        # EscrowProvider interface + in-memory fake
   chain/
     client.ts        # Anchor program wrapper
     settle.ts        # settlement queue, idempotent
@@ -354,7 +352,7 @@ tick():
     if match.tick >= stageEndsAtTick: advance stage (emit STAGE_CHANGE)
     broadcast BOARD_UPDATE to the room
     per-player private deltas (CREDITS, SIPHON_RESULT, TRACE_RESULT) to individual sockets
-  every 40 ticks (10s): queue snapshot write (async, never awaited in the loop)
+  sweep lobby fill timeouts
 ```
 
 Inbound messages are **queued, not applied on arrival**. Handlers push an intent onto
@@ -388,6 +386,8 @@ Spec §13.2 is the baseline. Additions required for a working server:
 **Client → server (all Zod-validated, all reject on unknown fields):**
 
 ```
+CREATE_LOBBY { name, wallet? }           // acked with { code, matchId, playerId, sessionToken }
+JOIN_LOBBY   { code, name, wallet? }     // same ack; the 4th seat starts the match
 JOIN        { matchId, sessionToken }
 TAP_BATCH   { tier, count, lane?, clientTs }   // lane defaults to sender's own; any
                                                // other lane must be dormant
@@ -411,12 +411,21 @@ HEARTBEAT   {}
 ```
 RESUME_STATE { fullPrivateView }   // sent on successful reconnect, see §8
 ACTION_REJECTED { action, reason, code }
-SNAPSHOT_LAG { }                   // optional, dev only
 ```
 
 `ACTION_REJECTED` is mandatory. A silently dropped action is indistinguishable from a
 bug on the client and will cost days of debugging. The one exception is clamp-dropped
 taps, which are dropped silently by design (spec §5.1).
+
+It carries two kinds of `code`. A `RejectionCode` from the engine means a rule refused the
+action. A transport code — `NOT_JOINED`, `NO_MATCH`, `INVALID_PAYLOAD`, `TOO_MANY_MESSAGES`
+— means the message never reached the engine, and those carry `matchId: null` when the
+socket has no match yet.
+
+**Every socket has a plain message allowance: burst 40, 20 per second. [D]** It is separate
+from the game's token buckets, which clamp play rather than traffic: a player at zero
+credits can still send, and without this could flood the socket with batches that only ever
+come back rejected.
 
 Every outbound message carries `matchId` and `serverTick`.
 
@@ -454,14 +463,16 @@ impostor, crew win immediately.
 
 ## 9. Persistence
 
-Postgres tables: `matches`, `match_events`, `match_snapshots`, `settlements`.
+**None in the MVP.** No Postgres, no snapshots, no event-log writes. In-memory state is
+authoritative and a match that dies with the process is gone.
 
-- Snapshot every 10s and at every round boundary. Async, fire-and-forget with error
-  logging — never block a tick on the DB.
-- Append the event log in batches on the same cadence.
-- Recovery: load latest snapshot, replay events after its tick. If replay fails or the
-  snapshot is older than 30s, void the match.
-- `settlements` rows are the idempotency ledger — see §10.
+§0.3 already keeps the database off the tap path, and `MatchState.eventLog` is a complete
+source of truth for settlement and replay for as long as the process lives — so the
+database buys durability alone, and durability is not what a demo needs. Persistence comes
+back as one whole task (tables, write cadence, and recovery-or-void) rather than as
+half-wired scaffolding carried along now.
+
+Idempotency for settlement therefore lives in memory too — see §10.
 
 ---
 
@@ -504,7 +515,6 @@ gets subtly wrong.
 
 Also void, unconditionally:
 
-- Snapshot recovery failure
 - Settlement payload fails validation (refunds + payouts + rake + dust ≠ escrow)
 
 That last check runs before every settlement. If the numbers do not balance exactly,
@@ -593,6 +603,12 @@ The engine is pure, so there is no excuse for thin tests.
    final tick; disconnect during the vote stage.
 4. **Settlement reconciliation test** — for every golden replay, escrow in equals
    refunds + payouts + rake out, to the credit.
+5. **`net/` and `match/` are tested by integration only.** Four real Socket.IO clients
+   through a full match, including one disconnect with reconnect and one grace expiry.
+   Do not unit-test the handlers: they are a thin validate-and-queue layer, so a test with
+   a mocked socket asserts the mock rather than the server. The engine's purity is what
+   makes this affordable — everything worth asserting about the rules is already covered
+   above, and these tests only have to prove the wiring.
 
 ---
 

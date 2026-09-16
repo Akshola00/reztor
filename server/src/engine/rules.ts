@@ -322,6 +322,12 @@ export function decideReconnect(
 }
 
 export function decide(state: MatchState, intent: Intent, tick: number): Result<MatchEvent, Rejection> {
+  const decided = dispatch(state, intent, tick)
+  // Every rejection that reaches the runtime knows its sender; see the Rejection type.
+  return decided.ok ? decided : err({ ...decided.error, playerId: intent.playerId })
+}
+
+function dispatch(state: MatchState, intent: Intent, tick: number): Result<MatchEvent, Rejection> {
   switch (intent.kind) {
     case 'TAP_BATCH':
       return decideTap(state, intent, tick)

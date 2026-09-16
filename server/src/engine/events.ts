@@ -114,4 +114,7 @@ export type RejectionCode =
   | 'INVALID_VOTE_TARGET'
   | 'NOT_DISCONNECTED'
 
-export type Rejection = { action: Intent['kind']; code: RejectionCode; reason: string }
+// `playerId` is stamped by the `decide` dispatcher, not by the individual rule functions, so the
+// net layer can address ACTION_REJECTED back to the sender (CLAUDE.md §7). It is optional because
+// a rule function returns a rejection before anyone has asked who sent it.
+export type Rejection = { action: Intent['kind']; code: RejectionCode; reason: string; playerId?: PlayerId }
