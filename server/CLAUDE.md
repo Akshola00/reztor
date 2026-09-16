@@ -646,3 +646,27 @@ build these. Do not leave scaffolding for them.
 
 Also out of scope for MVP: wallet-signature auth, rate limiting beyond the game's own
 token buckets, KMS for the authority keypair. Trust-based build.
+
+---
+
+## 17. Dev tools
+
+Tools, not product. They are allowed to be ugly; they are not allowed to grow features.
+
+```
+pnpm serve                                      # dev server on :3000, client at /dev
+pnpm bots --code=ABCD --count=3 --strategy=optimal --rate=4
+pnpm soak                                       # one match at real duration, ~6 minutes
+```
+
+- **`src/sim/bot.ts`** drives bots as real Socket.IO clients over a real port, never in
+  process. A bot that can play proves `net/` can be played; an in-process bot would only
+  prove the engine works, which the engine tests already do. Strategies: `masher`,
+  `optimal` (the §12.1 mix), `conserver`, `impostor`. Roles come from the seed, so any bot
+  that turns out to be the impostor plays the impostor script whatever it was configured
+  with.
+- **`dev/client.html`** is one static file with no build step, served at `/dev`, using the
+  Socket.IO CDN. Its job is to tell "the protocol is wrong" apart from "the phone client is
+  wrong". Every frame in and out is shown raw. Do not let it become the product.
+- **`pnpm soak`** has its own vitest config because it takes six minutes; `pnpm test` excludes
+  it. It is the only place the tick loop is measured against a wall clock.

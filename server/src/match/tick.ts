@@ -16,12 +16,24 @@ export type TickHooks = {
   onInterval?: (nowMs: number) => void
 }
 
+// What a soak run needs to answer "did the clock hold?" without instrumenting the loop from outside.
+export type TickStats = {
+  ticks: number
+  // Intervals the match clocks were advanced by, which exceeds `ticks` whenever one was skipped.
+  intervalsAdvanced: number
+  skippedIntervals: number
+  overruns: number
+  maxDurationMs: number
+  startedAtMs: number | null
+}
+
 export type TickLoop = {
   start(): void
   stop(): void
   // One iteration, driven by the caller. Tests use this instead of waiting on real time.
   runOnce(nowMs: number): void
   isRunning(): boolean
+  stats(): TickStats
 }
 
 export type TickLoopOptions = {
@@ -41,6 +53,14 @@ export function createTickLoop({
   // CLAUDE.md §6: never let ticks overlap.
   let inTick = false
   let lastAtMs: number | null = null
+  const stats: TickStats = {
+    ticks: 0,
+    intervalsAdvanced: 0,
+    skippedIntervals: 0,
+    overruns: 0,
+    maxDurationMs: 0,
+    startedAtMs: null,
+  }
 
   const runOnce = (nowMs: number): void => {
     if (inTick) {
@@ -55,7 +75,11 @@ export function createTickLoop({
       // match clock advances by however many intervals actually elapsed (CLAUDE.md §6).
       const elapsed = lastAtMs === null ? TICK_MS : nowMs - lastAtMs
       const intervals = Math.max(1, Math.round(elapsed / TICK_MS))
+      if (stats.startedAtMs === null) stats.startedAtMs = nowMs
       lastAtMs = lastAtMs === null ? nowMs : lastAtMs + intervals * TICK_MS
+      stats.ticks += 1
+      stats.intervalsAdvanced += intervals
+      stats.skippedIntervals += intervals - 1
       if (intervals > 1) {
         logger('warn', 'tick intervals skipped, advancing match clocks', { intervals })
       }
@@ -79,7 +103,11 @@ export function createTickLoop({
     } finally {
       inTick = false
       const duration = now() - startedAt
-      if (duration > TICK_MS) logger('warn', 'tick overran its interval', { durationMs: duration })
+      stats.maxDurationMs = Math.max(stats.maxDurationMs, duration)
+      if (duration > TICK_MS) {
+        stats.overruns += 1
+        logger('warn', 'tick overran its interval', { durationMs: duration })
+      }
     }
   }
 
@@ -97,5 +125,6 @@ export function createTickLoop({
     },
     runOnce,
     isRunning: () => timer !== null,
+    stats: () => ({ ...stats }),
   }
 }

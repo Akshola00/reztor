@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Reztor dev client</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  /* Deliberately ugly. This file exists to tell "the protocol is wrong" apart from
+     "React Native is wrong", and nothing else. */
+  body { font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; margin: 0; padding: 12px;
+         background: #14161a; color: #d6dae0; }
+  h1 { font-size: 14px; margin: 0 0 8px; color: #8fb7ff; }
+  fieldset { border: 1px solid #2c313a; margin: 0 0 10px; padding: 8px; }
+  legend { color: #7d8794; padding: 0 4px; }
+  input, select, button { font: inherit; background: #1d2129; color: #d6dae0;
+                          border: 1px solid #333a45; padding: 4px 6px; }
+  button { cursor: pointer; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button.big { padding: 14px 22px; font-size: 16px; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 6px; }
+  .lane { margin-bottom: 4px; }
+  .bar { height: 16px; background: #222833; position: relative; }
+  .bar > i { display: block; height: 100%; background: #3d7dff; }
+  .bar.mine > i { background: #46c07a; }
+  .bar.dormant > i { background: #7a6030; }
+  .meta { color: #7d8794; }
+  #log { height: 260px; overflow: auto; background: #0f1115; border: 1px solid #2c313a;
+         padding: 6px; white-space: pre-wrap; }
+  #chatlog { height: 90px; overflow: auto; background: #0f1115; border: 1px solid #2c313a;
+             padding: 4px; margin-top: 4px; }
+  #status { color: #e3b96b; min-height: 18px; }
+  .in  { color: #86d0a4; }
+  .out { color: #e3b96b; }
+  .err { color: #ff7a7a; }
+  #impostor { display: none; }
+  #impostor.on { display: block; }
+</style>
+</head>
+<body>
+
+<h1>Reztor dev client <span class="meta" id="who">not connected</span></h1>
+
+<fieldset>
+  <legend>lobby</legend>
+  <div class="row">
+    <input id="name" placeholder="name" value="human" size="10" />
+    <button id="create">CREATE_LOBBY</button>
+    <input id="code" placeholder="code" size="6" style="text-transform:uppercase" />
+    <button id="join">JOIN_LOBBY</button>
+    <button id="enter" disabled>JOIN (enter match)</button>
+  </div>
+  <div class="row meta" id="ticket"></div>
+</fieldset>
+
+<fieldset>
+  <legend>board <span class="meta" id="stage"></span></legend>
+  <div id="lanes"></div>
+  <div class="row meta" id="wallet"></div>
+</fieldset>
+
+<fieldset>
+  <legend>actions</legend>
+  <div class="row">
+    <button id="tap" class="big" disabled>TAP</button>
+    <label><input type="radio" name="tier" value="1" checked /> tier 1</label>
+    <label><input type="radio" name="tier" value="2" /> tier 2</label>
+    <span class="meta">lane</span>
+    <select id="tapLane"><option value="">(own)</option></select>
+  </div>
+  <div class="row">
+    <span class="meta">trace</span>
+    <select id="traceTarget"></select>
+    <button id="trace" disabled>TRACE (200)</button>
+  </div>
+  <div class="row">
+    <input id="chat" placeholder="chat message" size="40" />
+    <button id="send" disabled>CHAT</button>
+  </div>
+  <div id="chatlog"></div>
+  <div class="row" id="votes"></div>
+  <div class="row" id="status"></div>
+</fieldset>
+
+<fieldset id="impostor">
+  <legend>impostor only</legend>
+  <div class="row">
+    <span class="meta">source</span> <select id="siphonSource"></select>
+    <span class="meta">sink</span> <select id="siphonSink"></select>
+    <button id="siphon">SIPHON</button>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>raw frames — every message in and out</legend>
+  <div class="row">
+    <button id="clear">clear</button>
+    <label><input type="checkbox" id="hideBoard" checked /> hide BOARD_UPDATE</label>
+  </div>
+  <div id="log"></div>
+</fieldset>
+
+<script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+<script>
+(function () {
+  var socket = io({ transports: ['websocket'] });
+  var me = null, matchId = null, token = null, role = null, board = null;
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function log(dir, event, payload) {
+    if (dir === 'in' && event === 'BOARD_UPDATE' && $('hideBoard').checked) return;
+    var pane = $('log');
+    var atBottom = pane.scrollTop + pane.clientHeight >= pane.scrollHeight - 20;
+    var line = document.createElement('div');
+    line.className = dir;
+    line.textContent = (dir === 'in' ? '<- ' : '-> ') + event + '  ' +
+      (payload === undefined ? '' : JSON.stringify(payload));
+    pane.appendChild(line);
+    if (atBottom) pane.scrollTop = pane.scrollHeight;
+  }
+
+  // Every outbound frame goes through here so the log can never drift from what was sent.
+  function emit(event, payload) {
+    log('out', event, payload);
+    socket.emit(event, payload);
+  }
+
+  function emitAck(event, payload, done) {
+    log('out', event, payload);
+    socket.emit(event, payload, function (response) {
+      log('in', event + ' (ack)', response);
+      done(response);
+    });
+  }
+
+  ['MATCH_STARTED','RESUME_STATE','BOARD_UPDATE','STAGE_CHANGE','CREDITS','SIPHON_RESULT',
+   'TRACE_RESULT','VOTE_RESULT','MATCH_END','ACTION_REJECTED'].forEach(function (event) {
+    socket.on(event, function (payload) {
+      log(event === 'ACTION_REJECTED' ? 'err' : 'in', event, payload);
+      if (event === 'BOARD_UPDATE') { board = payload.board; render(); }
+      if (event === 'MATCH_STARTED' || event === 'RESUME_STATE') {
+        role = payload.view.you.role;
+        me = payload.view.you.id;
+        board = payload.view;
+        $('impostor').className = role === 'impostor' ? 'on' : '';
+        $('who').textContent = me + ' — ' + role;
+        wallet(payload.view.you);
+        render();
+      }
+      if (event === 'CREDITS') wallet(payload);
+      notable(event, payload);
+    });
+  });
+
+  function say(text) { $('status').textContent = text; }
+
+  function nameOf(id) {
+    var player = ((board && board.players) || []).filter(function (p) { return p.id === id; })[0];
+    return player ? player.name : id;
+  }
+
+  // The handful of results a human must see without reading raw frames. A social deduction game
+  // played out of a JSON log is not being played.
+  function notable(event, payload) {
+    if (event === 'TRACE_RESULT') {
+      say('TRACE on ' + nameOf(payload.target) + ' -> ' + payload.result);
+    } else if (event === 'SIPHON_RESULT') {
+      say('SIPHON ' + nameOf(payload.source) + ' -> ' + nameOf(payload.sink) + '   pulled ' +
+          payload.pulled + ', delivered ' + payload.delivered + ', destroyed ' + payload.destroyed);
+    } else if (event === 'VOTE_RESULT') {
+      var votes = Object.keys(payload.votes).map(function (voter) {
+        var target = payload.votes[voter];
+        return nameOf(voter) + '->' + (target === 'skip' ? 'skip' : nameOf(target));
+      }).join('   ');
+      say('ROUND ' + payload.round + ' VOTE   ' + votes + '   ejected: ' +
+          (payload.ejected ? nameOf(payload.ejected) : 'nobody'));
+    } else if (event === 'ACTION_REJECTED') {
+      say('rejected ' + payload.action + ': ' + payload.code + ' - ' + (payload.reason || ''));
+    } else if (event === 'MATCH_END') {
+      var reveal = payload.reveal;
+      say(reveal
+        ? 'MATCH OVER - ' + (reveal.resolution.winner || 'void') + ' (' + reveal.resolution.reason +
+          ')   impostor was ' + nameOf(reveal.impostorId)
+        : 'MATCH OVER (' + payload.error + ')');
+    }
+  }
+
+  function escapeHtml(text) {
+    return String(text).replace(/[&<>"]/g, function (character) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[character];
+    });
+  }
+
+  var chatShown = -1;
+  function renderChat() {
+    var chat = (board && board.chat) || [];
+    if (chat.length === chatShown) return;
+    chatShown = chat.length;
+    $('chatlog').innerHTML = chat.map(function (message) {
+      return '<div>' + escapeHtml(nameOf(message.from)) + ': ' + escapeHtml(message.text) + '</div>';
+    }).join('');
+    $('chatlog').scrollTop = $('chatlog').scrollHeight;
+  }
+
+  socket.on('connect', function () { log('in', 'connect', { id: socket.id }); });
+  socket.on('disconnect', function (reason) { log('err', 'disconnect', { reason: reason }); });
+
+  function wallet(you) {
+    $('wallet').textContent = 'credits ' + you.credits + '   spent ' + you.spent +
+      '   tier ' + you.tier + (you.traceUsed ? '   trace used' : '');
+  }
+
+  function render() {
+    if (!board) return;
+    $('stage').textContent = 'round ' + board.round + ' / ' + board.stage +
+      '   ends at tick ' + board.stageEndsAtTick;
+
+    var total = 0;
+    $('lanes').innerHTML = '';
+    board.lanes.forEach(function (lane) {
+      total += lane.units;
+      var player = (board.players || []).filter(function (p) { return p.id === lane.owner; })[0];
+      var wrap = document.createElement('div');
+      wrap.className = 'lane';
+      wrap.innerHTML = '<div class="meta">' + (player ? player.name : lane.owner) +
+        (lane.owner === me ? ' (you)' : '') + ' — ' + lane.units +
+        (lane.dormant ? ' DORMANT' : '') + (player && player.status !== 'alive' ? ' ' + player.status : '') +
+        '</div><div class="bar ' + (lane.owner === me ? 'mine' : '') + (lane.dormant ? ' dormant' : '') +
+        '"><i style="width:' + Math.min(100, lane.units / 10) + '%"></i></div>';
+      $('lanes').appendChild(wrap);
+    });
+    $('stage').textContent += '   board ' + total + ' / ' + (board.config ? board.config.winTarget : '?');
+
+    fillTargets();
+    renderChat();
+    var voting = board.stage === 'vote';
+    $('votes').innerHTML = voting ? '<span class="meta">vote</span>' : '';
+    if (voting) {
+      board.players.filter(function (p) { return p.status !== 'ejected'; }).forEach(function (p) {
+        addVote(p.id, p.name + (p.id === me ? ' (you)' : ''));
+      });
+      addVote('skip', 'skip');
+    }
+    $('tap').disabled = board.stage !== 'tap';
+    $('trace').disabled = board.stage !== 'tap';
+    $('send').disabled = board.stage !== 'chat';
+  }
+
+  function addVote(value, label) {
+    var button = document.createElement('button');
+    button.textContent = label;
+    button.onclick = function () { emit('VOTE', { target: value }); };
+    $('votes').appendChild(button);
+  }
+
+  var filled = '';
+  function fillTargets() {
+    var key = board.lanes.map(function (l) { return l.owner; }).join(',');
+    if (key === filled) return;
+    filled = key;
+    [['tapLane', true], ['traceTarget', false], ['siphonSource', false], ['siphonSink', false]]
+      .forEach(function (pair) {
+        var select = $(pair[0]);
+        select.innerHTML = pair[1] ? '<option value="">(own lane)</option>' : '';
+        board.lanes.forEach(function (lane) {
+          var option = document.createElement('option');
+          option.value = lane.owner;
+          var player = (board.players || []).filter(function (p) { return p.id === lane.owner; })[0];
+          option.textContent = (player ? player.name : lane.owner) + (lane.owner === me ? ' (you)' : '');
+          select.appendChild(option);
+        });
+      });
+  }
+
+  function tier() {
+    return Number(document.querySelector('input[name=tier]:checked').value);
+  }
+
+  $('create').onclick = function () {
+    emitAck('CREATE_LOBBY', { name: $('name').value }, seated);
+  };
+  $('join').onclick = function () {
+    emitAck('JOIN_LOBBY', { code: $('code').value.toUpperCase(), name: $('name').value }, seated);
+  };
+
+  function seated(response) {
+    if (!response.ok) { alert('lobby: ' + response.error); return; }
+    matchId = response.ticket.matchId;
+    token = response.ticket.sessionToken;
+    $('code').value = response.ticket.code;
+    $('ticket').textContent = 'code ' + response.ticket.code + '   seat ' + response.ticket.seated +
+      '/4   playerId ' + response.ticket.playerId +
+      (response.ticket.started ? '   match starting' : '   waiting for players');
+    $('enter').disabled = false;
+    // JOIN straight away: the server holds a seated player in the room until the lobby fills,
+    // so there is nothing for a human to wait for and nothing to press twice.
+    $('enter').click();
+  }
+
+  $('enter').onclick = function () {
+    emitAck('JOIN', { matchId: matchId, sessionToken: token }, function (response) {
+      if (!response.ok) alert('join: ' + response.error);
+    });
+  };
+
+  // Heartbeat, so the server's disconnect rule sees a live client (CLAUDE.md §8).
+  setInterval(function () { if (token) socket.emit('HEARTBEAT', {}); }, 2000);
+
+  $('tap').onclick = function () {
+    emit('TAP_BATCH', { tier: tier(), count: 1, clientTs: Date.now(),
+                        lane: $('tapLane').value || undefined });
+  };
+  document.querySelectorAll('input[name=tier]').forEach(function (radio) {
+    radio.onchange = function () { emit('SET_TIER', { tier: tier() }); };
+  });
+  $('trace').onclick = function () { emit('TRACE', { target: $('traceTarget').value }); };
+  $('siphon').onclick = function () {
+    emit('SIPHON', { source: $('siphonSource').value, sink: $('siphonSink').value });
+  };
+  $('send').onclick = function () {
+    if (!$('chat').value) return;
+    emit('CHAT', { text: $('chat').value });
+    $('chat').value = '';
+  };
+  $('chat').onkeydown = function (e) { if (e.key === 'Enter') $('send').click(); };
+  $('clear').onclick = function () { $('log').innerHTML = ''; };
+
+  // Space bar taps, because a tap game tested with a mouse tells you nothing about rate limits.
+  document.onkeydown = function (e) {
+    if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT') {
+      e.preventDefault();
+      if (!$('tap').disabled) $('tap').click();
+    }
+  };
+})();
+</script>
+</body>
+</html>

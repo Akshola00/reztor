@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { createServer as createHttpServer, type Server as HttpServer } from 'node:http'
 import { Server, type Socket } from 'socket.io'
 import type { MatchConfig } from '../engine/config.js'
@@ -24,12 +25,16 @@ import {
   type HandlerDeps,
 } from './handlers.js'
 
+// Counted at the emitter, so one number covers both room broadcasts and private sends.
+export type ServerMetrics = { roomBroadcasts: number; privateSends: number }
+
 export type GameServer = {
   io: Server
   registry: MatchRegistry
   lobby: LobbyService
   escrow: EscrowProvider
   loop: TickLoop
+  metrics(): ServerMetrics
   listen(port?: number): Promise<number>
   close(): Promise<void>
 }
@@ -50,14 +55,34 @@ const ack = (respond: unknown, response: unknown): void => {
 export function createGameServer(options: ServerOptions = {}): GameServer {
   const { config, escrow = inMemoryEscrow(), logger = consoleLogger, now = () => Date.now() } = options
 
-  const http: HttpServer = createHttpServer()
+  // The throwaway browser client, served as one file with no build step. Socket.IO installs its
+  // own handler for /socket.io/ ahead of this one and passes everything else through.
+  const http: HttpServer = createHttpServer((request, response) => {
+    if (request.method === 'GET' && (request.url === '/dev' || request.url === '/dev/')) {
+      try {
+        response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+        response.end(readFileSync(new URL('../../dev/client.html', import.meta.url)))
+      } catch {
+        response.writeHead(500, { 'content-type': 'text/plain' }).end('dev/client.html is missing')
+      }
+      return
+    }
+    response.writeHead(404, { 'content-type': 'text/plain' }).end('not found')
+  })
   const io = new Server(http, { cors: { origin: '*' } })
 
   const registry = createRegistry()
   const connections = createConnections()
+  const metrics: ServerMetrics = { roomBroadcasts: 0, privateSends: 0 }
   const emitter: Emitter = {
-    toRoom: (matchId, event, payload) => void io.to(matchId).emit(event, payload),
-    toSocket: (socketId, event, payload) => void io.to(socketId).emit(event, payload),
+    toRoom: (matchId, event, payload) => {
+      metrics.roomBroadcasts += 1
+      io.to(matchId).emit(event, payload)
+    },
+    toSocket: (socketId, event, payload) => {
+      metrics.privateSends += 1
+      io.to(socketId).emit(event, payload)
+    },
   }
 
   const lobby = createLobbyService({
@@ -66,6 +91,15 @@ export function createGameServer(options: ServerOptions = {}): GameServer {
     ...(config === undefined ? {} : { config }),
     logger,
     now,
+    // Everyone already waiting in the room learns their role the moment the lobby fills.
+    onMatchStart: (match) => {
+      for (const playerId of Object.keys(match.state.players)) {
+        const socketId = connections.socketFor(match.matchId, playerId)
+        if (socketId === undefined) continue
+        greeted.add(`${match.matchId}:${playerId}`)
+        sendMatchStarted(emitter, match, socketId, playerId)
+      }
+    },
   })
 
   const deps: HandlerDeps = { registry, connections, lobby, emitter, logger, now }
@@ -175,10 +209,16 @@ export function createGameServer(options: ServerOptions = {}): GameServer {
         return ack(respond, { ok: false, error: result })
       }
 
-      const match = registry.get(result.matchId)
-      if (match === undefined) return ack(respond, { ok: false, error: 'NO_MATCH' })
-
       void socket.join(result.matchId)
+
+      const match = registry.get(result.matchId)
+      if (match === undefined) {
+        // Seated but the lobby has not filled. The socket waits in the room and MATCH_STARTED
+        // arrives when the fourth player does.
+        logger('info', 'player waiting in lobby', { matchId: result.matchId, playerId: result.playerId })
+        return ack(respond, { ok: true, playerId: result.playerId, waiting: true, reconnected: false })
+      }
+
       const key = `${result.matchId}:${result.playerId}`
       const reconnecting = greeted.has(key)
       greeted.add(key)
@@ -218,9 +258,14 @@ export function createGameServer(options: ServerOptions = {}): GameServer {
     lobby,
     escrow,
     loop,
+    metrics: () => ({ ...metrics }),
     listen: (port = 0) =>
-      new Promise<number>((resolve) => {
+      // A listen that never rejects hides the commonest dev failure of all, a port already in use,
+      // as an unhandled 'error' event and a stack trace.
+      new Promise<number>((resolve, reject) => {
+        http.once('error', reject)
         http.listen(port, () => {
+          http.removeListener('error', reject)
           const address = http.address()
           loop.start()
           resolve(typeof address === 'object' && address !== null ? address.port : port)

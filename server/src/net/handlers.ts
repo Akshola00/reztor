@@ -27,7 +27,7 @@ export type HandlerDeps = {
   now: () => number
 }
 
-export type JoinError = 'INVALID_PAYLOAD' | 'UNKNOWN_SESSION' | 'WRONG_MATCH' | 'NO_MATCH'
+export type JoinError = 'INVALID_PAYLOAD' | 'UNKNOWN_SESSION' | 'WRONG_MATCH'
 
 // A transport-level refusal. Distinct from the engine's Rejection, which is a rule outcome —
 // these never reach the engine at all. matchId/serverTick are null when the socket has no match.
@@ -53,8 +53,10 @@ export function handleJoin(deps: HandlerDeps, socketId: string, payload: unknown
   const session = deps.lobby.resolveSession(parsed.data.sessionToken)
   if (session === undefined) return 'UNKNOWN_SESSION'
   if (session.matchId !== parsed.data.matchId) return 'WRONG_MATCH'
-  if (deps.registry.get(session.matchId) === undefined) return 'NO_MATCH'
 
+  // Deliberately does not require a running match. A player seated in a lobby that has not filled
+  // yet binds their socket now and waits in the room; the alternative is a client that has a valid
+  // session but nothing to do with it, and no signal for when the match begins.
   deps.connections.bind(socketId, session, deps.now())
   return session
 }
