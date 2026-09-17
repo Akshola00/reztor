@@ -44,3 +44,6 @@ example
 
 # Machine-local symlinks into .agents/skills; the real files there are committed.
 .claude/skills/
+
+# Item-1 board screenshots, kept out of the repo.
+.previews/

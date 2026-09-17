@@ -53,6 +53,15 @@ const material = {
     borderBottomWidth: 1,
     borderBottomColor: palette.bevelShadow,
   },
+  // The same bevel inverted, for a face that reads as pressed into the stone. §7.3 wants the
+  // selected tier chip inset rather than highlighted; the preview's chips use it too.
+  insetStoneFace: {
+    backgroundColor: palette.void,
+    borderTopWidth: 1,
+    borderTopColor: palette.bevelShadow,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.stoneLit,
+  },
 } as const
 
 // §3.3. Radius encodes hierarchy. The Heart and conduits are apertures, not objects.
@@ -108,6 +117,163 @@ const layout = {
 // §3.3. A tiled PNG above the background and below content. It does not animate.
 const grainOpacity = 0.03
 
+// ---------------------------------------------------------------------------------------------
+// Art values chosen in build item 1
+// ---------------------------------------------------------------------------------------------
+//
+// reztor-design.md fixes the palette, the type scale, the vertical budget, the 2px frontier and
+// its 6px glow. It does not name conduit width, the gap between conduits, the vertical grain
+// inside unfilled char, sigil stroke weight, the vessel outline, or glow falloff. Everything in
+// this group was chosen in item 1 so that no literal sits in a component file. Change art here.
+const art = {
+  // Conduit aperture. 44 reads as a column rather than a bar at 360dp, and a 14 gap keeps four
+  // of them plus the board margin inside the 360pt floor of §10.4's 360–430pt range.
+  conduitWidth: 44,
+  conduitGap: 14,
+
+  // §6.2 names both of these.
+  frontierThickness: 2,
+  frontierGlowHeight: 6,
+  // Peak alpha of that glow where it meets the frontier. Chosen: bright enough to be the
+  // second-brightest thing on screen after the Heart, per §6.2, without blooming. Raised from
+  // 0.55 after item 1's first screenshot, where the glow did not register at all.
+  frontierGlowOpacity: 0.75,
+
+  // §6.2 asks for "a faint vertical grain" in the unfilled char, so the conduit reads as stone
+  // rather than a hole. Pitch, width and alpha chosen. Raised from 0.5/0.1 after item 1's first
+  // screenshot: at ~3.5x density the grain was invisible and the aperture read as a flat hole.
+  conduitGrainPitch: 6,
+  conduitGrainWidth: 1,
+  conduitGrainOpacity: 0.22,
+
+  // The aperture's own carved edge, per §3.3. An aperture is cut *inward*, so the bevel inverts:
+  // the dark edge sits at the top and the light edge at the bottom. Without this the conduits
+  // read as bars floating on the void rather than openings in stone (§4).
+  apertureEdge: 1,
+
+  // A guard, not a design value. react-native-svg treats `scaleY={0}` as falsy and falls back
+  // to 1, so an empty conduit rendered completely full on item 1's first pass. The fill scale is
+  // floored to this, and the fill is also gated to opacity 0 when a lane has no units. Item 2
+  // must keep that floor when it drives scaleY from a shared value, or a lane at rest will flash
+  // to full height.
+  fillScaleFloor: 0.0001,
+
+  // §6.2's "desaturate to 45%" for a dormant lane. See `cold` below for the interpretation.
+  coldSaturation: 0.45,
+
+  // The Threshold is one carved line across all four conduits: a light edge with a dark edge
+  // under it, per §3.3's bevel logic. Thickness chosen.
+  thresholdThickness: 1,
+
+  // §6.1 brackets your own conduit with "two short carved marks"; BUILD-PLAN moves a bracket
+  // onto the name plate. One bracket encloses both: a mark at the conduit top and one at the
+  // plate bottom. Length and thickness chosen.
+  bracketLength: 12,
+  bracketThickness: 1,
+
+  // Sigils are drawn in a square viewBox and scaled, so one stroke weight holds at every size
+  // (§5.2 requires the same weight for all four). Box and stroke chosen.
+  sigilBox: 24,
+  sigilStroke: 1.5,
+  // The two sizes §5.2 and the preview strip care about: legible-at-thumb and inspectable.
+  sigilSmall: 16,
+  sigilLarge: 48,
+
+  // Name plate inside the 72 `namePlates` slot. Height and sigil size chosen.
+  namePlateHeight: 56,
+  namePlateSigil: 16,
+
+  // The Heart. §6.4 says "a carved vessel shape, roughly 120×96". The outline itself is not
+  // described, so item 1 offers two candidates for a call on device:
+  //   A — an urn: swelling shoulders tapering to a foot, the softer read.
+  //   B — a cut hexagon: straight facets only, the more carved read.
+  // Both outlines fill the box, inset only enough to keep the 1px carved stroke inside it. The
+  // first item-1 screenshot had them occupying 72x82 of the 120x96 box, which made the Heart
+  // smaller than its own percentage text and read as a logo rather than §6.1's hero image.
+  heartBox: { width: 120, height: 96 },
+  heartVesselPathA: 'M 5 28 C 5 12 30 4 60 4 C 90 4 115 12 115 28 L 104 64 C 104 84 84 92 60 92 C 36 92 16 84 16 64 Z',
+  heartVesselPathB: 'M 6 27 L 60 4 L 114 27 L 103 65 L 60 92 L 17 65 Z',
+  // Where the light sits inside the vessel, and the radii of the fixed light layers. The stops
+  // never change; only opacity and scale derive from the board fraction.
+  heartLightCentre: { x: 60, y: 50 },
+  heartCoreRadius: 14,
+  heartGlowRadius: 38,
+  heartHaloRadius: 60,
+  // Light response to the board fraction. §6.4: nearly dead at 0%, clearly alive by 55%, and
+  // it stops escalating above the Threshold (the fraction is clamped to 1 before it gets here).
+  // Coefficients chosen: opacity = base + gain × fraction.
+  heartLight: {
+    coreBase: 0.14,
+    coreGain: 0.86,
+    glowBase: 0.08,
+    glowGain: 0.62,
+    haloBase: 0.0,
+    haloGain: 0.38,
+    scaleBase: 0.78,
+    scaleGain: 0.32,
+  },
+} as const
+
+// ---------------------------------------------------------------------------------------------
+// Dormant (cold) colours, precomputed
+// ---------------------------------------------------------------------------------------------
+//
+// §6.2: a cold conduit "desaturates to 45%". It does not say whether that means to 45% of the
+// original saturation or reduced by 45%. Read here as **to 45% of the original** — HSL
+// saturation multiplied by 0.45 — which is the plainer reading of "to 45%".
+//
+// Precomputed at module load rather than applied as an SVG filter: Android re-rasterises
+// filters, and nothing in the Offering stage may cost a re-raster.
+
+function hexToRgb(hex: string): [number, number, number] {
+  const n = parseInt(hex.slice(1), 16)
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  const clamp255 = (v: number) => Math.max(0, Math.min(255, Math.round(v)))
+  return `#${((clamp255(r) << 16) | (clamp255(g) << 8) | clamp255(b)).toString(16).padStart(6, '0').toUpperCase()}`
+}
+
+/** Multiplies a colour's HSL saturation by `factor`, leaving hue and lightness untouched. */
+export function desaturate(hex: string, factor: number): string {
+  const [r, g, b] = hexToRgb(hex).map((v) => v / 255) as [number, number, number]
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const l = (max + min) / 2
+  if (max === min) {
+    return rgbToHex(r * 255, g * 255, b * 255)
+  }
+  const d = max - min
+  const s = (l > 0.5 ? d / (2 - max - min) : d / (max + min)) * factor
+  let h = 0
+  if (max === r) {
+    h = ((g - b) / d + (g < b ? 6 : 0)) / 6
+  } else if (max === g) {
+    h = ((b - r) / d + 2) / 6
+  } else {
+    h = ((r - g) / d + 4) / 6
+  }
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s
+  const p = 2 * l - q
+  const channel = (t: number) => {
+    let x = t
+    if (x < 0) x += 1
+    if (x > 1) x -= 1
+    if (x < 1 / 6) return p + (q - p) * 6 * x
+    if (x < 1 / 2) return q
+    if (x < 2 / 3) return p + (q - p) * (2 / 3 - x) * 6
+    return p
+  }
+  return rgbToHex(channel(h + 1 / 3) * 255, channel(h) * 255, channel(h - 1 / 3) * 255)
+}
+
+const cold = {
+  char: desaturate(palette.char, art.coldSaturation),
+  flameDeep: desaturate(palette.flameDeep, art.coldSaturation),
+  flame: desaturate(palette.flame, art.coldSaturation),
+} as const
+
 export const tokens = {
   palette,
   material,
@@ -117,4 +283,6 @@ export const tokens = {
   tabularFigures,
   layout,
   grainOpacity,
+  art,
+  cold,
 } as const
