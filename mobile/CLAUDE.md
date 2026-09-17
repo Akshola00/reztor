@@ -42,10 +42,10 @@ Install everything with `npx expo install <pkg>` so versions match the SDK. Neve
 
 Expo publishes skills for AI agents. If `expo-upgrade` or related Expo skills are available in the environment, prefer them over guessing at SDK migration steps.
 
-## Type and fonts — checked on a device in item 0
+## Type and fonts — checked on a device
 
 - **IBM Plex Sans already renders tabular digits on Android.** In the item 0 specimen the `tabular-nums` column and the plain column aligned identically, so the fixed-width digit slots that design doc §10.1 offers as a fallback are not needed. Keep `tokens.tabularFigures` on anything that counts anyway: it is the correct declaration, it costs nothing, and it protects the credit counter and timer if the face ever changes.
-- **Both Grenze Gotisch weights (400 and 700) stay loaded until item 1.** Which one ships is decided against the real Heart percentage, not a specimen. Do not drop either weight before that call is made.
+- **Grenze Gotisch 700 is the display weight.** Item 1 judged 400 against 700 at `t-heart` against the real Heart and 700 ships. The 400 face is no longer loaded, and `tokens.fontFamily` exposes a single `display` family rather than a regular/bold pair. Do not reintroduce a second display weight without judging it on a device first.
 
 ## Commands
 

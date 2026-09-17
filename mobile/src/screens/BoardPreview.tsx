@@ -3,8 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } fr
 
 import type { LaneSnapshot, MatchConfig, PlayerSnapshot } from '../../protocol/generated'
 import { Board } from '../art/Board'
-import type { VesselVariant } from '../art/Heart'
-import { SEAT_COLOURS, Sigil, type Seat4Variant, type SeatNumber } from '../art/Sigil'
+import { SEAT_COLOURS, Sigil, type SeatNumber } from '../art/Sigil'
 import { tokens } from '../design/tokens'
 
 // Temporary. Deleted at the start of build item 2.
@@ -59,42 +58,28 @@ const STATES = [
 
 const SEATS: SeatNumber[] = [1, 2, 3, 4]
 
-// Temporary item-1 capture override. When non-null it pins the board to one state with fixed
-// display options, so a screenshot set is a controlled comparison. `adb shell input tap` proved
-// unreliable for this: taps were swallowed during scroll momentum and landed on neighbouring
-// chips, which produced two mislabelled frames and silently changed the vessel and weight
-// between captures. These are module constants rather than state because Fast Refresh preserves
-// component state across edits and would ignore a changed initial value.
+// Temporary item-1 capture override. When non-null it pins the board to one state, so a
+// screenshot set is a controlled comparison. `adb shell input tap` proved unreliable for this:
+// taps were swallowed during scroll momentum and landed on neighbouring chips, which produced
+// two mislabelled frames. This is a module constant rather than state because Fast Refresh
+// preserves component state across edits and would ignore a changed initial value.
 //
 // Leave as null: that restores the interactive chips.
 const CAPTURE_STATE: string | null = null
-const CAPTURE_WEIGHT: 400 | 700 = 400
-const CAPTURE_SEAT4: Seat4Variant = 'A'
-const CAPTURE_VESSEL: VesselVariant = 'B'
 
 export function BoardPreview() {
   const { height } = useWindowDimensions()
   const [stateKey, setStateKey] = useState<string>('mid')
-  const [weight, setWeight] = useState<400 | 700>(400)
-  const [seat4Variant, setSeat4Variant] = useState<Seat4Variant>('A')
-  const [vessel, setVessel] = useState<VesselVariant>('B')
 
   const activeKey = CAPTURE_STATE ?? stateKey
-  const activeWeight = CAPTURE_STATE ? CAPTURE_WEIGHT : weight
-  const activeSeat4 = CAPTURE_STATE ? CAPTURE_SEAT4 : seat4Variant
-  const activeVessel = CAPTURE_STATE ? CAPTURE_VESSEL : vessel
-
   const active = STATES.find((s) => s.key === activeKey) ?? STATES[1]
   const boardTotal = active.lanes.reduce((sum, l) => sum + l.units, 0)
 
   const header = (
     <View style={styles.chipRow}>
       {STATES.map((s) => (
-        <Chip key={s.key} label={s.label} selected={s.key === stateKey} onPress={() => setStateKey(s.key)} />
+        <Chip key={s.key} label={s.label} selected={s.key === activeKey} onPress={() => setStateKey(s.key)} />
       ))}
-      <Chip label={String(weight)} selected={false} onPress={() => setWeight(weight === 400 ? 700 : 400)} />
-      <Chip label={seat4Variant} selected={false} onPress={() => setSeat4Variant(seat4Variant === 'A' ? 'B' : 'A')} />
-      <Chip label={vessel} selected={false} onPress={() => setVessel(vessel === 'A' ? 'B' : 'A')} />
     </View>
   )
 
@@ -109,13 +94,10 @@ export function BoardPreview() {
           config={config}
           youId={YOU}
           header={header}
-          heartWeight={activeWeight}
-          seat4Variant={activeSeat4}
-          vessel={activeVessel}
         />
       </View>
 
-      {/* Below the plinth: every sigil at both sizes, and both seat-4 candidates. */}
+      {/* Below the plinth: every sigil at both sizes §5.2 cares about. */}
       <View style={styles.strip}>
         <View style={styles.stripRow}>
           {SEATS.map((seat) => (
@@ -124,14 +106,6 @@ export function BoardPreview() {
               <Text style={styles.stripLabel}>{String(seat)}</Text>
             </View>
           ))}
-          <View style={styles.stripCell}>
-            <Sigil seat={4} colour={SEAT_COLOURS[4]} size={tokens.art.sigilSmall} seat4Variant="A" />
-            <Text style={styles.stripLabel}>4A</Text>
-          </View>
-          <View style={styles.stripCell}>
-            <Sigil seat={4} colour={SEAT_COLOURS[4]} size={tokens.art.sigilSmall} seat4Variant="B" />
-            <Text style={styles.stripLabel}>4B</Text>
-          </View>
         </View>
 
         <View style={styles.stripRow}>
@@ -141,14 +115,6 @@ export function BoardPreview() {
               <Text style={styles.stripLabel}>{String(seat)}</Text>
             </View>
           ))}
-          <View style={styles.stripCell}>
-            <Sigil seat={4} colour={SEAT_COLOURS[4]} size={tokens.art.sigilLarge} seat4Variant="A" />
-            <Text style={styles.stripLabel}>4A</Text>
-          </View>
-          <View style={styles.stripCell}>
-            <Sigil seat={4} colour={SEAT_COLOURS[4]} size={tokens.art.sigilLarge} seat4Variant="B" />
-            <Text style={styles.stripLabel}>4B</Text>
-          </View>
         </View>
       </View>
     </ScrollView>
@@ -168,7 +134,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: tokens.art.bracketLength / 2,
+    gap: tokens.art.conduitGap / 2,
   },
   // Stone tones only. Never fire.
   chip: {

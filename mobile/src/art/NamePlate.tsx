@@ -1,25 +1,27 @@
 import { StyleSheet, Text, View } from 'react-native'
 
 import { tokens } from '../design/tokens'
-import { SEAT_COLOURS, Sigil, type Seat4Variant, type SeatNumber } from './Sigil'
+import { SEAT_COLOURS, Sigil, type SeatNumber } from './Sigil'
 
-// BUILD-PLAN.md §2 cuts the Faithful figures and puts a carved name plate in their slot: the
-// sigil in the seat colour, and the name. Nothing here carries fire, and the own-lane bracket
-// is drawn by Board so that one bracket encloses the conduit and the plate together.
+// BUILD-PLAN.md §2 cuts the Faithful figures and puts the player's identity in their slot: the
+// sigil in the seat colour, and the name.
+//
+// Inscribed directly onto the stone field — no face, no border, no radius. As a boxed plate it
+// put four identical rounded cards in a row across the board, which §4 rules out. Nothing here
+// carries fire, and the own-lane bracket is drawn by Board so that one bracket encloses the
+// conduit and the inscription together.
 
 type NamePlateProps = {
   seat: SeatNumber
   name: string
   width: number
   dormant?: boolean
-  seat4Variant?: Seat4Variant
 }
 
-export function NamePlate({ seat, name, width, dormant = false, seat4Variant = 'A' }: NamePlateProps) {
-  const colour = SEAT_COLOURS[seat]
+export function NamePlate({ seat, name, width, dormant = false }: NamePlateProps) {
   return (
-    <View style={[styles.plate, { width }]}>
-      <Sigil seat={seat} colour={colour} size={tokens.art.namePlateSigil} seat4Variant={seat4Variant} />
+    <View style={[styles.inscription, { width }]}>
+      <Sigil seat={seat} colour={SEAT_COLOURS[seat]} size={tokens.art.namePlateSigil} />
       <Text style={[styles.name, dormant && styles.nameDormant]} numberOfLines={1} ellipsizeMode="tail">
         {name}
       </Text>
@@ -28,12 +30,9 @@ export function NamePlate({ seat, name, width, dormant = false, seat4Variant = '
 }
 
 const styles = StyleSheet.create({
-  plate: {
-    height: tokens.art.namePlateHeight,
-    borderRadius: tokens.radii.panel,
+  inscription: {
     alignItems: 'center',
-    justifyContent: 'center',
-    ...tokens.material.raisedStoneFace,
+    gap: tokens.art.namePlateGap,
   },
   name: {
     ...tokens.type.fine,
@@ -41,7 +40,7 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
     textAlign: 'center',
   },
-  // An ejected player is public information (spec §6), so the plate may say so quietly.
+  // An ejected player is public information (spec §6), so the inscription may say so quietly.
   nameDormant: {
     color: tokens.palette.boneFaint,
   },

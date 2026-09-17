@@ -1,4 +1,4 @@
-import { GrenzeGotisch_400Regular, GrenzeGotisch_700Bold } from '@expo-google-fonts/grenze-gotisch'
+import { GrenzeGotisch_700Bold } from '@expo-google-fonts/grenze-gotisch'
 import { IBMPlexSans_400Regular, IBMPlexSans_500Medium } from '@expo-google-fonts/ibm-plex-sans'
 import { useFonts } from 'expo-font'
 import { Stack } from 'expo-router'
@@ -14,8 +14,9 @@ import { tokens } from '../design/tokens'
 SplashScreen.preventAutoHideAsync()
 
 export default function RootLayout() {
+  // One display weight: item 1 judged Grenze Gotisch 400 against 700 at t-heart on device and
+  // 700 ships, so the 400 face is no longer loaded. IBM Plex keeps both — 500 is for chat names.
   const [fontsLoaded, fontError] = useFonts({
-    GrenzeGotisch_400Regular,
     GrenzeGotisch_700Bold,
     IBMPlexSans_400Regular,
     IBMPlexSans_500Medium,

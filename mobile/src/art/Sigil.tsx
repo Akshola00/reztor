@@ -1,4 +1,3 @@
-import { useId } from 'react'
 import Svg, { Circle, Line, Path } from 'react-native-svg'
 
 import { tokens } from '../design/tokens'
@@ -7,18 +6,17 @@ import { tokens } from '../design/tokens'
 // reads as more important. Everything is drawn in a square viewBox and scaled, so the stroke
 // stays proportional at 16 and at 48.
 //
-// Seat 4 has two candidates. §5.2 calls for a square rotated 45° with one corner open, but
-// §6.1's own diagram draws it upright, and rotated it risks reading as seat 3's diamond at
-// 16px. Variant A follows §5.2, variant B follows the diagram.
+// Seat 4 is upright, per §6.1's diagram, and draws all four sides with a small gap at one
+// corner. Item 1 first tried §5.2's literal reading — a rotated square with a corner left open,
+// which drops two whole sides — and it read as a bare chevron at 16px. Upright with a gap keeps
+// it a square, and avoids colliding with seat 3's diamond at thumb size.
 
 export type SeatNumber = 1 | 2 | 3 | 4
-export type Seat4Variant = 'A' | 'B'
 
 type SigilProps = {
   seat: SeatNumber
   colour: string
   size?: number
-  seat4Variant?: Seat4Variant
 }
 
 const BOX = tokens.art.sigilBox
@@ -27,11 +25,9 @@ const MID = BOX / 2
 const INSET = tokens.art.sigilStroke * 2
 const NEAR = INSET
 const FAR = BOX - INSET
+const GAP = tokens.art.sigilCornerGap
 
-export function Sigil({ seat, colour, size = tokens.art.sigilSmall, seat4Variant = 'A' }: SigilProps) {
-  // Unique per instance: duplicate ids across Svg elements render wrong on Android.
-  const uid = useId().replace(/[^a-zA-Z0-9]/g, '')
-
+export function Sigil({ seat, colour, size = tokens.art.sigilSmall }: SigilProps) {
   const stroke = {
     stroke: colour,
     strokeWidth: tokens.art.sigilStroke,
@@ -42,7 +38,7 @@ export function Sigil({ seat, colour, size = tokens.art.sigilSmall, seat4Variant
   }
 
   return (
-    <Svg width={size} height={size} viewBox={`0 0 ${BOX} ${BOX}`} testID={`sigil-${seat}-${uid}`}>
+    <Svg width={size} height={size} viewBox={`0 0 ${BOX} ${BOX}`}>
       {seat === 1 ? (
         <>
           <Circle cx={MID} cy={MID} r={MID - INSET} {...stroke} />
@@ -65,14 +61,12 @@ export function Sigil({ seat, colour, size = tokens.art.sigilSmall, seat4Variant
         </>
       ) : null}
 
-      {seat === 4 && seat4Variant === 'A' ? (
-        // §5.2: rotated 45°, one corner open. Open between the top and right vertices.
-        <Path d={`M ${FAR} ${MID} L ${MID} ${FAR} L ${NEAR} ${MID} L ${MID} ${NEAR}`} {...stroke} />
-      ) : null}
-
-      {seat === 4 && seat4Variant === 'B' ? (
-        // §6.1's diagram: upright, one corner open. Open at the top right.
-        <Path d={`M ${MID} ${NEAR} L ${NEAR} ${NEAR} L ${NEAR} ${FAR} L ${FAR} ${FAR} L ${FAR} ${MID}`} {...stroke} />
+      {seat === 4 ? (
+        // All four sides, upright, with a small gap at the top-right corner.
+        <Path
+          d={`M ${FAR - GAP} ${NEAR} L ${NEAR} ${NEAR} L ${NEAR} ${FAR} L ${FAR} ${FAR} L ${FAR} ${NEAR + GAP}`}
+          {...stroke}
+        />
       ) : null}
     </Svg>
   )

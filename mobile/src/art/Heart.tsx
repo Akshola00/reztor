@@ -1,39 +1,41 @@
 import { useId } from 'react'
-import Svg, { Circle, ClipPath, Defs, G, Path, RadialGradient, Rect, Stop } from 'react-native-svg'
+import Svg, { Circle, ClipPath, Defs, G, Path, RadialGradient, Stop } from 'react-native-svg'
 
 import { tokens } from '../design/tokens'
 
-// §6.4. A carved vessel containing a light that is nearly dead at 0% and fully alive at the
+// §6.4. A carved vessel holding a light that is nearly dead at 0% and fully alive at the
 // Threshold. Above the Threshold it stays bright and stops escalating, so `fraction` arrives
 // already clamped to 1.
 //
-// The light is fixed layers — an ember core plus two radial-gradient glows. No gradient stop is
-// recomputed per value: only opacity and scale derive from the fraction, so item 2 can drive
-// this from a shared value without touching geometry.
-
-export type VesselVariant = 'A' | 'B'
+// The vessel is a recess in the stone field, so its bevel is inverted per §3.3: dark edge at the
+// top, lit edge below. The light is clipped to the vessel's inner *cavity* rather than to its
+// silhouette — clipped to the outline it read as a round lamp floating on top of the vessel
+// instead of a light held inside it, and shaped by it.
+//
+// The light is fixed layers: an ember core plus two radial glows. No gradient stop is recomputed
+// per value — only opacity and scale derive from the fraction, so item 2 can drive this from a
+// shared value without touching geometry.
 
 type HeartProps = {
   /** boardTotal / winTarget, clamped to 0..1 by the caller. */
   fraction: number
-  vessel?: VesselVariant
 }
 
-export function Heart({ fraction, vessel = 'B' }: HeartProps) {
+export function Heart({ fraction }: HeartProps) {
   // Unique per instance: duplicate ids across Svg elements render wrong on Android.
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '')
   const coreId = `core${uid}`
   const glowId = `glow${uid}`
   const haloId = `halo${uid}`
-  const clipId = `vessel${uid}`
+  const cavityId = `cavity${uid}`
 
   const { art, palette } = tokens
   const { width, height } = art.heartBox
   const { x: cx, y: cy } = art.heartLightCentre
   const light = art.heartLight
+  const edge = art.apertureEdge
 
   const f = Math.max(0, Math.min(1, fraction))
-  const path = vessel === 'A' ? art.heartVesselPathA : art.heartVesselPathB
 
   const coreOpacity = light.coreBase + light.coreGain * f
   const glowOpacity = light.glowBase + light.glowGain * f
@@ -43,8 +45,8 @@ export function Heart({ fraction, vessel = 'B' }: HeartProps) {
   return (
     <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
       <Defs>
-        <ClipPath id={clipId}>
-          <Path d={path} />
+        <ClipPath id={cavityId}>
+          <Path d={art.heartCavityPath} />
         </ClipPath>
         <RadialGradient id={coreId} cx="50%" cy="50%" r="50%" gradientUnits="objectBoundingBox">
           <Stop offset="0" stopColor={palette.flameWhite} stopOpacity={1} />
@@ -60,12 +62,14 @@ export function Heart({ fraction, vessel = 'B' }: HeartProps) {
         </RadialGradient>
       </Defs>
 
-      {/* The vessel body. */}
-      <Path d={path} fill={palette.stone} />
+      {/* The recess floor: the vessel is cut into the field, so its face is darker than stone. */}
+      <Path d={art.heartVesselPath} fill={palette.char} />
 
-      {/* The light, contained. */}
-      <G clipPath={`url(#${clipId})`}>
-        <Rect x={0} y={0} width={width} height={height} fill={palette.void} />
+      {/* The cavity, deeper still. */}
+      <Path d={art.heartCavityPath} fill={palette.void} />
+
+      {/* The light, held inside the cavity and shaped by it. */}
+      <G clipPath={`url(#${cavityId})`}>
         <Circle
           cx={cx}
           cy={cy}
@@ -89,15 +93,11 @@ export function Heart({ fraction, vessel = 'B' }: HeartProps) {
         <Circle cx={cx} cy={cy} r={art.heartCoreRadius} fill={`url(#${coreId})`} opacity={coreOpacity} />
       </G>
 
-      {/* Carved, per §3.3: the dark edge sits a hair below the light one. No shadow, no glow. */}
-      <Path
-        d={path}
-        fill="none"
-        stroke={palette.bevelShadow}
-        strokeWidth={art.thresholdThickness}
-        translateY={art.thresholdThickness}
-      />
-      <Path d={path} fill="none" stroke={palette.stoneLit} strokeWidth={art.thresholdThickness} />
+      {/* Both edges carved as recesses: lit edge below, dark edge on top. No shadow, no glow. */}
+      <Path d={art.heartCavityPath} fill="none" stroke={palette.stoneLit} strokeWidth={edge} translateY={edge} />
+      <Path d={art.heartCavityPath} fill="none" stroke={palette.bevelShadow} strokeWidth={edge} />
+      <Path d={art.heartVesselPath} fill="none" stroke={palette.stoneLit} strokeWidth={edge} translateY={edge} />
+      <Path d={art.heartVesselPath} fill="none" stroke={palette.bevelShadow} strokeWidth={edge} />
     </Svg>
   )
 }

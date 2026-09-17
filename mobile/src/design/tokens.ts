@@ -75,9 +75,11 @@ const radii = {
 // Android will not select a weight from a custom family via `fontWeight`, so each weight is
 // its own family name. These are the expo-google-fonts export names. No CSS fallback stacks —
 // they do nothing in React Native.
+//
+// One display weight only. Item 1 judged Grenze Gotisch 400 against 700 on device at t-heart
+// and 700 ships; the 400 face was dropped rather than left loaded and unused.
 const fontFamily = {
-  displayRegular: 'GrenzeGotisch_400Regular',
-  displayBold: 'GrenzeGotisch_700Bold',
+  display: 'GrenzeGotisch_700Bold',
   uiRegular: 'IBMPlexSans_400Regular',
   uiMedium: 'IBMPlexSans_500Medium',
 } as const
@@ -86,9 +88,9 @@ const fontFamily = {
 // Native wants an absolute value. Family per §3.2's usage lists: Grenze Gotisch carries the
 // Heart, stage names, role reveal and the Reckoning headline, and is never set below 20.
 const type = {
-  heart: { fontSize: 56, lineHeight: 56, fontFamily: fontFamily.displayRegular },
-  display: { fontSize: 32, lineHeight: 35.2, fontFamily: fontFamily.displayRegular },
-  stage: { fontSize: 20, lineHeight: 24, fontFamily: fontFamily.displayRegular },
+  heart: { fontSize: 56, lineHeight: 56, fontFamily: fontFamily.display },
+  display: { fontSize: 32, lineHeight: 35.2, fontFamily: fontFamily.display },
+  stage: { fontSize: 20, lineHeight: 24, fontFamily: fontFamily.display },
   body: { fontSize: 15, lineHeight: 22.5, fontFamily: fontFamily.uiRegular },
   data: { fontSize: 14, lineHeight: 16.8, fontFamily: fontFamily.uiRegular },
   fine: { fontSize: 12, lineHeight: 15.6, fontFamily: fontFamily.uiRegular },
@@ -146,10 +148,15 @@ const art = {
   conduitGrainWidth: 1,
   conduitGrainOpacity: 0.22,
 
-  // The aperture's own carved edge, per §3.3. An aperture is cut *inward*, so the bevel inverts:
-  // the dark edge sits at the top and the light edge at the bottom. Without this the conduits
-  // read as bars floating on the void rather than openings in stone (§4).
+  // The aperture's own carved edge, per §3.3. An aperture is cut *inward* into the stone field,
+  // so the bevel inverts: the dark edge sits at the top and the light edge at the foot.
   apertureEdge: 1,
+
+  // §6.2's two-stop fill runs flameDeep at the base to flame near the frontier. Spread evenly
+  // it read as a progress bar, so flameDeep now holds most of the column and flame appears only
+  // approaching the frontier. This is an objectBoundingBox offset on the scaled rect, so a short
+  // fill is still mostly deep with a bright top. Chosen in item 1.
+  fillDeepHoldOffset: 0.72,
 
   // A guard, not a design value. react-native-svg treats `scaleY={0}` as falsy and falls back
   // to 1, so an empty conduit rendered completely full on item 1's first pass. The fill scale is
@@ -160,45 +167,57 @@ const art = {
 
   // §6.2's "desaturate to 45%" for a dormant lane. See `cold` below for the interpretation.
   coldSaturation: 0.45,
+  // Desaturation alone left a dormant lane at about the same luminance as live fire, so it read
+  // milky and sat forward instead of receding. Its fill is also darkened by this factor. Chosen
+  // in item 1. Applied to the fill only: darkening `char` as well would turn the whole aperture
+  // into a black hole and lose the fill level, which must stay readable.
+  coldLightness: 0.55,
 
-  // The Threshold is one carved line across all four conduits: a light edge with a dark edge
-  // under it, per §3.3's bevel logic. Thickness chosen.
+  // The Threshold is one carved line across the conduit row: a light edge with a dark edge under
+  // it, per §3.3's bevel logic. It spans the row plus a small overhang, never the full screen.
   thresholdThickness: 1,
+  thresholdOverhang: 8,
+
+  // The carved seam between the stone field and the raised plinth.
+  seamThickness: 1,
 
   // §6.1 brackets your own conduit with "two short carved marks"; BUILD-PLAN moves a bracket
-  // onto the name plate. One bracket encloses both: a mark at the conduit top and one at the
-  // plate bottom. Length and thickness chosen.
-  bracketLength: 12,
-  bracketThickness: 1,
+  // onto the name plate. One bracket encloses both: marks at the conduit head and at the foot of
+  // the inscription. Lengthened and thickened in item 1 after the first pass, where at 12x1 they
+  // were invisible in peripheral vision. Drawn in boneDim — never fire, never a seat colour.
+  bracketLength: 20,
+  bracketThickness: 2,
 
   // Sigils are drawn in a square viewBox and scaled, so one stroke weight holds at every size
   // (§5.2 requires the same weight for all four). Box and stroke chosen.
   sigilBox: 24,
   sigilStroke: 1.5,
+  // Seat 4 is a square with a small gap at one corner. All four sides are drawn: dropping two
+  // sides made it read as a chevron at 16px rather than as a square.
+  sigilCornerGap: 4,
   // The two sizes §5.2 and the preview strip care about: legible-at-thumb and inspectable.
   sigilSmall: 16,
   sigilLarge: 48,
 
-  // Name plate inside the 72 `namePlates` slot. Height and sigil size chosen.
-  namePlateHeight: 56,
+  // The sigil size inscribed above each name, and the gap between the two.
   namePlateSigil: 16,
+  namePlateGap: 4,
 
-  // The Heart. §6.4 says "a carved vessel shape, roughly 120×96". The outline itself is not
-  // described, so item 1 offers two candidates for a call on device:
-  //   A — an urn: swelling shoulders tapering to a foot, the softer read.
-  //   B — a cut hexagon: straight facets only, the more carved read.
-  // Both outlines fill the box, inset only enough to keep the 1px carved stroke inside it. The
-  // first item-1 screenshot had them occupying 72x82 of the 120x96 box, which made the Heart
-  // smaller than its own percentage text and read as a logo rather than §6.1's hero image.
+  // The Heart. §6.4 says "a carved vessel shape, roughly 120×96". The outline is not described.
+  // A cut hexagon: straight facets only, the carved read, chosen over an urn in item 1.
+  //
+  // The vessel is a recess in the stone field. `heartCavityPath` is its inner cavity, and the
+  // light is clipped to that rather than to the silhouette — clipped to the outline the glow
+  // read as a round lamp floating on top of the vessel instead of a light held inside it.
   heartBox: { width: 120, height: 96 },
-  heartVesselPathA: 'M 5 28 C 5 12 30 4 60 4 C 90 4 115 12 115 28 L 104 64 C 104 84 84 92 60 92 C 36 92 16 84 16 64 Z',
-  heartVesselPathB: 'M 6 27 L 60 4 L 114 27 L 103 65 L 60 92 L 17 65 Z',
-  // Where the light sits inside the vessel, and the radii of the fixed light layers. The stops
+  heartVesselPath: 'M 6 27 L 60 4 L 114 27 L 103 65 L 60 92 L 17 65 Z',
+  heartCavityPath: 'M 20 32 L 60 15 L 100 32 L 92 61 L 60 81 L 28 61 Z',
+  // Where the light sits inside the cavity, and the radii of the fixed light layers. The stops
   // never change; only opacity and scale derive from the board fraction.
-  heartLightCentre: { x: 60, y: 50 },
-  heartCoreRadius: 14,
-  heartGlowRadius: 38,
-  heartHaloRadius: 60,
+  heartLightCentre: { x: 60, y: 48 },
+  heartCoreRadius: 11,
+  heartGlowRadius: 30,
+  heartHaloRadius: 44,
   // Light response to the board fraction. §6.4: nearly dead at 0%, clearly alive by 55%, and
   // it stops escalating above the Threshold (the fraction is clamped to 1 before it gets here).
   // Coefficients chosen: opacity = base + gain × fraction.
@@ -220,7 +239,8 @@ const art = {
 //
 // §6.2: a cold conduit "desaturates to 45%". It does not say whether that means to 45% of the
 // original saturation or reduced by 45%. Read here as **to 45% of the original** — HSL
-// saturation multiplied by 0.45 — which is the plainer reading of "to 45%".
+// saturation multiplied by 0.45 — which is the plainer reading of "to 45%". Item 1 adds a
+// lightness cut on top, because saturation alone did not make a dead lane recede.
 //
 // Precomputed at module load rather than applied as an SVG filter: Android re-rasterises
 // filters, and nothing in the Offering stage may cost a re-raster.
@@ -235,17 +255,18 @@ function rgbToHex(r: number, g: number, b: number): string {
   return `#${((clamp255(r) << 16) | (clamp255(g) << 8) | clamp255(b)).toString(16).padStart(6, '0').toUpperCase()}`
 }
 
-/** Multiplies a colour's HSL saturation by `factor`, leaving hue and lightness untouched. */
-export function desaturate(hex: string, factor: number): string {
+/** Scales a colour's HSL saturation and lightness, leaving hue untouched. */
+export function cool(hex: string, saturation: number, lightness: number): string {
   const [r, g, b] = hexToRgb(hex).map((v) => v / 255) as [number, number, number]
   const max = Math.max(r, g, b)
   const min = Math.min(r, g, b)
-  const l = (max + min) / 2
+  const l0 = (max + min) / 2
+  const l = l0 * lightness
   if (max === min) {
-    return rgbToHex(r * 255, g * 255, b * 255)
+    return rgbToHex(l * 255, l * 255, l * 255)
   }
   const d = max - min
-  const s = (l > 0.5 ? d / (2 - max - min) : d / (max + min)) * factor
+  const s = (l0 > 0.5 ? d / (2 - max - min) : d / (max + min)) * saturation
   let h = 0
   if (max === r) {
     h = ((g - b) / d + (g < b ? 6 : 0)) / 6
@@ -269,9 +290,11 @@ export function desaturate(hex: string, factor: number): string {
 }
 
 const cold = {
-  char: desaturate(palette.char, art.coldSaturation),
-  flameDeep: desaturate(palette.flameDeep, art.coldSaturation),
-  flame: desaturate(palette.flame, art.coldSaturation),
+  // The aperture floor keeps its lightness: it is already near-black, and darkening it would
+  // erase the contrast the fill level needs.
+  char: cool(palette.char, art.coldSaturation, 1),
+  flameDeep: cool(palette.flameDeep, art.coldSaturation, art.coldLightness),
+  flame: cool(palette.flame, art.coldSaturation, art.coldLightness),
 } as const
 
 export const tokens = {
