@@ -130,6 +130,14 @@ const grainOpacity = 0.03
 const art = {
   // Conduit aperture. 44 reads as a column rather than a bar at 360dp, and a 14 gap keeps four
   // of them plus the board margin inside the 360pt floor of §10.4's 360–430pt range.
+  //
+  // Widening was tried and rejected. 62/24 gives a 320dp row — 89% of the 360dp floor with
+  // symmetric 20dp margins — and an inscription then fits about ten characters instead of six.
+  // It was reverted anyway: the vessel is fixed at 120dp, so a 320dp row drops the Heart from
+  // ~0.49 to ~0.33 of the row's width and it stops reading as §6.1's hero image, while the
+  // filled columns go from roughly 1:5.7 to 1:4 and read as slabs rather than channels. Names
+  // are secondary — §5.2 makes the sigil the primary identity carrier — so truncation costs far
+  // less than a diminished Heart. Do not widen the row without enlarging the Heart with it.
   conduitWidth: 44,
   conduitGap: 14,
 
