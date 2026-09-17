@@ -115,7 +115,14 @@ These live in `src/design/tokens.ts` as a typed object. The CSS-variable form be
 --bone-faint: #545c6c; /* disabled, timestamps */
 ```
 
-**Blue fire is reserved.** `--flame*` appears in exactly three places: the conduit fill, the Threshold marks when crossed, and the board percentage during the crossing moment only. Not on buttons, not on focus rings, not on the active tab, and never on the percentage at any other time — it sits in `--bone` for the whole match and takes fire once. A player must be able to learn "blue = progress" in round one and never have that contradicted.
+**Blue fire is reserved.** `--flame*` appears in exactly four places:
+
+1. the conduit fill;
+2. the Threshold marks, when crossed;
+3. the board percentage, during the crossing moment only — it sits in `--bone` for the rest of the match and takes fire once;
+4. the Faithful's mark in the Marking (§7.2), in `--flame-cold`. This one is private, fires once per match, and is never seen by another player, so it cannot teach anything that contradicts the other three.
+
+Not on buttons, not on focus rings, not on the active tab, not on the tap band. A player must be able to learn "blue = progress" in round one and never have that contradicted.
 
 **Player identity is a mantle colour plus a sigil**, never fire. The four mantles are muted so they cannot be confused with the fill:
 
@@ -188,7 +195,7 @@ These are the specific failure modes. Treat each as a lint rule.
 - **No Inter, no Space Grotesk, no monospace for small labels.**
 - **No tracked-out all-caps eyebrow labels** above headings ("YOUR ROLE", "CURRENT STAGE"). If a label is necessary the heading was not clear enough.
 - **No 01 / 02 / 03 numbered markers.** Rounds are numbered because rounds are a sequence; nothing else is.
-- **No `→` appended to button text.**
+- **No `→` appended to button text.** §7.3's tier face (`1 ⟡ → 1`) is permitted and is not an exception to the spirit of this rule: there the arrow is notation for "this cost yields this much", sitting between two numbers. What is banned is the arrow as a call-to-action, tacked onto a label to point at the next screen.
 - **No identical rounded cards** carrying every piece of content.
 - **No fade-and-slide-up on every element that mounts.** Motion is budgeted; see §8.
 - **No `#0B0B0B` or `#111`** standing in for the background — use `--void`, which is cold on purpose.
@@ -201,17 +208,11 @@ If a screen is finished and it would be equally at home in a DeFi dashboard, it 
 
 ### 5.1 Form
 
-Each player is a hooded figure kneeling at the foot of their conduit, drawn as inline SVG from flat shapes — no raster art, no gradients beyond a two-stop fill.
+**The hooded figures are cut** (BUILD-PLAN.md §2). There is no body, no hood, no face and no mantle drape anywhere in the product.
 
-Construction, roughly 64×88 units:
+A player's form is their **sigil token**: the seat sigil on a small stone disc, riding the surface of their own conduit, per §6.2. That is the whole of it.
 
-- **Hood and body** are one continuous silhouette: a pointed-arch hood flowing into a wide kneeling base, giving a stable triangular mass. Fill `--stone`, with a slightly lighter `--stone-lit` edge on the side facing the conduit.
-- **The face is a void.** A darker shape (`--void`) inside the hood, with no features.
-- **Two eye-points** sit in that void, filled with the player's mantle colour. These are the figure's only expressive element — their vertical position and opacity carry every emotional state.
-- **The mantle** is a shoulder drape in the seat colour, muted, occupying maybe 20% of the silhouette. The robe itself stays charcoal for everyone.
-- **The sigil** is carved into the plinth stone in front of each figure, not worn.
-
-Silhouettes must be distinguishable at 48px tall on a dark screen. Test this before adding any detail.
+The token carries identity by shape first (§5.2), by position second — where it sits on the conduit is that player's standing in the rite, readable at a glance across all four — and by colour only as reinforcement. It must stay distinguishable by shape alone at its on-board size.
 
 ### 5.2 Sigils
 
@@ -226,15 +227,18 @@ Sigils appear on the plinth, beside names in chat, on vote tokens, and in the Re
 
 ### 5.3 States
 
-| State                              | Treatment                                                                                                                                                                                                     |
-| :--------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Kneeling (idle)                    | Slow breathing — the silhouette scales 1.0→1.008 over 4s. Eye-points at 70% opacity.                                                                                                                          |
-| Channelling (this player offering) | Figure leans ~3° toward the conduit, eye-points brighten to 100%. Returns to idle after 600ms of no offerings.                                                                                                |
-| Starved (conduit fell this tick)   | Eye-points drop to 35% and the figure contracts 2%. Recovers over 1.2s. Applied to any conduit that loses ground — **including the impostor's victim and a self-sink source**, so it never identifies anyone. |
-| Cold (cast out)                    | The figure is gone. An empty robe remains, collapsed, at 40% opacity. Eye-points extinguished.                                                                                                                |
-| Disconnected                       | Figure at 25% opacity, no breathing. A thin `--bone-faint` outline marks the absence.                                                                                                                         |
+The five figure states are cut with the figures. Two survive, carried by the token:
 
-There is no "Hollow" figure state. The Hollow looks exactly like everyone else on every client, including their own.
+| State           | Treatment                                                                                           |
+| :-------------- | :-------------------------------------------------------------------------------------------------- |
+| Cold (cast out) | Disc at 40% opacity, sigil in `--bone-faint`. It stays that way for the rest of the match.          |
+| Disconnected    | Token at 25% opacity. Nothing else marks the absence — no outline, no badge, no countdown on-board. |
+
+**Starved is cut.** A conduit that lost ground already says so: the frontier descends, carrying its surface and its token down with it, and `--toll` embers rise from the new frontier (§6.3). That is the information, and a second channel for it would only risk implying a direction, which §6.3 forbids.
+
+Idle breathing and the channelling lean are cut with the figures and are not reassigned to the token. The token moves when the conduit moves and at no other time.
+
+There is no "Hollow" token state. The Hollow's conduit and token look exactly like everyone else's on every client, including their own.
 
 ---
 
@@ -282,7 +286,7 @@ Vertical budget on an 844pt viewport: header 48pt, conduits flexing to fill (280
 Each conduit is a fixed-height SVG aperture. The fill is a `<rect>` inside a clip path, animated with `transform: scaleY()` anchored at the bottom. Never animate height.
 
 - **Unfilled** is `--char` with a faint vertical grain, not pure black — the conduit is stone, not a hole.
-- **Fill** is a two-stop vertical gradient, `--flame-deep` at the base to `--flame` near the frontier.
+- **Fill** is a two-stop vertical gradient, `--flame-deep` at the base to `--flame` near the frontier. `--flame-deep` holds the lower seven-eighths and the ramp to `--flame` is confined to the top eighth, so the surface crowns and the frontier keeps the brightest value. Item 1c judged this on the phone against a darker base (`--flame-deep` mixed toward `--char`, ramping across the top third) and against a translucent body that let the char grain read through the fire; both were rejected and this distribution ships. The fill is opaque — the carved Threshold mark passes behind it and is not visible through it.
 - **The frontier** is a 2px `--flame-cold` line at the top of the fill with a tight 6px glow. This is the element the eye tracks, and with no vessel on screen it carries the brightest value in the product.
 - **Cold conduits** (cast out) desaturate to 45% and the frontier line goes flat `--bone-faint`. The fill stays — the progress is still counted.
 - **Cap behaviour**: at 1000 units the frontier meets the top and the glow doubles briefly, once, then settles. Additional offerings produce no visual change, which is the honest representation of the hard cap. The surface and its token stay fully inside the aperture at capacity — neither is ever clipped by the lip.
@@ -315,26 +319,27 @@ The crossing is the one orchestrated moment:
 
 ## 7. Screens
 
-### 7.1 Inventory
+### 7.1 The flow
 
-| #   | Screen            | Note                                     |
-| :-- | :---------------- | :--------------------------------------- |
-| 1   | Threshold (entry) | Wallet connect, buy-in, the rite at rest |
-| 2   | The Gathering     | Lobby, seats filling, 60s dissolve timer |
-| 3   | The Marking       | Role reveal — private, theatrical, 4s    |
-| 4   | Offering          | The board, 60s. Hero screen.             |
-| 5   | Draw targeting    | Full-screen overlay, impostor only       |
-| 6   | Augury            | Purchase confirm, then result card       |
-| 7   | Council           | Chat, 45s, board frozen but visible      |
-| 8   | Judgement         | Vote, 15s                                |
-| 9   | The Reveal        | All votes at once                        |
-| 10  | Cast Out          | Ejection sequence, ~3s                   |
-| 11  | The Reckoning     | Full post-mortem                         |
-| 12  | Broken states     | Disconnect, void, refund                 |
+Six places, not twelve screens. Everything inside a match is one screen driven by the server's stage — see BUILD-PLAN.md §3 for the routes.
+
+1. **Splash** — native, held until the fonts resolve. No content of its own.
+2. **Home** — name, create, and join by code. An About/rules scroll sits below the actions rather than behind a link. **No wallet UI of any kind is shown until the contract lands on day 6**; when it does, wallet connect appears here and nothing else changes.
+3. **Lobby** — the invite code set large enough to read aloud across a room, seats filling as players arrive, and a leave control.
+4. **Match — one screen.** It never remounts; a remount loses the conduit animation state and reads as a flicker.
+   - **The Marking** plays as a full-screen overlay at match start and lifts to reveal the board beneath it. It is not a route.
+   - **Offering, Council and Judgement** change the lower region automatically on the server's stage. They are phases of one screen, not dismissible modals — there is nothing to close and no way to be in the wrong one.
+   - **The rules sheet** can be opened at any time. **The action sheet** holds Augury, plus the Draw for the Hollow (§7.4).
+   - **The vote reveal and Cast Out** are brief overlays over the board.
+   - **The leave confirmation** states plainly that the stake is forfeit.
+5. **The Reckoning** — the full post-mortem.
+6. **Broken states** — void, refund, disconnect past the grace period.
 
 ### 7.2 The Marking (role reveal)
 
 This is the most important four seconds in the product and it happens before the player has done anything. It sets whether the rest of the match feels tense or trivial.
+
+**It is an overlay inside the match screen, not a route.** It covers the board at match start and lifts to reveal it, so the board is already mounted and already correct underneath — no navigation, no remount, nothing to skip.
 
 Full bleed `--void`. The player's own sigil token alone, centred, larger than it will ever appear again. A mark is drawn onto the stone around it, stroke by stroke, over about 1.2s.
 
@@ -355,7 +360,9 @@ Per §6. Additional behaviour:
 
 **The credit counter** sits between the two buttons. It ticks down continuously with tabular figures. Below 100 credits it shifts to `--toll`. Below 20 it pulses slowly. There is no modal warning — the player is mid-tap and a modal would be hostile.
 
-**The tap band** is the tap target — a large oval stone face, centred, with the band running from below the controls row to the bottom edge. A clear gap separates it from the controls row so a thumb reaching for the band cannot catch a button. It depresses 2px on touch, releases over 80ms, and emits a small `--flame-cold` spark at the touch point. The band must never trigger text selection, double-tap zoom, or pull-to-refresh.
+**The tap band** is the tap target — a large oval, centred, with the band running from below the controls row to the bottom edge. A clear gap separates it from the controls row so a thumb reaching for the band cannot catch a button. It depresses 2px on touch, releases over 80ms, and emits a small `--flame-cold` spark at the touch point. The band must never trigger text selection, double-tap zoom, or pull-to-refresh.
+
+**Its resting face is `--char` with a stone bevel rim** — lit edge above, shadow below, stone sides — so the band reads as carved into the dark and can never be brighter than the fire. Item 1c judged this on the phone against a raised `--stone` slab, which on an empty board was the brightest object on screen and pulled the eye off the conduits. The pressed state brightens to `--stone-lit`, which only reads as brightening because the resting face is this dark.
 
 The oval is the one deliberate exception to §3.3's radius hierarchy: it is the only thing on screen shaped to a thumb rather than cut from stone, and that is what makes it read as the thing to hit. Nothing else in the product takes a radius above `4`.
 
@@ -388,11 +395,11 @@ The 45s timer runs as a thin line that shortens across the top of the chat, not 
 
 ### 7.6 Judgement and The Reveal
 
-Four (or three) tokens in a row: figure, sigil, name. Tap to place your mark. A Withhold option sits apart from the others, visually lower, because abstaining is a real choice and not a fifth player.
+Four (or three) vote tokens in a row: the player's sigil token and their name. Tap to place your mark. A Withhold option sits apart from the others, visually lower, because abstaining is a real choice and not a fifth player.
 
 Once cast, your own mark shows on your chosen token. **No other player's vote is visible in any form** — not a count, not "2 have voted", nothing. Simultaneous reveal is a hard requirement and any progress indicator leaks it.
 
-At close, all marks flip in at once over 400ms, then resolve. If a majority is reached, the target's figure is marked for Cast Out. If not: _"No one is cast out."_ and the round advances.
+At close, all marks flip in at once over 400ms, then resolve. If a majority is reached, the target's sigil token is marked for Cast Out. If not: _"No one is cast out."_ and the round advances.
 
 ### 7.7 Cast Out
 
@@ -406,7 +413,7 @@ Their conduit's fill desaturates to cold but does not empty — their contributi
 
 Everything, immediately, with no progressive disclosure. The mechanics spec is right that the post-mortem argument is half the entertainment, and hiding anything behind a tab or an accordion kills it.
 
-Order: verdict in Grenze Gotisch → the Hollow revealed, their figure marked in `--toll` → final board and percentage → a per-player table (credits spent, units contributed, final conduit) → the Hollow's line (total toll, Draw count, self-sinks) → Augury purchases and results → full vote history by round → payouts and refunds in `--gold` → the role seed, monospace, selectable, with a one-line note that it can be checked against the assignment.
+Order: verdict in Grenze Gotisch → the Hollow revealed, their sigil token marked in `--toll` → final board and percentage → a per-player table (credits spent, units contributed, final conduit) → the Hollow's line (total toll, Draw count, self-sinks) → Augury purchases and results → full vote history by round → payouts and refunds in `--gold` → the role seed, monospace, selectable, with a one-line note that it can be checked against the assignment.
 
 The table is real tabular data with tabular figures and aligned columns, not four rounded cards.
 
@@ -416,9 +423,9 @@ Two actions at the bottom: **Kneel again** and **Leave**.
 
 The mechanics spec's void-and-refund path needs first-class design, because it is the moment a player worries about their money.
 
-A voided rite gets its own screen, not a toast: the Heart goes dark, and the copy says exactly what happened and what it cost. _"The rite is broken. Nothing was spent. 12 SKR returned to your wallet."_ Refund amount in `--gold`, transaction link available. No apology, no filler.
+A voided rite gets its own screen, not a toast: the percentage and the conduits go dark, and the copy says exactly what happened and what it cost. _"The rite is broken. Nothing was spent. 12 SKR returned to your wallet."_ Refund amount in `--gold`, transaction link available. No apology, no filler.
 
-Disconnection during the 30s grace shows a countdown on the player's own figure. Reconnecting resumes without ceremony.
+Disconnection during the 30s grace shows a countdown beside the player's own sigil token. Reconnecting resumes without ceremony.
 
 ---
 
@@ -492,6 +499,7 @@ src/art/Conduit.tsx        aperture, arced surface, frontier
 src/art/RidingToken.tsx    sigil on a stone disc, rides the surface
 src/art/BoardHeader.tsx    round, percentage, timer
 src/art/Sigil.tsx
+src/art/SkrMark.tsx        the SKR glyph, drawn (U+27E1 is not in IBM Plex Sans)
 ```
 
 Every colour comes from `tokens.ts`. No hex literal appears anywhere else in the codebase — if a component needs a colour that isn't a token, that is a design decision and it belongs here, not in a component file.
@@ -509,16 +517,4 @@ Every colour comes from `tokens.ts`. No hex literal appears anywhere else in the
 
 ## 11. Build order
 
-0. A working dev build on a real Android phone. Nothing below can be judged in an emulator, and Expo Go will not run this project at all.
-1. Tokens, fonts, grain. Confirm on that phone before anything else.
-2. `Conduit` and `Heart` as static SVG at fixed values. Judge the hero image cold — if it isn't striking without motion, motion won't save it.
-3. `Figure` and `Sigil`, silhouette test at 48px.
-4. Offering screen with local-only tapping, no network. Tune the feel here.
-5. Wire the socket, add reconciliation.
-6. Council, Judgement, Reveal.
-7. The Marking, Cast Out, Threshold crossing — the three theatrical beats, together, so they share a vocabulary.
-8. The Reckoning.
-9. Audio.
-10. Broken states.
-
-Steps 1–4 are where the product either has an identity or doesn't. Do not proceed past 4 until the board is something you want to look at.
+**See `BUILD-PLAN.md` §5.** That is the single build order for this project. This document describes what the screens are; it does not describe the sequence they are built in, and a second ordering here would only drift out of step with the first.

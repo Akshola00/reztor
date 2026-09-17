@@ -64,11 +64,11 @@ simultaneous reveal. Cast Out. The Reckoning table. The void screen.
 ### Cut for MVP
 
 - **The Faithful figures (§5.1, §5.3).** The hooded silhouette with eye-points and five
-  animated states is a day of art on its own. Replace with a carved name plate under
-  each conduit: sigil, name, and a thin bracket marking your own. Everything the five
-  states carried moves onto the conduit itself — a drained conduit already shows a
-  falling frontier and toll embers, which is the information. This is the largest cut
-  and the one that buys the schedule.
+  animated states is a day of art on its own. Identity moves onto the conduit itself as
+  the riding sigil token (§6.2), which carries the seat by shape and that player's
+  standing by position. Of the five states only cold and disconnected survive; a drained
+  conduit already shows a falling frontier and toll embers, which is the information.
+  This is the largest cut and the one that buys the schedule.
 - **All audio (§9).** The drone, the struck-stone offering, the crossfaded loops. Half a
   day minimum and it does not survive a demo video's own soundtrack. The Threshold
   still gets its visual moment.
@@ -94,20 +94,29 @@ Wallet connect, buy-in, real settlement. See §4.
 
 ---
 
-## 3. Screens — six routes, not twelve
+## 3. Screens — five routes, not twelve
 
 | Route           | Covers                                                                                        |
 | --------------- | --------------------------------------------------------------------------------------------- |
-| `/`             | Entry: name, create or join by code. No wallet.                                               |
-| `/lobby/[code]` | The Gathering — seats filling, dissolve timer                                                 |
-| `/marking`      | The Marking — role reveal, 4s, no skip                                                        |
+| `/`             | Home: name, create or join by code, rules scroll below the actions. No wallet until day 6.    |
+| `/lobby/[code]` | The Gathering — invite code, seats filling, dissolve timer, leave                             |
 | `/match`        | **One screen, stage-driven.** Offering, Council, Judgement, Reveal, Cast Out. Never remounts. |
 | `/reckoning`    | The Reckoning, full post-mortem                                                               |
 | `/broken`       | Void, refund, disconnect-past-grace                                                           |
 
-The Draw and Augury share one sheet, opened from the board's single action button. Both
-live inside `/match` as components rather than routes, and the closed board is identical
-for every role.
+**There is no `/marking` route.** The Marking is a full-screen overlay inside `/match`: it
+covers the board at match start and lifts to reveal it, so the board is already mounted and
+already correct underneath, and nothing remounts.
+
+Everything that is not a server stage lives inside `/match` as a component rather than a
+route:
+
+- **The Marking overlay** — role reveal, 4s, no skip.
+- **The action sheet** — Augury for everyone, plus the Draw for the Hollow. One sheet, opened
+  from the board's single action button, so the closed board is identical for every role.
+- **The rules sheet** — openable at any time.
+- **The vote reveal and Cast Out** — brief overlays over the board.
+- **The leave confirmation** — states that the stake is forfeit.
 
 ---
 
@@ -135,16 +144,21 @@ real Android phone.
    trivial reasons; find that out now. Also: delete the template cruft, install
    `react-native-svg`, create `src/design/tokens.ts` and `src/design/motion.ts` from the
    design doc's named values, load both fonts, add the grain.
-1. **`Conduit` and `Heart` as static SVG at fixed values.** Judge the hero image cold.
-   If four columns of cold fire under a dead heart is not striking without motion,
-   motion will not save it. Iterate here — it is cheap now and expensive later.
-2. **The Offering screen, local only, no network.** Plinth, tier chips, credit counter,
+1. **The board art as static SVG at fixed values**, per `reztor-design.md` §6.1: the
+   header, four derived-width conduits with arced surfaces and riding sigil tokens, the
+   Threshold marks, the controls row and the tap band. Judge the hero image cold. If four
+   columns of cold fire in the dark is not striking without motion, motion will not save
+   it. Iterate here — it is cheap now and expensive later.
+2. **The Offering screen, local only, no network.** Tap band, tier button, credit counter,
    optimistic tapping at a real 6/sec. Tune the feel. This is the core verb and nothing
    downstream matters if it is wrong.
-3. **Socket, entry, lobby, Marking.** Connection, invite code, seated waiting,
-   `MATCH_STARTED`, role reveal, then into the live board with reconciliation.
+3. **Socket, entry, lobby, the Marking overlay.** Connection, invite code, seated waiting,
+   `MATCH_STARTED`, then the Marking playing as an overlay inside `/match` — not a route —
+   lifting into the live board with reconciliation.
 4. **Council, Judgement, Reveal, Cast Out.** The stage machine inside `/match`.
-5. **Draw sheet and Augury.** Impostor controls and the trace result card.
+5. **The shared action sheet.** One sheet holding Augury for everyone and the Draw for the
+   Hollow, opened from the board's single action button, plus the trace result card. The
+   closed board must stay identical for every role.
 6. **The Reckoning and the broken states.**
 7. **Playtest, four phones, four people.** Book this before you start item 0.
 
@@ -155,7 +169,7 @@ assembly.
 
 ## 6. The two things most likely to go wrong
 
-**The plinth at six taps per second.** `Pressable`'s `onPressIn` will not reliably fire
+**The tap band at six taps per second.** `Pressable`'s `onPressIn` will not reliably fire
 sixty times in ten seconds. Use a bare `View` with `onTouchStart`, or a Gesture Handler
 `Tap` with a short `maxDuration`, and verify with a counter on device before building
 anything on top of it. If the tap surface drops inputs, every balance number you

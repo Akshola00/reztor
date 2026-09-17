@@ -249,9 +249,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // §3.3's one permitted exception to the radius hierarchy — see §7.3. Still carved stone: the
-  // bevel is the same raised face as every button.
+  // §3.3's one permitted exception to the radius hierarchy — see §7.3. A face cut into the dark
+  // rather than a slab raised out of it, chosen on the phone in item 1c: the band must never be
+  // brighter than the fire, and `char` leaves item 2's `stoneLit` pressed state room to read as
+  // brightening.
   bandFace: {
-    ...tokens.material.raisedStoneFace,
+    ...tokens.material.carvedBandFace,
   },
 })

@@ -63,6 +63,18 @@ const material = {
     borderBottomWidth: 1,
     borderBottomColor: palette.stoneLit,
   },
+  // §7.3's tap band face, chosen on the phone in item 1c over a raised stone slab: a face cut
+  // into the dark rather than a slab lifted out of it. The face is `char`, which is far darker
+  // than `stoneLit`, so item 2's pressed state still reads as the band brightening under the
+  // thumb. The rim carries §3.3's bevel — lit above, shadow below — with stone sides, so the
+  // band is carved and never brighter than the fire.
+  carvedBandFace: {
+    backgroundColor: palette.char,
+    borderWidth: 2,
+    borderColor: palette.stoneEdge,
+    borderTopColor: palette.stoneLit,
+    borderBottomColor: palette.bevelShadow,
+  },
 } as const
 
 // §3.3. Radius encodes hierarchy. The conduits are apertures, not objects. The tap band is the
@@ -183,6 +195,12 @@ const art = {
   // compete with the frontier for attention — exactly §4's bar-chart read. §6.2 gives the
   // frontier the brightest value in the product, so the ramp is now confined to the top eighth
   // of the fill and the body of the column stays deep.
+  //
+  // Item 1c put this against two alternatives on the phone and kept it: a darker base
+  // (flameDeep mixed 55% toward char, ramping through flameDeep across the top third), and a
+  // translucent body at 50% letting char's vertical grain read through the fire. Both were
+  // rejected — see reztor-design.md §6.2. Do not reintroduce either without judging it on the
+  // phone again.
   fillDeepHoldOffset: 0.88,
 
   // A guard, not a design value. react-native-svg treats `scaleY={0}` as falsy and falls back

@@ -215,6 +215,7 @@ Cast-out players stay in the match screen as spectators. Remove their inputs ent
 5. Empty, loading, and error states exist.
 6. For anything in the Offering stage: tapping still feels instant, and the JS thread is idle during a tap burst.
 7. Verify a build with `npx expo run:android --no-bundler`, whose exit code is the build's own. Start Metro separately (`pnpm run dev`). A build passes when that command exits 0, the app installs, and a screenshot shows it rendering — `adb exec-out screencap -p`, then actually look at it. Do not verify with `pnpm run android`: it never exits on success because it holds Metro open in the foreground, so a green wrapper script around it proves nothing.
+8. **Any script that captures exit codes, loops over files, or compares hashes runs under bash explicitly** — a `#!/usr/bin/env bash` shebang, or `bash script.sh`, or `bash -c`. The default shell here is **zsh, which does not word-split an unquoted variable**: `for f in $FILES` iterates exactly once with the whole string as a single word, so the loop silently does nothing and a hash comparison silently "passes" on an empty list. This has broken three checks in this project already, two of which reported a pass for a check that never ran, and one of which printed a failure verdict computed from two empty strings. Prefer arrays, quote deliberately, and make every check fail loudly when its inputs are missing rather than returning zero. A check that cannot prove its inputs existed has not run.
 
 ## Do not
 

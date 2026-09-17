@@ -96,6 +96,9 @@ export function Conduit({ units, capacity, dormant, width, height, thresholdFrac
   return (
     <Svg width={width} height={height}>
       <Defs>
+        {/* §6.2's two-stop gradient, with flameDeep holding the lower seven-eighths so the ramp
+            to flame crowns the surface rather than lighting the whole column. Item 1c judged
+            this against a darker base and a translucent body on the phone and kept it. */}
         <LinearGradient id={fillId} x1="0" y1="1" x2="0" y2="0" gradientUnits="objectBoundingBox">
           <Stop offset="0" stopColor={base} />
           <Stop offset={String(art.fillDeepHoldOffset)} stopColor={base} />
@@ -188,7 +191,7 @@ export function Conduit({ units, capacity, dormant, width, height, thresholdFrac
             drawn *under* the fill, which is right while the Threshold is only a mark — but at the
             moment of crossing most lanes are at or past 60%, so those marks sit behind their own
             fill and the ignition is invisible on exactly the lanes that earned it. Drawn again on
-            top, once, when crossed. §3.1 permits flame here; this is one of its three uses. */}
+            top, once, when crossed. §3.1 permits flame here; this is one of its uses. */}
         {crossed ? (
           <>
             <Rect x={0} y={thresholdY} width={width} height={art.thresholdThickness} fill={palette.flameCold} />

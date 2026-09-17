@@ -82,11 +82,11 @@ const ROLES: { key: Side; label: string }[] = [
 
 const SEATS: SeatNumber[] = [1, 2, 3, 4]
 
-// Temporary item-1 capture overrides. When non-null they pin the board to one state, so a
-// screenshot set is a controlled comparison. `adb shell input tap` proved unreliable for this:
-// taps were swallowed during scroll momentum and landed on neighbouring chips, which produced
-// two mislabelled frames. These are module constants rather than state because Fast Refresh
-// preserves component state across edits and would ignore a changed initial value.
+// Temporary capture overrides. When non-null they pin the board, so a screenshot set is a
+// controlled comparison. `adb shell input tap` proved unreliable for this: taps were swallowed
+// during scroll momentum and landed on neighbouring chips, which produced two mislabelled frames
+// in item 1. These are module constants rather than state because Fast Refresh preserves
+// component state across edits and would ignore a changed initial value.
 //
 // Leave both as null: that restores the interactive chips.
 const CAPTURE_STATE: string | null = null
