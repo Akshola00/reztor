@@ -1,0 +1,14 @@
+# Add files here to ignore them from prettier formatting
+/.expo
+/android
+/coverage
+/dist
+/ios
+/tmp
+pnpm-lock.yaml
+.agents
+agent
+
+# Emitted from the server and byte-compared by server/test/protocol/generated.test.ts.
+# Formatting it breaks that guard.
+protocol/generated.ts
