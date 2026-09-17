@@ -204,7 +204,7 @@ Cast-out players stay in the match screen as spectators. Remove their inputs ent
 4. The screen has been checked against the relevant section of `reztor-design.md` — colours, copy, and durations match the named values.
 5. Empty, loading, and error states exist.
 6. For anything in the Offering stage: tapping still feels instant, and the JS thread is idle during a tap burst.
-7. A build counts as passing only when Gradle reports `BUILD SUCCESSFUL` **and** a screenshot shows the app rendering. A green wrapper script is not evidence: check the build's own result, then `adb exec-out screencap -p` and look at it. Note that `pnpm run android` does **not** exit on success — it holds Metro open in the foreground — so a missing exit code there means "still serving", not "failed". For a bare exit status, run `android/gradlew app:assembleDebug` or `pnpm run android:build`.
+7. Verify a build with `npx expo run:android --no-bundler`, whose exit code is the build's own. Start Metro separately (`pnpm run dev`). A build passes when that command exits 0, the app installs, and a screenshot shows it rendering — `adb exec-out screencap -p`, then actually look at it. Do not verify with `pnpm run android`: it never exits on success because it holds Metro open in the foreground, so a green wrapper script around it proves nothing.
 
 ## Do not
 

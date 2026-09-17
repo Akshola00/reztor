@@ -41,3 +41,6 @@ example
 # generated native folders
 /ios
 /android
+
+# Machine-local symlinks into .agents/skills; the real files there are committed.
+.claude/skills/
