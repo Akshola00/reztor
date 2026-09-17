@@ -32,7 +32,7 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, fontError])
 
-  // The Heart percentage must not reflow, so render nothing until the faces resolve.
+  // The board percentage must not reflow, so render nothing until the faces resolve.
   if (!fontsLoaded && !fontError) {
     return null
   }

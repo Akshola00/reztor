@@ -56,9 +56,10 @@ shoulder leaks it.
 ### Keep
 
 Palette and type tokens in full. Both fonts. The carved material, no elevation, no
-shadows. Grain overlay. The Heart, conduits, Threshold line, sigils — all SVG. The
-plinth as tap target. Tier chips, credit counter. The Marking. Chat rows. Vote tokens
-and simultaneous reveal. Cast Out. The Reckoning table. The void screen.
+shadows. Grain overlay. The conduits with their arced surfaces and riding sigil tokens,
+the Threshold marks, the sigils — all SVG. The tap band as tap target. The tier button,
+the credit counter, the shared action button. The Marking. Chat rows. Vote tokens and
+simultaneous reveal. Cast Out. The Reckoning table. The void screen.
 
 ### Cut for MVP
 
@@ -74,13 +75,17 @@ and simultaneous reveal. Cast Out. The Reckoning table. The void screen.
 - **Reduce-motion variants, screen-reader announcements, the contrast audit (§10.4).**
   Keep `accessibilityLabel` and `accessibilityRole` as you go — they cost nothing while
   writing a component and a fortune to retrofit. The rest is post-hackathon.
-- **Augury as its own purchase-confirm screen (§7.1 #6).** One button on the board, one
-  result card. No confirmation step.
-- **Draw targeting as a full-screen overlay (§7.4).** A bottom sheet with two rows of
-  seat tokens. Same content, a quarter of the layout work, and faster to dismiss —
-  which §7.4 says is the point.
+- **The drawn Heart (§6.4).** The board has no vessel on it. The Heart stays the name of
+  the board in the fiction and in §1.1's vocabulary, and the percentage in the header is
+  how full it is. The conduits are the hero image instead.
+- **Augury and the Draw as separate controls (§7.1 #6, §7.4).** One action button on the
+  board, identical for every role in size, position and label, opening one bottom sheet:
+  Augury for the Faithful, Augury and the Draw for the Hollow. No confirmation step and
+  no impostor-only control. Same content, a quarter of the layout work, and faster to
+  dismiss — which §7.4 says is the point.
 - **The Threshold crossing orchestration (§6.4).** 1400ms of choreography becomes a
-  600ms `--flame-white` flood with the Threshold line igniting. Same beat, less rigging.
+  600ms `--flame-white` flood: the Threshold marks ignite across all four conduits and
+  the percentage takes the flood. Same beat, less rigging.
 - **Landscape letterboxing, the 600pt case, the mute control, transaction links.**
 
 ### Deferred, not cut
@@ -100,7 +105,9 @@ Wallet connect, buy-in, real settlement. See §4.
 | `/reckoning`    | The Reckoning, full post-mortem                                                               |
 | `/broken`       | Void, refund, disconnect-past-grace                                                           |
 
-The Draw sheet and the Augury result are components inside `/match`, not routes.
+The Draw and Augury share one sheet, opened from the board's single action button. Both
+live inside `/match` as components rather than routes, and the closed board is identical
+for every role.
 
 ---
 

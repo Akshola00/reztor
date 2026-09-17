@@ -51,11 +51,7 @@ const duration = {
   markStroke: 1200,
 } as const
 
-// §8 — the Heart's pulse period tracks the board total between these bounds. It is a period,
-// not a transition duration, so it is not in `duration`.
-const heartPulsePeriod = { min: 1500, max: 5000 } as const
-
-// §7.3 — px the plinth sinks while touched.
+// §7.3 — px the tap band sinks while touched.
 const plinthPressDepth = 2
 
 // The §8 rows that name a curve, prepared to spread straight into `withTiming`.
@@ -70,8 +66,6 @@ const transition = {
   stageChange: { duration: duration.stageChange, easing: easing.easeInOut },
   voteReveal: { duration: duration.voteReveal, easing: easing.easeOut },
   overlay: { duration: duration.overlay, easing: easing.easeOut },
-  // Period comes from `heartPulsePeriod`.
-  heartPulse: { easing: easing.easeInOut },
 } as const
 
 export const motion = {
@@ -79,6 +73,5 @@ export const motion = {
   easing,
   duration,
   transition,
-  heartPulsePeriod,
   plinthPressDepth,
 } as const

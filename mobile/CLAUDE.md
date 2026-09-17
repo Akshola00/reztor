@@ -30,13 +30,13 @@ Before starting work on a screen, read `BUILD-PLAN.md` for its scope, `../docs/P
 - **Expo SDK 57** (React Native 0.86, React 19.2). New Architecture only; the legacy architecture was dropped in SDK 55.
 - **TypeScript**, strict mode.
 - **Expo Router** for navigation between the top-level areas (entry, lobby, match, reckoning).
-- **react-native-svg** for all game art — the Heart, conduits, figures, sigils.
+- **react-native-svg** for all game art — the conduits, their arced surfaces, the sigils.
 - **react-native-reanimated** for all animation, running on the UI thread.
-- **react-native-gesture-handler** for the plinth tap surface — see BUILD-PLAN.md §6.
+- **react-native-gesture-handler** for the tap band surface — see BUILD-PLAN.md §6.
 - **expo-haptics**, **expo-font**, **expo-splash-screen**, **expo-keep-awake**. No **expo-audio**: all audio is cut for the MVP (BUILD-PLAN.md §2).
 - **Wallet UI** (`@wallet-ui/react-native-kit`) over **`@solana/kit`** for Mobile Wallet Adapter.
 - **Plain `StyleSheet` plus a typed token module.** No NativeWind, no styled-components, no Uniwind. Most of this app is custom SVG, and a utility CSS layer adds build surface for very little benefit here.
-- **No bottom-sheet library.** BUILD-PLAN.md §2 replaces design doc §7.4's full-screen Draw overlay with a bottom sheet. Build it from primitives and Reanimated rather than adding a dependency.
+- **No bottom-sheet library.** BUILD-PLAN.md §2 replaces design doc §7.4's full-screen Draw overlay with one bottom sheet, shared by Augury and the Draw and opened from the board's single action button. Build it from primitives and Reanimated rather than adding a dependency.
 
 Install everything with `npx expo install <pkg>` so versions match the SDK. Never pin a React Native or Expo package version by hand.
 
@@ -45,7 +45,9 @@ Expo publishes skills for AI agents. If `expo-upgrade` or related Expo skills ar
 ## Type and fonts — checked on a device
 
 - **IBM Plex Sans already renders tabular digits on Android.** In the item 0 specimen the `tabular-nums` column and the plain column aligned identically, so the fixed-width digit slots that design doc §10.1 offers as a fallback are not needed. Keep `tokens.tabularFigures` on anything that counts anyway: it is the correct declaration, it costs nothing, and it protects the credit counter and timer if the face ever changes.
-- **Grenze Gotisch 700 is the display weight.** Item 1 judged 400 against 700 at `t-heart` against the real Heart and 700 ships. The 400 face is no longer loaded, and `tokens.fontFamily` exposes a single `display` family rather than a regular/bold pair. Do not reintroduce a second display weight without judging it on a device first.
+- **Grenze Gotisch 700 is the display weight.** Item 1 judged 400 against 700 at `t-heart` and 700 ships. The 400 face is no longer loaded, and `tokens.fontFamily` exposes a single `display` family rather than a regular/bold pair. Do not reintroduce a second display weight without judging it on a device first.
+- **The board percentage is `t-heart` (56).** Item 1b captured both candidate steps on the phone. At `t-display` (32) it reads with the same weight as the round and the timer; since the drawn Heart is gone the percentage is the only board-state readout on screen and has to outrank them, which it does at 56.
+- **Grenze Gotisch has no tabular figures**, so the percentage cannot simply be centred — its digits measure 20.78px to 28.22px at the 56 step, and a centred number walks sideways every time a digit changes. `BoardHeader` gives each digit a fixed slot. The `%` is deliberately not slotted: it measures 50.23px, nearly twice a digit, and it never changes. The cost is mild tracking on narrow digits, accepted in exchange for the number holding still while the player taps. Do not use `tabularFigures` here — it does nothing for this face.
 
 ## Commands
 
@@ -79,10 +81,14 @@ src/
     tokens.ts            palette, type scale, material, layout budget
     motion.ts            every duration and easing curve, single source
   art/
-    Heart.tsx
-    Conduit.tsx
-    NamePlate.tsx        carved sigil + name. Replaces the cut Figure — BUILD-PLAN.md §2
+    Conduit.tsx          aperture, arced surface, frontier, Threshold mark
+    RidingToken.tsx      sigil on a stone disc, riding the conduit surface
+    BoardHeader.tsx      round, board percentage, stage timer
+    NamePlate.tsx        carved sigil + name. Replaces the cut Figure — BUILD-PLAN.md §2.
+                         Off the board since item 1b; kept for chat rows and vote tokens.
     Sigil.tsx
+    SkrMark.tsx          the SKR glyph drawn as SVG. U+27E1 is absent from IBM Plex Sans, so
+                         as text Android substitutes an uncontrolled face. Never set it as text.
   screens/               one file per route in BUILD-PLAN.md §3
   net/
     socket.ts            socket.io client
@@ -107,11 +113,13 @@ The server _does_ send `SIPHON_RESULT` — privately, to the impostor alone. See
 
 A conduit that fell renders a descending frontier and rising `toll` embers. That is the entire vocabulary for a drain.
 
+Conduits are separated by a gap of background and never touch. Touching surfaces make a drain beside a rise read as flow.
+
 ### 2. Tapping is optimistic and never waits for the network
 
 The board broadcast is every 250ms. If the player's own frontier waits for it, the core verb of the game feels broken.
 
-On `onPressIn`: decrement local credits, advance the local frontier shared value, fire the haptic, spark the plinth — all synchronously in the same frame, before any network work. Batch the taps on the spec's 250ms timer.
+On `onPressIn`: decrement local credits, advance the local frontier shared value, fire the haptic, spark the tap band — all synchronously in the same frame, before any network work. Batch the taps on the spec's 250ms timer.
 
 On `BOARD_UPDATE`: **every** conduit lerps toward the server value and none of them snap — other players' lanes included. Rising takes 250ms linear, falling 400ms ease-out, per design doc §8 as amended by BUILD-PLAN.md §1. A snap at 4Hz is visibly steppy on a phone. The only instant movement in the product is the player's own optimistic tap.
 
@@ -119,7 +127,7 @@ Never `await` anything in a touch handler.
 
 ### 3. Animation runs on the UI thread
 
-All conduit, Heart, and figure animation uses Reanimated shared values and worklets. Nothing that animates during the Offering stage may pass through the JS thread, and `setState` must never be called per tap or per frame.
+All conduit, surface, and token animation uses Reanimated shared values and worklets. Nothing that animates during the Offering stage may pass through the JS thread, and `setState` must never be called per tap or per frame.
 
 - Conduit fill is `scaleY` on a transform, anchored at the bottom, inside an `Animated` SVG group. Never animate SVG `height` or `y`.
 - Only `transform` and `opacity` animate during a match.
@@ -130,6 +138,8 @@ All conduit, Heart, and figure animation uses Reanimated shared values and workl
 Role arrives once, privately, in the match-start message for that player. There is no client-side flag, log line, dev overlay, or console output that reveals another player's role before `MATCH_END`.
 
 Specifically: ejection does not reveal role, and the impostor has no distinct visual state on any client including their own. If a code path would make a role inferable from timing, bundle contents, or network shape, treat it as a bug.
+
+No control, button or layout element exists for one role and not another. The Draw is reached through the shared action button.
 
 ### 5. All values come from the token modules
 
@@ -192,7 +202,7 @@ Cast-out players stay in the match screen as spectators. Remove their inputs ent
 ## Accessibility
 
 - Every interactive element has an `accessibilityLabel` and `accessibilityRole`.
-- Respect `AccessibilityInfo.isReduceMotionEnabled()` — it removes breathing, the Heart pulse, embers, and the Threshold flood, per design doc §8. Frontier movement stays, because it is information.
+- Respect `AccessibilityInfo.isReduceMotionEnabled()` — it removes the embers and the Threshold flood, per design doc §8. Frontier movement stays, because it is information, and the surface and token ride with it.
 - Player identity is never carried by colour alone; the sigil is always present.
 - Text contrast meets 4.5:1 against its background.
 

@@ -5,8 +5,9 @@ import type { TextStyle } from 'react-native'
 // The design doc defines no spacing scale, so this module has none. Spacing is an open
 // decision — do not invent one here, and do not put a magic margin in a component.
 
-// §3.1. Blue fire is reserved: `flame*` appears only on the conduit fill, the Heart, and the
-// crossed Threshold marker. Player identity is a mantle colour plus a sigil, never fire.
+// §3.1. Blue fire is reserved: `flame*` appears only on the conduit fill, the crossed Threshold
+// marks, and the board percentage during the crossing moment. Player identity is a mantle colour
+// plus a sigil, never fire.
 const palette = {
   // Ground — the temple
   void: '#0B0D12',
@@ -53,8 +54,8 @@ const material = {
     borderBottomWidth: 1,
     borderBottomColor: palette.bevelShadow,
   },
-  // The same bevel inverted, for a face that reads as pressed into the stone. §7.3 wants the
-  // selected tier chip inset rather than highlighted; the preview's chips use it too.
+  // The same bevel inverted, for a face that reads as pressed into the stone. The preview's
+  // chips use it, and item 2 uses it for the tap band's pressed state.
   insetStoneFace: {
     backgroundColor: palette.void,
     borderTopWidth: 1,
@@ -64,7 +65,8 @@ const material = {
   },
 } as const
 
-// §3.3. Radius encodes hierarchy. The Heart and conduits are apertures, not objects.
+// §3.3. Radius encodes hierarchy. The conduits are apertures, not objects. The tap band is the
+// one exception the doc allows — see §7.3 — and takes its radius from its own height.
 const radii = {
   panel: 2,
   plinth: 2,
@@ -76,8 +78,8 @@ const radii = {
 // its own family name. These are the expo-google-fonts export names. No CSS fallback stacks —
 // they do nothing in React Native.
 //
-// One display weight only. Item 1 judged Grenze Gotisch 400 against 700 on device at t-heart
-// and 700 ships; the 400 face was dropped rather than left loaded and unused.
+// One display weight only. Item 1 judged Grenze Gotisch 400 against 700 on device and 700
+// ships; the 400 face was dropped rather than left loaded and unused.
 const fontFamily = {
   display: 'GrenzeGotisch_700Bold',
   uiRegular: 'IBMPlexSans_400Regular',
@@ -86,7 +88,11 @@ const fontFamily = {
 
 // §3.2. `lineHeight` is the doc's ratio multiplied out and left unrounded, because React
 // Native wants an absolute value. Family per §3.2's usage lists: Grenze Gotisch carries the
-// Heart, stage names, role reveal and the Reckoning headline, and is never set below 20.
+// board percentage, stage names, role reveal and the Reckoning headline, and is never set
+// below 20.
+//
+// `heart` keeps its name from when the percentage sat under a drawn vessel. It is now §3.2's
+// board-percentage step and nothing else; renaming it would churn every call site for nothing.
 const type = {
   heart: { fontSize: 56, lineHeight: 56, fontFamily: fontFamily.display },
   display: { fontSize: 32, lineHeight: 35.2, fontFamily: fontFamily.display },
@@ -103,16 +109,14 @@ const type = {
 // tuple will not assign to a TextStyle.
 const tabularFigures: TextStyle = { fontVariant: ['tabular-nums'] }
 
-// §6.1's vertical budget on an 844px viewport, plus the §10.4 touch floor. `namePlates` holds
-// the slot §6.1 gives the Faithful — BUILD-PLAN.md §2 cuts the figures and puts carved name
-// plates there instead.
+// §6.1's vertical budget on an 844pt viewport, plus the §10.4 touch floor. The conduits take
+// the slack, so they are always the largest thing on screen — they are the hero image now.
 const layout = {
   header: 48,
-  heart: 180,
   conduits: 280,
-  namePlates: 72,
-  plinth: 180,
   controls: 84,
+  tapBandGap: 24,
+  tapBand: 240,
   minTouchTarget: 44,
 } as const
 
@@ -120,51 +124,66 @@ const layout = {
 const grainOpacity = 0.03
 
 // ---------------------------------------------------------------------------------------------
-// Art values chosen in build item 1
+// Art values chosen in build items 1 and 1b
 // ---------------------------------------------------------------------------------------------
 //
 // reztor-design.md fixes the palette, the type scale, the vertical budget, the 2px frontier and
-// its 6px glow. It does not name conduit width, the gap between conduits, the vertical grain
-// inside unfilled char, sigil stroke weight, the vessel outline, or glow falloff. Everything in
-// this group was chosen in item 1 so that no literal sits in a component file. Change art here.
+// its 6px glow. It does not name the outer margin, the gap between conduits, the arc height, the
+// token disc, the vertical grain inside unfilled char, sigil stroke weight, or glow falloff.
+// Everything in this group was chosen here so that no literal sits in a component file.
 const art = {
-  // Conduit aperture. 44 reads as a column rather than a bar at 360dp, and a 14 gap keeps four
-  // of them plus the board margin inside the 360pt floor of §10.4's 360–430pt range.
-  //
-  // Widening was tried and rejected. 62/24 gives a 320dp row — 89% of the 360dp floor with
-  // symmetric 20dp margins — and an inscription then fits about ten characters instead of six.
-  // It was reverted anyway: the vessel is fixed at 120dp, so a 320dp row drops the Heart from
-  // ~0.49 to ~0.33 of the row's width and it stops reading as §6.1's hero image, while the
-  // filled columns go from roughly 1:5.7 to 1:4 and read as slabs rather than channels. Names
-  // are secondary — §5.2 makes the sigil the primary identity carrier — so truncation costs far
-  // less than a diminished Heart. Do not widen the row without enlarging the Heart with it.
-  conduitWidth: 44,
-  conduitGap: 14,
+  // §6.1: conduit width is derived, never fixed —
+  //   (screen width - 2 x conduitOuterMargin - 3 x conduitGap) / 4
+  // At the 360pt floor that gives a 74pt column against a ~450pt conduit area, about 1:6, so a
+  // filled column still reads as a channel rather than a slab. The gap is background, not a
+  // drawn divider: 10pt is 35px at this phone's 3.5x density, which is unmistakably a gap, and
+  // hard rule 1 requires the conduits never touch.
+  conduitOuterMargin: 16,
+  conduitGap: 10,
 
   // §6.2 names both of these.
   frontierThickness: 2,
   frontierGlowHeight: 6,
-  // Peak alpha of that glow where it meets the frontier. Chosen: bright enough to be the
-  // second-brightest thing on screen after the Heart, per §6.2, without blooming. Raised from
-  // 0.55 after item 1's first screenshot, where the glow did not register at all.
+  // Peak alpha of that glow where it meets the frontier. Bright enough to be the brightest
+  // thing on screen per §6.2, without blooming.
   frontierGlowOpacity: 0.75,
+  // The frontier now follows a curve, so the glow can no longer be a gradient rect: it is
+  // stroked copies of the arc, widening and fading away from the line. Two layers read as a
+  // tight glow and cost two paths. No <Filter> and no blur anywhere — Android re-rasterises
+  // filters and the Offering stage holds 60fps.
+  frontierGlowLayers: [
+    { widthScale: 2, opacityScale: 0.22 },
+    { widthScale: 1, opacityScale: 0.5 },
+  ],
+
+  // §6.2's convex surface. The rise at the centre of the arc. 8 against a ~74-87pt column is a
+  // gentle curve — enough to stop reading as a bar's flat top, not enough to read as a dome.
+  surfaceArcHeight: 8,
+  // How far the cap shape extends below the arc's ends, so it never seams against the fill rect
+  // underneath it.
+  surfaceCapOverlap: 2,
 
   // §6.2 asks for "a faint vertical grain" in the unfilled char, so the conduit reads as stone
-  // rather than a hole. Pitch, width and alpha chosen. Raised from 0.5/0.1 after item 1's first
-  // screenshot: at ~3.5x density the grain was invisible and the aperture read as a flat hole.
+  // rather than a hole. Pitch, width and alpha chosen at ~3.5x density.
   conduitGrainPitch: 6,
   conduitGrainWidth: 1,
   conduitGrainOpacity: 0.22,
 
-  // The aperture's own carved edge, per §3.3. An aperture is cut *inward* into the stone field,
-  // so the bevel inverts: the dark edge sits at the top and the light edge at the foot.
+  // The aperture's own carved edge, per §3.3. An aperture is cut *inward* into the field, so
+  // the bevel inverts: the dark edge sits at the top and the light edge at the foot.
   apertureEdge: 1,
 
   // §6.2's two-stop fill runs flameDeep at the base to flame near the frontier. Spread evenly
-  // it read as a progress bar, so flameDeep now holds most of the column and flame appears only
-  // approaching the frontier. This is an objectBoundingBox offset on the scaled rect, so a short
-  // fill is still mostly deep with a bright top. Chosen in item 1.
-  fillDeepHoldOffset: 0.72,
+  // it read as a progress bar, so flameDeep holds most of the column and flame appears only
+  // approaching the frontier. This is an objectBoundingBox offset on the scaled rect, so a
+  // short fill is still mostly deep with a bright top.
+  //
+  // Raised from 0.72 to 0.88 in item 1b. Item 1's columns were 44pt wide; the owner's layout
+  // makes them fill the screen, which roughly doubled the area of blue and let the fill mass
+  // compete with the frontier for attention — exactly §4's bar-chart read. §6.2 gives the
+  // frontier the brightest value in the product, so the ramp is now confined to the top eighth
+  // of the fill and the body of the column stays deep.
+  fillDeepHoldOffset: 0.88,
 
   // A guard, not a design value. react-native-svg treats `scaleY={0}` as falsy and falls back
   // to 1, so an empty conduit rendered completely full on item 1's first pass. The fill scale is
@@ -176,28 +195,29 @@ const art = {
   // §6.2's "desaturate to 45%" for a dormant lane. See `cold` below for the interpretation.
   coldSaturation: 0.45,
   // Desaturation alone left a dormant lane at about the same luminance as live fire, so it read
-  // milky and sat forward instead of receding. Its fill is also darkened by this factor. Chosen
-  // in item 1. Applied to the fill only: darkening `char` as well would turn the whole aperture
-  // into a black hole and lose the fill level, which must stay readable.
+  // milky and sat forward instead of receding. Its fill is also darkened by this factor.
+  // Applied to the fill only: darkening `char` as well would turn the whole aperture into a
+  // black hole and lose the fill level, which must stay readable.
   coldLightness: 0.55,
+  // §6.2 / §7.7: a cold conduit's token drops to this opacity and its sigil goes boneFaint.
+  coldTokenOpacity: 0.4,
 
-  // The Threshold is one carved line across the conduit row: a light edge with a dark edge under
-  // it, per §3.3's bevel logic. It spans the row plus a small overhang, never the full screen.
+  // §6.1's Threshold is a short carved mark across each conduit — a light edge with a dark edge
+  // under it, per §3.3's bevel logic. It stops at the conduit walls and never spans the gaps.
   thresholdThickness: 1,
-  thresholdOverhang: 8,
 
-  // The carved seam between the stone field and the raised plinth.
-  seamThickness: 1,
-
-  // §6.1 brackets your own conduit with "two short carved marks"; BUILD-PLAN moves a bracket
-  // onto the name plate. One bracket encloses both: marks at the conduit head and at the foot of
-  // the inscription. Lengthened and thickened in item 1 after the first pass, where at 12x1 they
-  // were invisible in peripheral vision. Drawn in boneDim — never fire, never a seat colour.
-  bracketLength: 20,
-  bracketThickness: 2,
+  // §6.2's riding token: the seat sigil on a small stone disc that rides the surface. 32 leaves
+  // the sigil 18pt inside a 74pt column, above §5.2's 16pt legibility floor, with stone visible
+  // around it. Your own token is larger and ringed in boneDim — never fire, never a seat colour
+  // — and that ring is the only difference between your conduit and anyone else's.
+  tokenDisc: 32,
+  tokenDiscOwn: 40,
+  tokenSigil: 18,
+  tokenSigilOwn: 22,
+  tokenRing: 2,
 
   // Sigils are drawn in a square viewBox and scaled, so one stroke weight holds at every size
-  // (§5.2 requires the same weight for all four). Box and stroke chosen.
+  // (§5.2 requires the same weight for all four).
   sigilBox: 24,
   sigilStroke: 1.5,
   // Seat 4 is a square with a small gap at one corner. All four sides are drawn: dropping two
@@ -207,38 +227,43 @@ const art = {
   sigilSmall: 16,
   sigilLarge: 48,
 
-  // The sigil size inscribed above each name, and the gap between the two.
+  // NamePlate is off the board since item 1b, but §7.5 and §7.6 still want sigil + name for
+  // chat rows and vote tokens, so its two values stay.
   namePlateSigil: 16,
   namePlateGap: 4,
 
-  // The Heart. §6.4 says "a carved vessel shape, roughly 120×96". The outline is not described.
-  // A cut hexagon: straight facets only, the carved read, chosen over an urn in item 1.
+  // Grenze Gotisch has no tabular figures. Measured off the shipped 700Bold TTF, its digits run
+  // 20.78px ("1") to 28.22px ("0") at the 56px t-heart step, so a centred percentage shifts
+  // sideways whenever a digit changes — which during the Offering stage is constantly. Each
+  // digit therefore gets a fixed slot of fontSize x this ratio and is centred inside it.
   //
-  // The vessel is a recess in the stone field. `heartCavityPath` is its inner cavity, and the
-  // light is clipped to that rather than to the silhouette — clipped to the outline the glow
-  // read as a round lamp floating on top of the vessel instead of a light held inside it.
-  heartBox: { width: 120, height: 96 },
-  heartVesselPath: 'M 6 27 L 60 4 L 114 27 L 103 65 L 60 92 L 17 65 Z',
-  heartCavityPath: 'M 20 32 L 60 15 L 100 32 L 92 61 L 60 81 L 28 61 Z',
-  // Where the light sits inside the cavity, and the radii of the fixed light layers. The stops
-  // never change; only opacity and scale derive from the board fraction.
-  heartLightCentre: { x: 60, y: 48 },
-  heartCoreRadius: 11,
-  heartGlowRadius: 30,
-  heartHaloRadius: 44,
-  // Light response to the board fraction. §6.4: nearly dead at 0%, clearly alive by 55%, and
-  // it stops escalating above the Threshold (the fraction is clamped to 1 before it gets here).
-  // Coefficients chosen: opacity = base + gain × fraction.
-  heartLight: {
-    coreBase: 0.14,
-    coreGain: 0.86,
-    glowBase: 0.08,
-    glowGain: 0.62,
-    haloBase: 0.0,
-    haloGain: 0.38,
-    scaleBase: 0.78,
-    scaleGain: 0.32,
-  },
+  // 0.52 gives 29.12px at 56 and 16.64px at 32, just clearing the widest digit ("0" at 28.22px)
+  // at either candidate step. It covers digits only, on purpose: "%" measures 50.23px at 56 —
+  // nearly twice a digit — so forcing it into the same slot would clip it. "%" never changes, so
+  // it takes its natural width and needs no slot.
+  //
+  // The cost is real and visible: a narrow digit ("1" at 20.78px) keeps ~8px of air inside its
+  // slot, so the number carries slight tracking, which §3.2 otherwise warns against. Fixed slots
+  // and a proportional face cannot both be had — and the number holding still while the player
+  // taps is worth more than the tracking costs.
+  percentDigitSlotRatio: 0.52,
+
+  // §7.3 writes SKR as "⟡" (U+27E1). That codepoint is *not* in IBM Plex Sans: the shipped TTF's
+  // cmap returns glyph 0 for it, so as text Android would silently substitute some other face in
+  // a product that otherwise controls both of its faces. It is drawn as SVG instead. "→" (U+2192)
+  // *is* in the face, so the arrow stays text.
+  //
+  // U+27E1 is a concave-sided diamond: four points whose sides bow toward the centre by this
+  // fraction of the distance in from the straight chord.
+  skrConcavity: 0.45,
+  skrMarkSize: 12,
+  // Between a number and the SKR mark that qualifies it.
+  skrGap: 4,
+
+  // §7.3's tap band. The face is an oval — the one deliberate exception to §3.3's radius
+  // hierarchy — so its radius comes from its own height rather than from `radii`.
+  tapBandInset: 28,
+  tapBandFaceHeight: 168,
 } as const
 
 // ---------------------------------------------------------------------------------------------

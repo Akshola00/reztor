@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 
-import type { LaneSnapshot, MatchConfig, PlayerSnapshot } from '../../protocol/generated'
+import type { LaneSnapshot, MatchConfig, Side } from '../../protocol/generated'
 import { Board } from '../art/Board'
 import { SEAT_COLOURS, Sigil, type SeatNumber } from '../art/Sigil'
 import { tokens } from '../design/tokens'
@@ -10,15 +10,13 @@ import { tokens } from '../design/tokens'
 //
 // A full-screen board at real size, so the composition can be judged on a device. All lane data
 // is hardcoded here and nowhere else. Switching a chip re-renders with new props; no transitions.
+//
+// The chips sit *below* the board rather than in it. The board has no header slot any more — its
+// header is the round, percentage and timer — and keeping the scaffolding off the first screen
+// means a screenshot is the real composition, and means the role comparison below is comparing
+// the board itself rather than which chip is lit.
 
 const YOU = 'p-you'
-
-const players: PlayerSnapshot[] = [
-  { id: YOU, name: 'Vex', status: 'alive' },
-  { id: 'p-2', name: 'Marrow', status: 'alive' },
-  { id: 'p-3', name: 'Quillon Ashgrove', status: 'alive' },
-  { id: 'p-4', name: 'Tor', status: 'alive' },
-]
 
 const config: MatchConfig = {
   laneCapacity: 1000,
@@ -42,46 +40,67 @@ const lane = (owner: string, units: number, dormant = false): LaneSnapshot => ({
 // Own lane first. The wire orders lanes by playerId; Board reads ownership from `youId` and
 // never reorders, so this order is only the preview's own arrangement.
 const STATES = [
-  { key: 'start', label: 'start', lanes: [lane(YOU, 0), lane('p-2', 0), lane('p-3', 0), lane('p-4', 0)] },
-  { key: 'mid', label: 'mid', lanes: [lane(YOU, 300), lane('p-2', 220), lane('p-3', 700), lane('p-4', 172)] },
+  {
+    key: 'start',
+    label: 'start',
+    round: 1,
+    secondsLeft: 58,
+    credits: 1000,
+    lanes: [lane(YOU, 0), lane('p-2', 0), lane('p-3', 0), lane('p-4', 0)],
+  },
+  {
+    key: 'mid',
+    label: 'mid',
+    round: 2,
+    secondsLeft: 41,
+    credits: 847,
+    lanes: [lane(YOU, 300), lane('p-2', 220), lane('p-3', 700), lane('p-4', 172)],
+  },
   {
     key: 'late',
     label: 'late',
+    round: 3,
+    secondsLeft: 12,
+    credits: 96,
     lanes: [lane(YOU, 1000), lane('p-2', 150, true), lane('p-3', 640), lane('p-4', 590)],
   },
   {
     key: 'crossed',
     label: 'crossed',
+    round: 3,
+    secondsLeft: 7,
+    credits: 84,
     lanes: [lane(YOU, 1000), lane('p-2', 180, true), lane('p-3', 700), lane('p-4', 620)],
   },
 ] as const
 
+const ROLES: { key: Side; label: string }[] = [
+  // §1.1's vocabulary: the interface says Faithful and Hollow, the wire says crew and impostor.
+  { key: 'crew', label: 'Faithful' },
+  { key: 'impostor', label: 'Hollow' },
+]
+
 const SEATS: SeatNumber[] = [1, 2, 3, 4]
 
-// Temporary item-1 capture override. When non-null it pins the board to one state, so a
+// Temporary item-1 capture overrides. When non-null they pin the board to one state, so a
 // screenshot set is a controlled comparison. `adb shell input tap` proved unreliable for this:
 // taps were swallowed during scroll momentum and landed on neighbouring chips, which produced
-// two mislabelled frames. This is a module constant rather than state because Fast Refresh
+// two mislabelled frames. These are module constants rather than state because Fast Refresh
 // preserves component state across edits and would ignore a changed initial value.
 //
-// Leave as null: that restores the interactive chips.
+// Leave both as null: that restores the interactive chips.
 const CAPTURE_STATE: string | null = null
+const CAPTURE_ROLE: Side | null = null
 
 export function BoardPreview() {
   const { height } = useWindowDimensions()
   const [stateKey, setStateKey] = useState<string>('mid')
+  const [role, setRole] = useState<Side>('crew')
 
   const activeKey = CAPTURE_STATE ?? stateKey
+  const activeRole = CAPTURE_ROLE ?? role
   const active = STATES.find((s) => s.key === activeKey) ?? STATES[1]
   const boardTotal = active.lanes.reduce((sum, l) => sum + l.units, 0)
-
-  const header = (
-    <View style={styles.chipRow}>
-      {STATES.map((s) => (
-        <Chip key={s.key} label={s.label} selected={s.key === activeKey} onPress={() => setStateKey(s.key)} />
-      ))}
-    </View>
-  )
 
   return (
     <ScrollView>
@@ -89,20 +108,38 @@ export function BoardPreview() {
       <View style={{ height }}>
         <Board
           lanes={[...active.lanes]}
-          players={players}
           boardTotal={boardTotal}
           config={config}
           youId={YOU}
-          header={header}
+          round={active.round}
+          secondsLeft={active.secondsLeft}
+          credits={active.credits}
+          tier={1}
+          role={activeRole}
         />
       </View>
 
-      {/* Below the plinth: every sigil at both sizes §5.2 cares about. */}
+      {/* Scaffolding, below the fold. */}
       <View style={styles.strip}>
+        <View style={styles.chipRow}>
+          {STATES.map((s) => (
+            <Chip key={s.key} label={s.label} selected={s.key === activeKey} onPress={() => setStateKey(s.key)} />
+          ))}
+        </View>
+
+        {/* Changes only the `role` prop passed into the board. The board must render
+            identically for both — see hard rule 4. */}
+        <View style={styles.chipRow}>
+          {ROLES.map((r) => (
+            <Chip key={r.key} label={r.label} selected={r.key === activeRole} onPress={() => setRole(r.key)} />
+          ))}
+        </View>
+
+        {/* Every sigil at both sizes §5.2 cares about, plus the two token sizes. */}
         <View style={styles.stripRow}>
           {SEATS.map((seat) => (
             <View key={`s${seat}`} style={styles.stripCell}>
-              <Sigil seat={seat} colour={SEAT_COLOURS[seat]} size={tokens.art.sigilSmall} />
+              <Sigil seat={seat} colour={SEAT_COLOURS[seat]} size={tokens.art.tokenSigil} />
               <Text style={styles.stripLabel}>{String(seat)}</Text>
             </View>
           ))}
@@ -134,12 +171,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: tokens.art.conduitGap / 2,
+    gap: tokens.art.conduitGap,
   },
   // Stone tones only. Never fire.
   chip: {
-    paddingHorizontal: tokens.art.conduitGap / 2,
-    height: tokens.art.namePlateSigil * 2,
+    paddingHorizontal: tokens.art.conduitGap,
+    height: tokens.layout.minTouchTarget,
     justifyContent: 'center',
     borderRadius: tokens.radii.chip,
     ...tokens.material.raisedStoneFace,

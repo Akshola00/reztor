@@ -75,7 +75,7 @@ This forces the following, and no visual idea survives contact with them:
 
 - **First paint under 2s on 4G.** No WebGL, no heavy runtime, no font flash that reflows the board.
 - **Sustained 60fps while tapping 6×/sec.** Only `transform` and `opacity` animate. Nothing animates `height`, `width`, `top`, or `filter` during the Offering stage.
-- **Legible at a glance.** During tapping the player's eyes are on their own conduit and the Heart. Everything else must be readable in peripheral vision or it does not need to be on screen.
+- **Legible at a glance.** During tapping the player's eyes are on their own conduit and the board percentage. Everything else must be readable in peripheral vision or it does not need to be on screen.
 - **Thumb reach.** Every control used during the Offering stage sits in the bottom 40% of the viewport.
 
 ---
@@ -115,7 +115,7 @@ These live in `src/design/tokens.ts` as a typed object. The CSS-variable form be
 --bone-faint: #545c6c; /* disabled, timestamps */
 ```
 
-**Blue fire is reserved.** `--flame*` appears in exactly three places: conduit fill, the Heart, and the Threshold marker when crossed. Not on buttons, not on focus rings, not on the active tab. A player must be able to learn "blue = progress" in round one and never have that contradicted.
+**Blue fire is reserved.** `--flame*` appears in exactly three places: the conduit fill, the Threshold marks when crossed, and the board percentage during the crossing moment only. Not on buttons, not on focus rings, not on the active tab, and never on the percentage at any other time — it sits in `--bone` for the whole match and takes fire once. A player must be able to learn "blue = progress" in round one and never have that contradicted.
 
 **Player identity is a mantle colour plus a sigil**, never fire. The four mantles are muted so they cannot be confused with the fill:
 
@@ -132,7 +132,7 @@ Each seat also carries a distinct geometric sigil (§5.2). Identity is never car
 
 Two families, both from Google Fonts, both self-hosted and preloaded.
 
-**Display — Grenze Gotisch.** Gothic-inflected without being blackletter, so it carries the rite without becoming illegible. Used for: the Heart's percentage, stage names, role reveal, the Reckoning headline, player names in Judgement. Never below 20px.
+**Display — Grenze Gotisch.** Gothic-inflected without being blackletter, so it carries the rite without becoming illegible. Used for: the board percentage, stage names, role reveal, the Reckoning headline, player names in Judgement. Never below 20px. Its digits are not tabular, so anywhere it sets a changing number the digit slots are fixed by hand.
 
 **Interface — IBM Plex Sans.** Slightly technical, excellent tabular figures, not the default humanist sans every generated interface reaches for. Used for everything else. Always `font-variant-numeric: tabular-nums` on anything that counts, so the credit balance doesn't jitter while it drains.
 
@@ -145,7 +145,7 @@ Scale, mobile-first:
 
 | Token         | Size / line-height | Use                            |
 | :------------ | :----------------- | :----------------------------- |
-| `--t-heart`   | 56 / 1.0           | Heart percentage               |
+| `--t-heart`   | 56 / 1.0           | Board percentage               |
 | `--t-display` | 32 / 1.1           | Role reveal, Reckoning verdict |
 | `--t-stage`   | 20 / 1.2           | Stage name, player names       |
 | `--t-body`    | 15 / 1.5           | Chat, explanations             |
@@ -171,7 +171,7 @@ Everything is carved, not stacked. Depth comes from a light edge on top and a da
 
 No `elevation` and no `shadowColor` anywhere. Android's elevation shadow is the single fastest way to make this look like a stock Material app.
 
-Corner radius encodes hierarchy rather than being applied uniformly: the plinth and major panels are `2` (cut stone), interactive chips are `4`, and the Heart and conduits have no radius at all because they are apertures, not objects. Nothing in the interface is a rounded card with a soft grey shadow.
+Corner radius encodes hierarchy rather than being applied uniformly: major panels are `2` (cut stone), interactive chips and buttons are `4`, and the conduits have no radius at all because they are apertures, not objects. The single exception is the tap band, which is an oval — §7.3 explains what earns it. Nothing else in the interface is a rounded card with a soft grey shadow.
 
 A single grain texture sits above the background and below content — a small tiled PNG in an absolutely positioned `Image` with `resizeMode="repeat"` at 3% opacity and `pointerEvents="none"`. It does not animate.
 
@@ -182,7 +182,7 @@ A single grain texture sits above the background and below content — a small t
 These are the specific failure modes. Treat each as a lint rule.
 
 - **No glassmorphism.** No `backdrop-filter: blur()`, no translucent panels with a 1px white-at-10% border. The world is opaque stone.
-- **No purple-to-blue gradient background.** The background is flat `--void` with grain. Gradients appear only inside the conduit fill and the Heart.
+- **No purple-to-blue gradient background.** The background is flat `--void` with grain. Gradients appear only inside the conduit fill.
 - **No neon glow on everything.** Fire glows. Two or three things per screen glow. Buttons, borders, and text do not.
 - **No emoji, anywhere,** including in chat placeholder text and empty states. Sigils and drawn icons only.
 - **No Inter, no Space Grotesk, no monospace for small labels.**
@@ -242,41 +242,40 @@ There is no "Hollow" figure state. The Hollow looks exactly like everyone else o
 
 ### 6.1 Composition
 
-The Heart sits at the top centre. Four conduits descend from it, evenly spaced, filling upward from their bases. The Threshold crosses all four as a single carved line at 60% of conduit height. The Faithful kneel at the bases. Below them, the plinth.
+Four conduits fill the width of the screen between small outer margins, separated by narrow gaps of background. They fill upward from their bases. Each one's surface is a gentle convex arc rather than a flat line, and the owner's sigil token rides that surface. A short carved Threshold mark crosses each conduit at 60% of its height. A thin header sits above them; a controls row and the tap band sit below.
 
-This is the hero image of the product: a dead heart above four columns of cold fire. Spend the boldness here and keep everything else quiet.
+This is the hero image of the product: four columns of cold fire in the dark, and the darkness between them is the background itself. Spend the boldness here and keep everything else quiet.
 
 ```
-┌────────────────────────────────┐
-│  Round 2 · Offering       0:41 │  ← stage, round, timer
-│                                │
-│           ╭────────╮           │
-│          │   HEART  │          │  ← luminosity tracks board total
-│           ╰────────╯           │
-│              58%               │  ← Grenze Gotisch, --t-heart
-│                                │
-│   │      │      │      │       │
-│ ──┼──────┼──────┼──────┼────── │  ← the Threshold, carved line
-│   │      │      │▓▓▓▓▓▓│       │
-│   │▓▓▓▓▓▓│▓▓▓▓▓▓│▓▓▓▓▓▓│▓▓▓▓▓▓│
-│   │▓▓▓▓▓▓│▓▓▓▓▓▓│▓▓▓▓▓▓│▓▓▓▓▓▓│
-│    ╱▲╲    ╱▲╲    ╱▲╲    ╱▲╲    │  ← the Faithful
-│    ◇      △      ◈      ◻      │  ← sigils, carved
-│  ┌──────────────────────────┐  │
-│  │                          │  │
-│  │       T H E   P L I N T H │  │  ← entire area is the tap target
-│  │                          │  │
-│  └──────────────────────────┘  │
-│  ◗ lesser  ◖ greater    847 ⟡  │  ← tier (private) · credits
-│  ┌──────────┐  ┌──────────┐    │
-│  │  Augury  │  │   Draw   │    │  ← Draw is impostor-only
-│  └──────────┘  └──────────┘    │
-└────────────────────────────────┘
+┌──────────────────────────────────┐
+│ Round 2           58%       0:41 │  ← round · percentage · timer
+│                                  │
+│  ┌────┐ ┌────┐ ┌────┐ ┌────┐     │
+│  │    │ │    │ │    │ │    │     │
+│  │    │ │    │ │╭──╮│ │    │     │  ← surface: a convex arc
+│  │    │ │    │ ││ ◈││ │    │     │  ← sigil token rides the surface
+│  ├────┤ ├────┤ │▓▓▓▓│ ├────┤     │  ← Threshold, carved per conduit
+│  │    │ │    │ │▓▓▓▓│ │    │     │
+│  │╭──╮│ │    │ │▓▓▓▓│ │╭──╮│     │
+│  ││ ◇││ │╭──╮│ │▓▓▓▓│ ││ ◻││     │
+│  │▓▓▓▓│ ││ △││ │▓▓▓▓│ │▓▓▓▓│     │
+│  │▓▓▓▓│ │▓▓▓▓│ │▓▓▓▓│ │▓▓▓▓│     │
+│  └────┘ └────┘ └────┘ └────┘     │
+│                                  │
+│ [1 ⟡ → 1]      847 ⟡   [ Augury ]│  ← tier · credits · action
+│                                  │
+│      ╭────────────────────╮      │
+│     │                      │     │
+│     │      the tap band    │     │  ← whole band is the tap target
+│     │                      │     │
+└─────┴──────────────────────┴─────┘
 ```
 
-Vertical budget on a 844px viewport: header 48px, Heart block 180px, conduits 280px, figures 72px, plinth 180px, controls 84px.
+Conduit width is derived, never fixed: `(screen width − 2 × outer margin − 3 × gap) / 4`. The gap is background, not a drawn divider, and must stay clearly visible at 360pt.
 
-**Your own conduit is bracketed**, not coloured differently — two short carved marks at its top and bottom edges. Everyone's conduit renders identically otherwise.
+Vertical budget on an 844pt viewport: header 48pt, conduits flexing to fill (280pt minimum), controls row 84pt, a clear 24pt gap, then the tap band at 240pt running to the bottom edge. The conduits take the slack, so they are always the largest thing on screen.
+
+**Your own conduit is marked by a larger sigil token with a `--bone-dim` ring**, not coloured differently. That is the only difference; everyone's conduit renders identically otherwise.
 
 ### 6.2 Conduit rendering
 
@@ -284,9 +283,11 @@ Each conduit is a fixed-height SVG aperture. The fill is a `<rect>` inside a cli
 
 - **Unfilled** is `--char` with a faint vertical grain, not pure black — the conduit is stone, not a hole.
 - **Fill** is a two-stop vertical gradient, `--flame-deep` at the base to `--flame` near the frontier.
-- **The frontier** is a 2px `--flame-cold` line at the top of the fill with a tight 6px glow. This is the element the eye tracks, so it gets the brightest value on screen after the Heart.
+- **The frontier** is a 2px `--flame-cold` line at the top of the fill with a tight 6px glow. This is the element the eye tracks, and with no vessel on screen it carries the brightest value in the product.
 - **Cold conduits** (cast out) desaturate to 45% and the frontier line goes flat `--bone-faint`. The fill stays — the progress is still counted.
-- **Cap behaviour**: at 1000 units the frontier meets the top and the glow doubles briefly, once, then settles. Additional offerings produce no visual change, which is the honest representation of the hard cap.
+- **Cap behaviour**: at 1000 units the frontier meets the top and the glow doubles briefly, once, then settles. Additional offerings produce no visual change, which is the honest representation of the hard cap. The surface and its token stay fully inside the aperture at capacity — neither is ever clipped by the lip.
+- **The surface is a convex arc**, not a flat line, spanning the full conduit width and rising by a fixed arc height at its centre. The frontier line and its glow follow that arc. Built as a cap shape that translates with the frontier while the fill below it keeps `scaleY`, so a change in units still moves nothing but `transform` and `opacity`.
+- **The sigil token rides the surface.** The conduit owner's sigil sits on a small stone disc with §3.3's raised bevel, stroked in the seat colour, and carries the same vertical translation as the surface. It rests at the conduit base at 0 units. On a cold conduit the disc drops to 40% opacity and the sigil goes `--bone-faint`.
 
 ### 6.3 The Draw — the critical constraint
 
@@ -296,20 +297,19 @@ The reason is structural. The server broadcasts only lane positions, never sipho
 
 What the client renders instead, purely from position deltas:
 
-- **A conduit that fell this tick**: the frontier descends, and `--toll` embers rise from the new frontier line and fade within 400ms. Its figure enters Starved. That is all.
+- **A conduit that fell this tick**: the frontier descends, carrying its surface and token down with it, and `--toll` embers rise from the new frontier line and fade within 400ms. That is all.
 - **A conduit that rose faster than one player could plausibly tap**: nothing special. It just rose. The ambiguity between a fast tapper, a greater offering, and a Draw sink is the game, and the interface must not resolve it.
 
 The descent of a drained frontier is deliberately slowed to ~400ms so it reads as a drain rather than a rendering glitch, but it carries no directional information.
 
-### 6.4 The Heart
+### 6.4 The Threshold crossing
 
-A carved vessel shape, roughly 120×96, containing a light that is nearly dead at 0% and fully alive at the Threshold.
+The Heart is not drawn. It remains the name of the board in the fiction and in §1.1's vocabulary — the players are feeding it and the percentage is how full it is — but there is no vessel on screen. The board's state is carried by the four conduits and the percentage in the header.
 
-- Luminosity, scale, and pulse rate all track board total continuously.
-- Below 20%: almost black, a single dim ember, a slow pulse around 5s.
-- At 55%: clearly alive, pulse around 2s.
-- **At the Threshold**: one orchestrated moment — the Heart takes a visible breath, `--flame-white` floods outward, the Threshold line ignites across all four conduits, and a low tone resolves. This fires once per match and is the only unprompted spectacle in the product. Everything else must stay quiet so that this lands.
-- Above the Threshold the Heart stays bright but stops escalating.
+The crossing is the one orchestrated moment:
+
+- **At the Threshold**: the Threshold marks ignite across all four conduits, and the board percentage takes a `--flame-white` flood. This is the only time fire touches the percentage (§3.1). It fires once per match and is the only unprompted spectacle in the product. Everything else must stay quiet so that this lands.
+- Above the Threshold the marks stay lit and the percentage returns to `--bone`. Nothing escalates further — the percentage caps at 100%.
 
 ---
 
@@ -317,29 +317,29 @@ A carved vessel shape, roughly 120×96, containing a light that is nearly dead a
 
 ### 7.1 Inventory
 
-| #   | Screen            | Note                                      |
-| :-- | :---------------- | :---------------------------------------- |
-| 1   | Threshold (entry) | Wallet connect, buy-in, the Heart at rest |
-| 2   | The Gathering     | Lobby, seats filling, 60s dissolve timer  |
-| 3   | The Marking       | Role reveal — private, theatrical, 4s     |
-| 4   | Offering          | The board, 60s. Hero screen.              |
-| 5   | Draw targeting    | Full-screen overlay, impostor only        |
-| 6   | Augury            | Purchase confirm, then result card        |
-| 7   | Council           | Chat, 45s, board frozen but visible       |
-| 8   | Judgement         | Vote, 15s                                 |
-| 9   | The Reveal        | All votes at once                         |
-| 10  | Cast Out          | Ejection sequence, ~3s                    |
-| 11  | The Reckoning     | Full post-mortem                          |
-| 12  | Broken states     | Disconnect, void, refund                  |
+| #   | Screen            | Note                                     |
+| :-- | :---------------- | :--------------------------------------- |
+| 1   | Threshold (entry) | Wallet connect, buy-in, the rite at rest |
+| 2   | The Gathering     | Lobby, seats filling, 60s dissolve timer |
+| 3   | The Marking       | Role reveal — private, theatrical, 4s    |
+| 4   | Offering          | The board, 60s. Hero screen.             |
+| 5   | Draw targeting    | Full-screen overlay, impostor only       |
+| 6   | Augury            | Purchase confirm, then result card       |
+| 7   | Council           | Chat, 45s, board frozen but visible      |
+| 8   | Judgement         | Vote, 15s                                |
+| 9   | The Reveal        | All votes at once                        |
+| 10  | Cast Out          | Ejection sequence, ~3s                   |
+| 11  | The Reckoning     | Full post-mortem                         |
+| 12  | Broken states     | Disconnect, void, refund                 |
 
 ### 7.2 The Marking (role reveal)
 
 This is the most important four seconds in the product and it happens before the player has done anything. It sets whether the rest of the match feels tense or trivial.
 
-Full bleed `--void`. The player's own figure alone, centred, larger than it will ever appear again. A mark is drawn onto the plinth stone in front of it, stroke by stroke, over about 1.2s.
+Full bleed `--void`. The player's own sigil token alone, centred, larger than it will ever appear again. A mark is drawn onto the stone around it, stroke by stroke, over about 1.2s.
 
-- **Faithful**: the mark completes in `--flame-cold` and the figure's eye-points steady. Line: _"You are Faithful. Feed the Heart."_
-- **Hollow**: the mark completes and then **inverts to `--toll`**, and the figure's eye-points dim rather than brighten. Line: _"You are Hollow. The Heart must not wake."_ Below it, quieter: _"You may take from one conduit and give to another. Four parts in ten are the toll."_
+- **Faithful**: the mark completes in `--flame-cold` and the token's ring steadies. Line: _"You are Faithful. Feed the Heart."_
+- **Hollow**: the mark completes and then **inverts to `--toll`**, and the token's ring dims rather than brightens. Line: _"You are Hollow. The Heart must not wake."_ Below it, quieter: _"You may take from one conduit and give to another. Four parts in ten are the toll."_
 
 Both variants run for exactly the same duration with the same number of animation beats, so that a player filming their screen or glancing at a neighbour's phone cannot infer role from timing. No skip button.
 
@@ -347,25 +347,36 @@ Both variants run for exactly the same duration with the same number of animatio
 
 Per §6. Additional behaviour:
 
-**The plinth** is the tap target — the full 180px slab, not the conduit. It depresses 2px on touch, releases over 80ms, and emits a small `--flame-cold` spark at the touch point. `touch-action: manipulation` and `user-select: none` throughout; the plinth must never trigger text selection, double-tap zoom, or pull-to-refresh.
+**The controls row** sits directly under the conduits: the tier button on the left, the credit counter centred, the action button on the right. Both buttons carry a raised stone face, chip radius `4`, and are at least 44pt. They are the same size and style as each other, so neither reads as the more important one.
 
-**Tier selection** is two carved chips, `lesser` and `greater`, showing cost and yield on the chip face (`1 ⟡ → 1` and `4 ⟡ → 3`). The selected chip is inset rather than highlighted. This control is private and must never render for other players.
+**The tier button** shows the current tier's cost and yield on its face (`1 ⟡ → 1`, or `4 ⟡ → 3` at greater). Pressing it cycles the tier; the face is the state, so there is no second chip to compare against and no selected/unselected pair. This control is private and must never render for other players.
 
-**The credit counter** sits beside the tier chips. It ticks down continuously with tabular figures. Below 100 credits it shifts to `--toll`. Below 20 it pulses slowly. There is no modal warning — the player is mid-tap and a modal would be hostile.
+**The action button** is labelled "Augury" and is identical for every role — see §7.4. It never changes size, position, or label based on role.
 
-**Rate clamp feedback**: taps beyond 6/sec are dropped silently by the server, and the client must be silent too. No error, no shake, no toast. The plinth simply stops sparking beyond the clamp. Anything louder teaches players to tap slower, which is not the intent.
+**The credit counter** sits between the two buttons. It ticks down continuously with tabular figures. Below 100 credits it shifts to `--toll`. Below 20 it pulses slowly. There is no modal warning — the player is mid-tap and a modal would be hostile.
 
-### 7.4 Draw targeting (impostor only)
+**The tap band** is the tap target — a large oval stone face, centred, with the band running from below the controls row to the bottom edge. A clear gap separates it from the controls row so a thumb reaching for the band cannot catch a button. It depresses 2px on touch, releases over 80ms, and emits a small `--flame-cold` spark at the touch point. The band must never trigger text selection, double-tap zoom, or pull-to-refresh.
 
-A full-screen overlay, opened from the Draw control, dismissible in one tap. It must be openable and closable fast, because the impostor is doing this while pretending to tap.
+The oval is the one deliberate exception to §3.3's radius hierarchy: it is the only thing on screen shaped to a thumb rather than cut from stone, and that is what makes it read as the thing to hit. Nothing else in the product takes a radius above `4`.
 
-Two rows: **Take from** and **Give to**, each showing four seat tokens (sigil + mantle + current conduit height as a small bar). Sources at 0 units are disabled and visibly carved-out. Selecting self as sink shows the doubled cost plainly: `12 ⟡`.
+**Rate clamp feedback**: taps beyond 6/sec are dropped silently by the server, and the client must be silent too. No error, no shake, no toast. The band simply stops sparking beyond the clamp. Anything louder teaches players to tap slower, which is not the intent.
+
+### 7.4 The action button and its sheet
+
+**The Draw is not its own control.** Every player has the same action button in the same place, at the same size, with the same label. What it opens differs:
+
+- **Faithful**: Augury.
+- **Hollow**: a sheet carrying Augury and the Draw.
+
+The closed screen is identical for every role. This is a secrecy requirement, not a layout convenience — a Draw button that exists only for the impostor identifies them to anyone who glances at the screen, and it identifies the other three by its absence.
+
+Inside the sheet, the Draw is two rows: **Take from** and **Give to**, each showing four seat tokens (sigil + mantle + current conduit height as a small bar). Sources at 0 units are disabled and visibly carved-out. Selecting self as sink shows the doubled cost plainly: `12 ⟡`.
 
 A persistent, private running total of the toll — _"You have taken 214 from the Heart"_ — in `--toll`. This is the impostor's only score and it should feel like a private sin.
 
-Confirmation is a single tap on the Give-to token; no separate confirm button. Each Draw fires immediately with a brief `--toll` pulse on the overlay edge, and the overlay stays open so the impostor can repeat or retarget.
+Confirmation is a single tap on the Give-to token; no separate confirm button. Each Draw fires immediately with a brief `--toll` pulse on the sheet edge, and the sheet stays open so the impostor can repeat or retarget.
 
-**This overlay must be visually distinct enough that a player cannot open it by accident and must dismiss cleanly if the stage changes underneath it.**
+**The sheet must dismiss cleanly if the stage changes underneath it**, and it must be fast to open and close, because the impostor is doing this while pretending to tap.
 
 ### 7.5 Council
 
@@ -387,7 +398,7 @@ At close, all marks flip in at once over 400ms, then resolve. If a majority is r
 
 Roughly three seconds, and the second-biggest beat after the Threshold.
 
-The figure's eye-points extinguish. The robe collapses. Their conduit's fill desaturates to cold but does not empty — their contribution stands. A line states the consequence plainly: _"[Name] is cast out. Their conduit is cold. Offerings into it are halved."_
+Their conduit's fill desaturates to cold but does not empty — their contribution stands. Its sigil token drops to 40% opacity and the sigil goes `--bone-faint`, where it stays for the rest of the match. A line states the consequence plainly: _"[Name] is cast out. Their conduit is cold. Offerings into it are halved."_
 
 **No role reveal on ejection.** This is the single most tempting thing to add and it would end the match. The spec is explicit that the impostor's identity stays hidden until `MATCH_END`, and an ejection that revealed the role would make rounds 2 and 3 pointless.
 
@@ -421,14 +432,13 @@ Motion answers actions. Two moments per match are unprompted spectacle — the T
 | Frontier rise (server) | 250ms    | linear       | Lerp toward broadcast position      |
 | Frontier fall (drain)  | 400ms    | ease-out     | Slower on purpose, so it reads      |
 | Toll embers            | 400ms    | ease-out     | `--toll`, rising, fading            |
-| Heart pulse            | 5s→1.5s  | ease-in-out  | Rate tracks board total             |
 | Threshold crossing     | 1400ms   | orchestrated | Once per match                      |
 | Stage change           | 500ms    | ease-in-out  | Board reflow, no fade-through-black |
 | Vote reveal            | 400ms    | ease-out     | All marks simultaneously            |
 | Cast Out               | 3000ms   | orchestrated |                                     |
 | Overlay open/close     | 180ms    | ease-out     | Scale from 0.98, no blur            |
 
-When `AccessibilityInfo.isReduceMotionEnabled()` is true, drop the breathing, the Heart pulse, the embers, and the Threshold flood, replacing the last with a single cross-fade. Frontier movement stays — it is information, not decoration.
+When `AccessibilityInfo.isReduceMotionEnabled()` is true, drop the embers and the Threshold flood, replacing the last with a single cross-fade. Frontier movement stays — it is information, not decoration — and so does the surface and token that ride it.
 
 **Haptics** via `expo-haptics`: `ImpactFeedbackStyle.Light` on each offering, `Medium` on a Draw, `NotificationFeedbackType.Warning` on Cast Out, nothing else. Haptics on every state change becomes noise within one round.
 
@@ -456,9 +466,9 @@ React Native has no Web Audio equivalent, so the drone cannot be synthesised at 
 
 Stack and package choices live in `CLAUDE.md`. What matters for the visuals:
 
-- **`react-native-svg`** draws the Heart, conduits, figures, and sigils. No canvas, no Skia, no sprite sheets. Everything in §5 and §6 is flat vector shapes and two-stop gradients, which `react-native-svg` handles natively.
+- **`react-native-svg`** draws the conduits, their arced surfaces, and the sigils. No canvas, no Skia, no sprite sheets. Everything in §6 is flat vector shapes and two-stop gradients, which `react-native-svg` handles natively.
 - **`react-native-reanimated`** drives every animation as shared values on the UI thread. Wrap SVG primitives with `Animated.createAnimatedComponent` and animate the `transform` prop. The JS thread must be idle during a tap burst.
-- **Fonts** are bundled TTFs loaded through `expo-font`'s `useFonts`, with the splash held until they resolve so the Heart percentage never reflows. `@expo-google-fonts/grenze-gotisch` and `@expo-google-fonts/ibm-plex-sans` are the convenient path if they resolve cleanly; otherwise drop the TTFs in `assets/fonts` directly.
+- **Fonts** are bundled TTFs loaded through `expo-font`'s `useFonts`, with the splash held until they resolve so the board percentage never reflows. `@expo-google-fonts/grenze-gotisch` and `@expo-google-fonts/ibm-plex-sans` are the convenient path if they resolve cleanly; otherwise drop the TTFs in `assets/fonts` directly.
 - **Tabular figures**: React Native does not expose `font-variant-numeric`, so either use `fontVariant: ['tabular-nums']` where the platform honours it, or fix the width of each digit slot in the credit counter and timer. Verify on device — a jittering credit balance during tapping is very visible.
 
 ### 10.2 Optimistic tapping
@@ -467,7 +477,7 @@ The single most important implementation note in this document.
 
 The board broadcast arrives every 250ms. If the player's own frontier waits for it, every tap feels a quarter second late and the core verb of the game feels broken.
 
-On `onPressIn` — not `onPress`, which waits for release: decrement local credits, advance a local frontier shared value, spark the plinth, fire the haptic — all synchronously, before any network call. Batch the taps on the spec's 250ms timer. When `BOARD_UPDATE` arrives, reconcile: other conduits snap to the server value, the player's own conduit animates toward it over 250ms rather than snapping, so an over-optimistic local prediction settles rather than jerking.
+On `onPressIn` — not `onPress`, which waits for release: decrement local credits, advance a local frontier shared value, spark the tap band, fire the haptic — all synchronously, before any network call. Batch the taps on the spec's 250ms timer. When `BOARD_UPDATE` arrives, reconcile: other conduits snap to the server value, the player's own conduit animates toward it over 250ms rather than snapping, so an over-optimistic local prediction settles rather than jerking.
 
 If the server value is _below_ the local prediction — the clamp dropped taps, or the player was drained — reconcile at the slower 400ms drain rate so it reads correctly.
 
@@ -478,9 +488,9 @@ See `CLAUDE.md` for the full tree. The design-relevant part:
 ```
 src/design/tokens.ts       palette, type scale, spacing, material
 src/design/motion.ts       durations and curves, single source
-src/art/Heart.tsx
-src/art/Conduit.tsx
-src/art/Figure.tsx         states per §5.3
+src/art/Conduit.tsx        aperture, arced surface, frontier
+src/art/RidingToken.tsx    sigil on a stone disc, rides the surface
+src/art/BoardHeader.tsx    round, percentage, timer
 src/art/Sigil.tsx
 ```
 
@@ -492,7 +502,7 @@ Every colour comes from `tokens.ts`. No hex literal appears anywhere else in the
 - Every interactive element has an `accessibilityLabel` and `accessibilityRole`. Touch targets are at least 44pt.
 - Contrast: all text meets 4.5:1 against its background. `--bone-faint` on `--void` is for decoration only, never for information.
 - Screen reader: the board announces at stage changes only, never per tick. Conduit positions are available as text.
-- The board is laid out against the safe area, but the plinth extends to the bottom edge — the gesture bar sits over dead space, not over the tap target.
+- The board is laid out against the safe area, but the tap band extends to the bottom edge — the gesture bar sits over dead space, not over the tap target.
 - Every state has an empty, loading, and error variant before the screen is considered done.
 
 ---
