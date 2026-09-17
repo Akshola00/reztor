@@ -282,6 +282,19 @@ const art = {
   // hierarchy — so its radius comes from its own height rather than from `radii`.
   tapBandInset: 28,
   tapBandFaceHeight: 168,
+
+  // §7.3's spark at the touch point. Small: it marks where the thumb landed, it is not an
+  // effect. flameCold, because a spark is an offering entering the conduit — see §3.1.
+  sparkSize: 10,
+  // Pre-mounted and recycled round-robin, so nothing mounts or unmounts per tap. Sized from the
+  // rate limit: at 6 taps/sec with a 400ms fade, at most three are alive at once, so eight is
+  // comfortable headroom without a pool that costs anything to hold.
+  sparkPoolSize: 8,
+
+  // §7.3's credit thresholds. Below the first the counter shifts to toll; below the second it
+  // also pulses. The doc names both numbers.
+  creditsLow: 100,
+  creditsCritical: 20,
 } as const
 
 // ---------------------------------------------------------------------------------------------

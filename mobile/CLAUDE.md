@@ -32,7 +32,7 @@ Before starting work on a screen, read `BUILD-PLAN.md` for its scope, `../docs/P
 - **Expo Router** for navigation between the top-level areas (entry, lobby, match, reckoning).
 - **react-native-svg** for all game art — the conduits, their arced surfaces, the sigils.
 - **react-native-reanimated** for all animation, running on the UI thread.
-- **react-native-gesture-handler** for the tap band surface — see BUILD-PLAN.md §6.
+- **react-native-gesture-handler** is installed and its `GestureHandlerRootView` wraps the tree, but it is **not** used for the tap band: item 2 phase 1 measured its worklet dispatch as never firing in this app. The tap band is a bare `View` with `onTouchStart` — see hard rule 3 and BUILD-PLAN.md §6.
 - **expo-haptics**, **expo-font**, **expo-splash-screen**, **expo-keep-awake**. No **expo-audio**: all audio is cut for the MVP (BUILD-PLAN.md §2).
 - **Wallet UI** (`@wallet-ui/react-native-kit`) over **`@solana/kit`** for Mobile Wallet Adapter.
 - **Plain `StyleSheet` plus a typed token module.** No NativeWind, no styled-components, no Uniwind. Most of this app is custom SVG, and a utility CSS layer adds build surface for very little benefit here.
@@ -132,6 +132,15 @@ All conduit, surface, and token animation uses Reanimated shared values and work
 - Conduit fill is `scaleY` on a transform, anchored at the bottom, inside an `Animated` SVG group. Never animate SVG `height` or `y`.
 - Only `transform` and `opacity` animate during a match.
 - The credit counter updates at most 10×/sec, not per tap.
+
+**The tap handler itself is on the JS thread, measured and chosen in item 2 phase 1.** The tap surface is a bare `View` with `onTouchStart`, because that is the only candidate that matched the kernel's finger-down count exactly (66 of 66 against `getevent`). `Pressable`'s `onPressIn` lost 28 of 112 touches — 25% — in a two-thumb burst at 11.3/sec. And RNGH's worklet dispatch does not fire in this app at all: `Gesture.Manual` with `onTouchesDown`, and `Gesture.Tap` with `onBegin`, both counted zero for real and synthetic input, while the same gesture with `.runOnJS(true)` counted every tap. Worklets themselves are healthy — `runOnUI` and `withTiming` both verified on device — so this is specific to RNGH's Reanimated path.
+
+So the rule above holds for animation but not for the touch entry point. What that costs and what it does not:
+
+- The bucket, credit and headroom clamps are synchronous JS on refs inside `onTouchStart`. No `await`, no `setState`, same frame.
+- The frontier is still a Reanimated shared value; it is written with `.set()` from JS and animates on the UI thread. A dropped JS frame delays the write, it does not drop the tap.
+- Haptics no longer needs `runOnJS`, because the handler is already on JS.
+- Do not reintroduce RNGH for the tap band without re-measuring against `getevent` first.
 
 ### 4. The client never learns a role it should not know
 

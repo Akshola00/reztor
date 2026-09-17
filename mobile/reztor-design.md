@@ -121,8 +121,9 @@ These live in `src/design/tokens.ts` as a typed object. The CSS-variable form be
 2. the Threshold marks, when crossed;
 3. the board percentage, during the crossing moment only — it sits in `--bone` for the rest of the match and takes fire once;
 4. the Faithful's mark in the Marking (§7.2), in `--flame-cold`. This one is private, fires once per match, and is never seen by another player, so it cannot teach anything that contradicts the other three.
+5. the offering spark at the touch point (§7.3), in `--flame-cold`. A spark is an offering entering the conduit, so it is progress by the same rule as the fill — it is the player's own tap becoming units, and it is the only fire that appears outside a conduit during the Offering stage.
 
-Not on buttons, not on focus rings, not on the active tab, not on the tap band. A player must be able to learn "blue = progress" in round one and never have that contradicted.
+Not on buttons, not on focus rings, not on the active tab, and not on the tap band's face — the spark sits on the band, the band itself is never fire. A player must be able to learn "blue = progress" in round one and never have that contradicted.
 
 **Player identity is a mantle colour plus a sigil**, never fire. The four mantles are muted so they cannot be confused with the fill:
 

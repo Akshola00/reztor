@@ -49,7 +49,15 @@ const duration = {
   // role cannot be inferred from timing. No skip.
   markingTotal: 4000,
   markStroke: 1200,
+
+  // §7.3's spark at the touch point. §8 names no duration for it; 400 matches the toll embers,
+  // which is the other single-shot mark on the board, so the two read as one vocabulary.
+  spark: 400,
 } as const
+
+// §7.3 — below `art.creditsCritical` the counter "pulses slowly". §7.3 names no period, so this
+// is chosen: slow enough to read as unease rather than as an alarm.
+const creditPulsePeriod = 2000
 
 // §7.3 — px the tap band sinks while touched.
 const plinthPressDepth = 2
@@ -66,6 +74,8 @@ const transition = {
   stageChange: { duration: duration.stageChange, easing: easing.easeInOut },
   voteReveal: { duration: duration.voteReveal, easing: easing.easeOut },
   overlay: { duration: duration.overlay, easing: easing.easeOut },
+  // A spark fades out and never back in, so ease-out is the only sensible curve.
+  spark: { duration: duration.spark, easing: easing.easeOut },
 } as const
 
 export const motion = {
@@ -74,4 +84,5 @@ export const motion = {
   duration,
   transition,
   plinthPressDepth,
+  creditPulsePeriod,
 } as const

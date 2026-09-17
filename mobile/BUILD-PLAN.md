@@ -169,11 +169,26 @@ assembly.
 
 ## 6. The two things most likely to go wrong
 
-**The tap band at six taps per second.** `Pressable`'s `onPressIn` will not reliably fire
-sixty times in ten seconds. Use a bare `View` with `onTouchStart`, or a Gesture Handler
-`Tap` with a short `maxDuration`, and verify with a counter on device before building
-anything on top of it. If the tap surface drops inputs, every balance number you
-measured on the server is meaningless.
+**The tap band at six taps per second — measured in item 2 phase 1, on the phone, against
+`adb shell getevent` as ground truth.** Counting kernel finger-downs (`ABS_MT_TRACKING_ID`
+with a non-`ffffffff` value) and comparing them to what each candidate reported:
+
+| Candidate                               | Thread | Kernel | Counted | Result        |
+| --------------------------------------- | ------ | -----: | ------: | ------------- |
+| bare `View` with `onTouchStart`         | JS     |     66 |      66 | exact         |
+| `Pressable` with `onPressIn`            | JS     |    112 |      84 | lost 28 (25%) |
+| RNGH `Gesture.Manual` + `onTouchesDown` | UI     |     98 |       0 | never fires   |
+
+**A bare `View` with `onTouchStart` is what ships.** `Pressable` is disqualified: the 25%
+loss appeared in a two-thumb burst at 11.3/sec, which is exactly the rate the Offering
+stage is built around. RNGH's worklet dispatch does not fire in this app at all — the same
+gesture with `.runOnJS(true)` counted every tap, and worklets themselves are healthy, so
+it is specific to RNGH's Reanimated path and is not worth chasing for a surface that
+`onTouchStart` already measures perfectly.
+
+The measurement method matters as much as the answer: never compare tap candidates against
+each other, only against the kernel. And never re-render while counting — a `setState` per
+touch penalises the JS-thread candidates and measures the harness instead of the handler.
 
 **Backgrounding.** Android kills the socket. An `AppState` listener that reconnects,
 re-`JOIN`s and applies `RESUME_STATE` wholesale is required from item 3 onward, not
