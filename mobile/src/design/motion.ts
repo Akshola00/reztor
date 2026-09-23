@@ -38,6 +38,11 @@ const duration = {
   // BUILD-PLAN.md §2 cuts §8's 1400ms orchestration down to a flame-white flood.
   thresholdCrossing: 600,
   castOut: 3000,
+  // §7.6: after the marks flip in, they hold this long before the vote resolves. Chosen in item 4:
+  // long enough to read four marks, short enough not to eat the next Offering.
+  revealHold: 1000,
+  // §7.7, inside castOut: the token drops to cold over this.
+  castOutCold: 1000,
 
   // §8's overlay timing, which BUILD-PLAN.md §2 applies to the Draw bottom sheet.
   overlay: 180,
@@ -75,8 +80,8 @@ const readoutInterval = 100
 
 // The §8 rows that name a curve, prepared to spread straight into `withTiming`.
 //
-// Deliberately absent: thresholdCrossing and castOut. §8 calls both "orchestrated", so picking a
-// curve here would be inventing a design value. Choose it when the beat is built, then add it.
+// Deliberately absent: thresholdCrossing. §8 calls it "orchestrated", so picking a curve here
+// would be inventing a design value. Choose it when the beat is built, then add it.
 const transition = {
   frontierRise: { duration: duration.frontierRise, easing: easing.linear },
   frontierFall: { duration: duration.frontierFall, easing: easing.easeOut },
@@ -98,6 +103,8 @@ const transition = {
   markTurn: { duration: duration.markTurn, easing: easing.easeInOut },
   markLine: { duration: duration.markLine, easing: easing.easeOut },
   markLift: { duration: duration.markLift, easing: easing.easeOut },
+  // §7.7, chosen in item 4: the ejected token settles into cold rather than blinking out.
+  castOutCold: { duration: duration.castOutCold, easing: easing.easeInOut },
 } as const
 
 export const motion = {

@@ -1,6 +1,6 @@
 import { AppState } from 'react-native'
 
-import type { JoinAck, JoinTicket, LobbyAck, PrivateView, Tier } from '../../protocol/generated'
+import type { JoinAck, JoinTicket, LobbyAck, PrivateView, Tier, VoteTarget } from '../../protocol/generated'
 import { createMatchStore } from '../state/match'
 import { createLoopback, type Loopback } from './loopback'
 import { BATCH_INTERVAL_MS, createOutbox, tapBatches, type Outbox } from './outbox'
@@ -28,6 +28,17 @@ const HEARTBEAT_INTERVAL_MS = 2000
  */
 export const LOBBY_FILL_TIMEOUT_SEC = 60
 
+/** PROTOCOL.md §4: chat messages are at most 240 characters. */
+export const CHAT_MAX = 240
+
+/**
+ * PROTOCOL.md §4: one chat message per 2 seconds, which the server measures in ticks (8). A
+ * message is applied on the tick after it arrives, so two sends exactly 2000ms apart can land 7
+ * ticks apart when the first arrives late in its tick. One extra tick of margin means
+ * CHAT_RATE_LIMITED never fires.
+ */
+export const CHAT_INTERVAL_MS = 2000 + 250
+
 /** PROTOCOL.md §2 and ../server/src/match/lobby.ts: no I, O, 0 or 1, four characters. */
 export const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 export const CODE_LENGTH = 4
@@ -47,6 +58,9 @@ let appState: { remove: () => void } | null = null
 let markingPending = false
 let rehearsal: { outbox: Outbox; loopback: Loopback; timer: ReturnType<typeof setInterval> } | null = null
 let rehearsalCount = 0
+/** The vote this client last cast, and in which round. Survives the Judgement region remounting. */
+let myVote: { round: number; target: VoteTarget } | null = null
+let lastChatAtMs = 0
 
 const startedListeners = new Set<() => void>()
 const resumeListeners = new Set<() => void>()
@@ -84,11 +98,15 @@ function getClient(): ReztorClient {
   c.on('STAGE_CHANGE', (message) => match.applyStageChange(message, message.serverTick))
   c.on('CHAT_MESSAGE', ({ from, text, tick }) => match.appendChat({ from, text, tick }))
   c.on('MATCH_END', () => match.applyEnd())
+  c.on('VOTE_RESULT', ({ round, votes, ejected, serverTick }) => {
+    match.applyVoteResult({ round, votes, ejected }, serverTick)
+    myVote = null
+  })
   c.on('ACTION_REJECTED', ({ action, code, reason }) => {
     // PROTOCOL.md §3: a well-behaved client sees none. Logged so a test can count them.
     console.warn('[net] ACTION_REJECTED', action, code, reason)
   })
-  // SIPHON_RESULT, TRACE_RESULT and VOTE_RESULT are known and have no reader until items 4 and 5.
+  // SIPHON_RESULT and TRACE_RESULT are known and have no reader until item 5.
   // SIPHON_RESULT must never be drawn as a pairing, on any client — hard rule 1.
 
   client = c
@@ -227,6 +245,31 @@ export const session = {
     }
     if (!client?.connected()) return
     for (const payload of tapBatches(tier, count)) client.send('TAP_BATCH', payload)
+  },
+
+  /** Milliseconds until the next chat message may be sent; 0 when it may be sent now. */
+  chatWaitMs(): number {
+    return Math.max(0, lastChatAtMs + CHAT_INTERVAL_MS - Date.now())
+  },
+
+  sendChat(text: string): boolean {
+    if (!client?.connected() || this.chatWaitMs() > 0) return false
+    lastChatAtMs = Date.now()
+    client.send('CHAT', { text })
+    return true
+  },
+
+  /** The vote cast this round, if any: local memory first, then the server's view on a resume. */
+  myVote(round: number): VoteTarget | null {
+    if (myVote !== null && myVote.round === round) return myVote.target
+    const s = match.snapshot()
+    return s !== null && s.round === round && s.stage === 'vote' ? s.currentVote : null
+  },
+
+  vote(round: number, target: VoteTarget) {
+    if (!client?.connected()) return
+    myVote = { round, target }
+    client.send('VOTE', { target })
   },
 
   setTier(tier: Tier) {

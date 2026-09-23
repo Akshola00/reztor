@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { LayoutChangeEvent, StyleSheet, useWindowDimensions, View } from 'react-native'
 import type { SharedValue } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -33,14 +33,38 @@ type BoardProps = {
   /** Owners whose player is disconnected and inside the grace period. */
   disconnected: ReadonlySet<PlayerId>
   crossed: boolean
+  /**
+   * §7.5: in Council and Judgement the board keeps about 40% of the screen and the lower region
+   * takes the rest. The board is the same component either way — only the conduit area's height
+   * changes — so nothing remounts and every shared value carries through.
+   */
+  compact?: boolean
   /** §6.1's header band. Supplied by the stage, so its readouts refresh without re-rendering the board. */
   header: ReactNode
   children?: ReactNode
 }
 
-export function Board({ lanes, laneUnits, config, youId, disconnected, crossed, header, children }: BoardProps) {
+// Dev only: counts Board mounts, so a test can prove the board survives every stage change.
+let boardMounts = 0
+
+export function Board({
+  lanes,
+  laneUnits,
+  config,
+  youId,
+  disconnected,
+  crossed,
+  compact = false,
+  header,
+  children,
+}: BoardProps) {
   const insets = useSafeAreaInsets()
-  const { width: screenWidth } = useWindowDimensions()
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions()
+
+  useEffect(() => {
+    boardMounts += 1
+    if (__DEV__) console.log('[board] mounted, count', boardMounts)
+  }, [])
   // The conduits flex, so their pixel height is only known after layout, and the geometry that
   // places the frontier and the token needs it in pixels.
   const [conduitHeight, setConduitHeight] = useState(0)
@@ -68,7 +92,19 @@ export function Board({ lanes, laneUnits, config, youId, disconnected, crossed, 
 
       {/* Conduits. They flex to fill whatever height is left, so they are always the largest
           thing on screen. */}
-      <View style={styles.conduitArea} onLayout={onConduitLayout}>
+      <View
+        style={[
+          styles.conduitArea,
+          compact
+            ? {
+                flex: 0,
+                minHeight: 0,
+                height: screenHeight * tokens.layout.councilBoardShare - insets.top - tokens.layout.header,
+              }
+            : null,
+        ]}
+        onLayout={onConduitLayout}
+      >
         <View style={[styles.columns, { gap: art.conduitGap }]}>
           {lanes.map((lane, i) => {
             const own = lane.owner === youId
@@ -104,7 +140,7 @@ export function Board({ lanes, laneUnits, config, youId, disconnected, crossed, 
         </View>
       </View>
 
-      {children}
+      {compact ? <View style={styles.lowerCompact}>{children}</View> : children}
     </View>
   )
 }
@@ -121,6 +157,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     alignItems: 'center',
     paddingHorizontal: tokens.art.conduitOuterMargin,
+  },
+  lowerCompact: {
+    flex: 1,
   },
   columns: {
     flexDirection: 'row',

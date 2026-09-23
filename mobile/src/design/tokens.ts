@@ -150,6 +150,10 @@ const layout = {
   screenGutter: 16,
   stackGap: 12,
   sectionGap: 32,
+
+  // §7.5: in Council and Judgement the board keeps "about 40%" of the screen — header and
+  // conduits together — and the lower region takes the rest.
+  councilBoardShare: 0.4,
 } as const
 
 // §3.3. A tiled PNG above the background and below content. It does not animate.
@@ -255,6 +259,20 @@ const art = {
   markingRingStart: 0.6,
   markingRingSteady: 1,
   markingRingDim: 0.25,
+
+  // §7.5's Council timer: "a thin line that shortens across the top of the chat". Chosen in
+  // item 4. Never a number, and never fire.
+  councilTimerHeight: 2,
+  // §7.5 asks only that the input show remaining characters "as the limit approaches". Chosen:
+  // the count appears with this many characters left.
+  chatCountdownFrom: 40,
+
+  // §7.6's Judgement row. The vote token is a mid-size disc between the board's token (32) and
+  // the Marking's (120); the mark is the player's own, a small square on its point like the
+  // Marking's, in bone. In the Reveal each mark is the voter's own sigil at `sigilSmall`.
+  voteDisc: 56,
+  voteSigil: 30,
+  voteMark: 10,
 
   // §6.1's Threshold is a short carved mark across each conduit — a light edge with a dark edge
   // under it, per §3.3's bevel logic. It stops at the conduit walls and never spans the gaps.

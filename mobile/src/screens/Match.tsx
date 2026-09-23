@@ -1,8 +1,14 @@
 import { useKeepAwake } from 'expo-keep-awake'
 import { Redirect } from 'expo-router'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { makeMutable, withTiming, type SharedValue } from 'react-native-reanimated'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native'
+import Animated, {
+  makeMutable,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  type SharedValue,
+} from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import type { PlayerId, Tier } from '../../protocol/generated'
@@ -15,7 +21,10 @@ import { BATCH_INTERVAL_MS } from '../net/outbox'
 import { DEV_TOOLS, match, session } from '../net/session'
 import type { MatchSnapshot } from '../state/match'
 import { createOptimisticStore } from '../state/optimistic'
+import { Council } from './Council'
+import { Judgement } from './Judgement'
 import { LiveHeader, Offering, usePolled } from './Offering'
+import { Reveal } from './Reveal'
 
 // /match — one screen for the whole rite, driven by the server's stage. The board is mounted once
 // per match and never remounts: Offering, Council and Judgement change only the lower region, and
@@ -65,6 +74,15 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
   // The value each lane was last sent toward, so reconciliation picks rise or fall without
   // reading a shared value back from the UI thread.
   const lastTarget = useRef<Record<PlayerId, number>>(Object.fromEntries(initial.lanes.map((l) => [l.owner, l.units])))
+
+  // Seat numbers follow the lane order the wire gives (by playerId), the same on every client.
+  const [seats] = useState(
+    () =>
+      Object.fromEntries(initial.lanes.map((lane, i) => [lane.owner, (i + 1) as SeatNumber])) as Record<
+        PlayerId,
+        SeatNumber
+      >,
+  )
 
   const [marking, setMarking] = useState(() => session.takeMarking())
 
@@ -174,29 +192,93 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
   }, [youId, prediction])
   const readCrossed = useCallback(() => readTotal() >= config.winTarget, [readTotal, config.winTarget])
 
+  const readVoteCount = useCallback(() => match.snapshot()?.voteHistory.length ?? 0, [])
+
   const stage = usePolled(readStage)
   const ended = usePolled(readEnded)
   const ownStatus = usePolled(readOwnStatus)
   usePolled(readShape)
   const crossed = usePolled(readCrossed)
+  const voteCount = usePolled(readVoteCount)
+
+  // -- The Reveal ----------------------------------------------------------------------------------
+  //
+  // Results already in hand when this screen mounted, or that arrived while the socket was away,
+  // are history: they are not replayed. Only a VOTE_RESULT received live plays the Reveal.
+  const [revealed, setRevealed] = useState(initial.voteHistory.length)
+  const [resolved, setResolved] = useState(false)
+  const resumedAt = useRef(false)
+  useEffect(() => session.onResume(() => (resumedAt.current = true)), [])
+  useEffect(() => {
+    if (resumedAt.current) {
+      resumedAt.current = false
+      setRevealed(voteCount)
+    }
+  }, [voteCount])
 
   const current = match.snapshot() ?? initial
-  const disconnected = new Set(current.players.filter((p) => p.status === 'disconnected').map((p) => p.id))
-  const seat = (initial.lanes.findIndex((lane) => lane.owner === youId) + 1) as SeatNumber
-  const rehearsal = session.isRehearsal()
+  const reveal = voteCount > revealed ? (current.voteHistory[revealed] ?? null) : null
 
-  // The lower region holds the same height in every stage, so the board never reflows.
+  // Leaving Council takes the keyboard with it.
+  useEffect(() => {
+    if (stage !== 'chat') Keyboard.dismiss()
+  }, [stage])
+
+  // Until the vote resolves on screen, the board must not announce it: BOARD_UPDATE marks the
+  // ejected lane dormant on the same tick as VOTE_RESULT, so its conduit is held warm until the
+  // Cast Out beat begins.
+  const holdWarm = reveal !== null && !resolved ? reveal.ejected : null
+  const lanes =
+    holdWarm === null ? current.lanes : current.lanes.map((l) => (l.owner === holdWarm ? { ...l, dormant: false } : l))
+
+  const disconnected = new Set(current.players.filter((p) => p.status === 'disconnected').map((p) => p.id))
+  const seat = seats[youId]
+  const rehearsal = session.isRehearsal()
+  const alive = ownStatus === 'alive' || ownStatus === 'disconnected'
+  const compact = reveal !== null || stage !== 'tap'
+
+  // In the Offering the lower region keeps a fixed height, so the board never reflows while tapping.
   const lowerHeight = tokens.layout.controls + tokens.layout.tapBandGap + tokens.layout.tapBand + insets.bottom
 
   let lower
-  if (ended) {
-    lower = <Placeholder height={lowerHeight} title="The rite has ended." />
-  } else if (ownStatus === 'ejected') {
+  let lowerKey: string
+  if (reveal !== null) {
+    lowerKey = `reveal-${reveal.round}`
+    lower = (
+      <Reveal
+        result={reveal}
+        seats={seats}
+        names={new Map(current.players.map((p) => [p.id, p.name]))}
+        youId={youId}
+        alreadyCold={
+          new Set(current.players.filter((p) => p.status === 'ejected' && p.id !== reveal.ejected).map((p) => p.id))
+        }
+        config={config}
+        onResolve={() => setResolved(true)}
+        onDone={() => {
+          setResolved(false)
+          setRevealed((n) => n + 1)
+        }}
+      />
+    )
+  } else if (ended) {
+    lowerKey = 'ended'
+    lower = <Placeholder height={compact ? undefined : lowerHeight} title="The rite has ended." />
+  } else if (stage === 'chat') {
+    lowerKey = 'chat'
+    // A cast-out player reads the Council but has no input at all.
+    lower = <Council config={config} seats={seats} canSpeak={alive} />
+  } else if (stage === 'vote') {
+    lowerKey = `vote-${current.round}`
+    lower = <Judgement seats={seats} round={current.round} canVote={alive} />
+  } else if (!alive) {
+    lowerKey = 'cast-out'
     // Cast-out players stay as spectators, with their inputs removed rather than disabled.
     lower = (
       <Placeholder height={lowerHeight} title="You are cast out." line="Your conduit is cold. The rite goes on." />
     )
-  } else if (stage === 'tap') {
+  } else {
+    lowerKey = 'tap'
     lower = (
       <Offering
         config={config}
@@ -207,26 +289,18 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
         onTierPress={onTierPress}
       />
     )
-  } else {
-    // Item 4 builds Council and Judgement. Until then the lower region names the stage.
-    lower = (
-      <Placeholder
-        height={lowerHeight}
-        title={stage === 'chat' ? 'Council' : 'Judgement'}
-        line="The conduits are sealed until the next Offering."
-      />
-    )
   }
 
   return (
     <View style={styles.root}>
       <Board
-        lanes={current.lanes}
+        lanes={lanes}
         laneUnits={laneUnits}
         config={config}
         youId={youId}
         disconnected={disconnected}
         crossed={crossed}
+        compact={compact}
         header={
           <LiveHeader
             winTarget={config.winTarget}
@@ -236,7 +310,9 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
           />
         }
       >
-        {lower}
+        <StagePanel key={lowerKey} fill={compact} bottomInset={compact ? insets.bottom : 0}>
+          {lower}
+        </StagePanel>
       </Board>
 
       {DEV_TOOLS && rehearsal ? <RehearsalStrip /> : null}
@@ -246,9 +322,29 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
   )
 }
 
-function Placeholder({ height, title, line }: { height: number; title: string; line?: string }) {
+/**
+ * The lower region's entrance on every stage change: a short rise and fade over §8's stage-change
+ * timing. Transform and opacity only (hard rule 3). The board above it is never part of this —
+ * only its conduit area's height changes, once, at the edge.
+ */
+function StagePanel({ fill, bottomInset, children }: { fill: boolean; bottomInset: number; children: ReactNode }) {
+  const enter = useSharedValue(0)
+  useEffect(() => {
+    enter.set(withTiming(1, motion.transition.stageChange))
+  }, [enter])
+  const style = useAnimatedStyle(() => ({
+    opacity: enter.get(),
+    transform: [{ translateY: (1 - enter.get()) * tokens.layout.stackGap * 2 }],
+  }))
+  // The Offering's band already runs under the gesture bar; the compact stages keep clear of it.
   return (
-    <View style={[styles.placeholder, { height }]}>
+    <Animated.View style={[fill ? styles.fill : null, { paddingBottom: bottomInset }, style]}>{children}</Animated.View>
+  )
+}
+
+function Placeholder({ height, title, line }: { height?: number; title: string; line?: string }) {
+  return (
+    <View style={[styles.placeholder, height === undefined ? styles.fill : { height }]}>
       <Text style={styles.placeholderTitle}>{title}</Text>
       {line === undefined ? null : <Text style={styles.placeholderLine}>{line}</Text>}
     </View>
@@ -296,18 +392,25 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
+  fill: {
+    flex: 1,
+  },
   placeholder: {
     alignItems: 'center',
     justifyContent: 'center',
     gap: tokens.layout.stackGap,
     paddingHorizontal: tokens.layout.screenGutter,
   },
+  // Stretched to the full width: shrink-wrapped inside the centred column, Android measured the
+  // Grenze Gotisch title short and clipped its last word ("You are cast" on the phone, item 4).
   placeholderTitle: {
+    alignSelf: 'stretch',
     ...tokens.type.stage,
     color: tokens.palette.bone,
     textAlign: 'center',
   },
   placeholderLine: {
+    alignSelf: 'stretch',
     ...tokens.type.body,
     color: tokens.palette.boneDim,
     textAlign: 'center',

@@ -88,10 +88,13 @@ src/
                          Off the board since item 1b; kept for chat rows and vote tokens.
     Sigil.tsx
     Marking.tsx          §7.2's role reveal overlay: one schedule for both roles, no skip
+    SeatToken.tsx        a seat's sigil on a still stone disc, warm or cold: the vote row and Reveal
     TapBand.tsx          §7.3's tap band: the onTouchStart surface, press layer, spark pool
     SkrMark.tsx          the SKR glyph drawn as SVG. U+27E1 is absent from IBM Plex Sans, so
                          as text Android substitutes an uncontrolled face. Never set it as text.
-  screens/               one file per route in BUILD-PLAN.md §3
+  screens/               one file per route in BUILD-PLAN.md §3, plus the match's lower regions:
+                         Offering, Council, Judgement and Reveal. Only the lower region changes
+                         between stages; the board in Match.tsx never remounts
   net/
     socket.ts            typed socket.io client over protocol/generated.ts. Logs no payloads
     session.ts           the one connection: ticket, JOIN, heartbeat, AppState reconnect, and

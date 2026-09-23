@@ -7,9 +7,11 @@ import type {
   PlayerSnapshot,
   PrivateView,
   Resolution,
+  RevealedVoteRound,
   Side,
   Stage,
   Tier,
+  VoteTarget,
 } from '../../protocol/generated'
 
 // CLAUDE.md: the last authoritative snapshot from the server, written only by socket messages —
@@ -42,6 +44,10 @@ export type MatchSnapshot = {
   tier: Tier
   /** Accumulated locally from CHAT_MESSAGE; RESUME_STATE replaces it with the backlog. */
   chat: ChatMessage[]
+  /** Every resolved vote, oldest first: RESUME_STATE's history, plus each VOTE_RESULT since. */
+  voteHistory: RevealedVoteRound[]
+  /** This player's vote in the current vote stage, as the server last reported it (views only). */
+  currentVote: VoteTarget | null
   resolution: Resolution | null
   /** Set by MATCH_END. */
   ended: boolean
@@ -57,7 +63,10 @@ export type MatchStore = {
   applyCredits: (credits: { credits: number; spent: number; tier: Tier }, serverTick: number) => void
   /** STAGE_CHANGE — the edge. BOARD_UPDATE carries the stage every tick as well. */
   applyStageChange: (change: { round: number; stage: Stage; endsAtTick: number }, serverTick: number) => void
+  /** Appends unless the same message is already held — a backlog and a live push can overlap. */
   appendChat: (message: ChatMessage) => void
+  /** VOTE_RESULT. */
+  applyVoteResult: (result: RevealedVoteRound, serverTick: number) => void
   applyEnd: () => void
   clear: () => void
   laneUnits: (owner: PlayerId) => number
@@ -105,6 +114,8 @@ export function createMatchStore(): MatchStore {
         spent: view.you.spent,
         tier: view.you.tier,
         chat: view.chat,
+        voteHistory: view.voteHistory,
+        currentVote: view.currentVote,
         resolution: view.resolution,
         ended: view.resolution !== null,
       }
@@ -133,7 +144,18 @@ export function createMatchStore(): MatchStore {
 
     appendChat(message) {
       if (snapshot === null) return
+      // One message per player per 2s, so sender and tick identify a message exactly.
+      const held = snapshot.chat.some(
+        (m) => m.from === message.from && m.tick === message.tick && m.text === message.text,
+      )
+      if (held) return
       update({ chat: [...snapshot.chat, message] })
+    },
+
+    applyVoteResult(result, serverTick) {
+      if (snapshot === null) return
+      if (snapshot.voteHistory.some((r) => r.round === result.round)) return
+      update({ serverTick, voteHistory: [...snapshot.voteHistory, result], currentVote: null })
     },
 
     applyEnd() {
