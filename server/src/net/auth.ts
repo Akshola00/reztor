@@ -5,6 +5,11 @@ export const HEARTBEAT_INTERVAL_MS = 2000
 // CLAUDE.md §8: three missed heartbeats at 2s.
 export const HEARTBEAT_TIMEOUT_MS = HEARTBEAT_INTERVAL_MS * 3
 
+// How long a lobby seat outlives its socket, counted from where a match's grace clock would
+// start. Long enough to background the app and paste the invite code into a chat, short enough
+// that a player who backed out does not hold the fourth seat for the rest of a 60s lobby.
+export const LOBBY_SEAT_GRACE_MS = 15_000
+
 // A plain per-socket message allowance, deliberately separate from the game's token buckets
 // (§5.1, §5.2). Those clamp play; this one stops a player with zero credits flooding the socket
 // with batches that only ever come back rejected.
@@ -33,6 +38,8 @@ export type ConnectionRegistry = {
   allow(socketId: string, nowMs: number): boolean
   // Players whose disconnect grace should now start (CLAUDE.md §8).
   timedOut(matchId: string, nowMs: number): PlayerId[]
+  // Whether a lobby seat has been abandoned: its socket has been gone for LOBBY_SEAT_GRACE_MS.
+  seatAbandoned(matchId: string, playerId: PlayerId, seatedAtMs: number, nowMs: number): boolean
 }
 
 export function createConnections(): ConnectionRegistry {
@@ -108,6 +115,18 @@ export function createConnections(): ConnectionRegistry {
         if (nowMs >= startsAt) due.push(connection.playerId)
       }
       return due.sort()
+    },
+
+    // A seat with no connection at all never sent JOIN, or its socket has since bound to another
+    // lobby; either way the seat time is its last sign of life.
+    seatAbandoned(matchId, playerId, seatedAtMs, nowMs) {
+      const connection = find(matchId, playerId)
+      if (connection !== undefined && connection.closedAtMs === null) return false
+      const goneAt =
+        connection === undefined
+          ? seatedAtMs + HEARTBEAT_TIMEOUT_MS
+          : Math.max(connection.closedAtMs ?? nowMs, connection.lastSeenAtMs + HEARTBEAT_TIMEOUT_MS)
+      return nowMs >= goneAt + LOBBY_SEAT_GRACE_MS
     },
   }
 }

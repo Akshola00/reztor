@@ -14,7 +14,7 @@ import type {
 } from '../../src/engine/selectors.js'
 import type { Settlement, SettlementLine } from '../../src/engine/settlement.js'
 import type { ChatMessage, Resolution } from '../../src/engine/state.js'
-import type { JoinTicket, LobbyError } from '../../src/match/lobby.js'
+import type { DissolveReason, JoinTicket, LobbyError, LobbyView } from '../../src/match/lobby.js'
 import type { JoinError } from '../../src/net/handlers.js'
 import { GAME_EVENTS } from '../../src/net/handlers.js'
 import { CLIENT_EVENTS, GENERATED_PATH, SERVER_EVENTS, emitProtocol } from '../../src/protocol/emit.js'
@@ -59,6 +59,8 @@ same<MutuallyAssignable<G.MatchConfig, MatchConfig>>()
 same<MutuallyAssignable<G.Settlement, Settlement>>()
 same<MutuallyAssignable<G.SettlementLine, SettlementLine>>()
 same<MutuallyAssignable<G.JoinTicket, JoinTicket>>()
+same<MutuallyAssignable<G.LobbyView, LobbyView>>()
+same<MutuallyAssignable<G.DissolveReason, DissolveReason>>()
 
 // ---- error and rejection unions ----
 same<MutuallyAssignable<G.RejectionCode, RejectionCode>>()

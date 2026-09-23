@@ -24,8 +24,13 @@ Server → client messages carry an envelope:
 { matchId: string, serverTick: number, ...payload }
 ```
 
-`ACTION_REJECTED` is the sole exception: both envelope fields may be `null`, because a socket can be
-refused before it belongs to any match.
+Two exceptions:
+
+- `ACTION_REJECTED`: both envelope fields may be `null`, because a socket can be refused before it
+  belongs to any match.
+- `LOBBY_UPDATE` and `LOBBY_DISSOLVED`: `matchId` is the real match id — a lobby has one from the
+  moment it is created, the same one in your ticket — and `serverTick` is **always `null`**. There
+  is no match clock until the lobby fills; the first real tick is `MATCH_STARTED`'s `0`.
 
 Three client messages use Socket.IO acknowledgements (`emitWithAck`) and get a direct response:
 `CREATE_LOBBY`, `JOIN_LOBBY`, `JOIN`. Every other client message is fire-and-forget; the only reply
@@ -58,8 +63,62 @@ no "lobby full" message to poll for and no reason to press anything twice.
 `ok: false` carries `UNKNOWN_CODE`, `LOBBY_FULL`, `ESCROW_FAILED` or `INVALID_PAYLOAD` for the lobby
 messages; `INVALID_PAYLOAD`, `UNKNOWN_SESSION` or `WRONG_MATCH` for `JOIN`.
 
-A lobby that does not fill within `lobbyFillTimeoutSec` (60s) dissolves silently. No escrow was
-taken, so there is nothing to refund and no message is sent.
+### `LOBBY_UPDATE` — while seated, to the lobby room
+
+```ts
+{ matchId, serverTick: null, code, seated, capacity,
+  players: { seated, id, name }[], expiresAt, serverNow }
+```
+
+Sent to the room every time a seat is taken or vacated, including the fourth seat, which arrives
+just before `MATCH_STARTED`. A socket also gets one, to itself, as soon as its `JOIN` comes back
+`waiting: true` — that is how a joiner renders the lobby immediately. **The lobby acks do not carry
+the roster**: a client that sends `JOIN` as soon as it has a ticket (as it must) has the roster one
+message later, and there is only one shape to render from.
+
+`players` is in seat order and `seated` on each is that player's seat number now. **Seat numbers
+move down** when an earlier player leaves, so the ticket's `seated` is only true at the moment it was
+issued; `LOBBY_UPDATE` supersedes it. Find your own row by `id` — the `playerId` from your ticket.
+Player ids are public (every `BOARD_UPDATE` carries them) and cannot be used to act as anyone:
+identity is the `sessionToken`, which never appears here. No wallets, no tokens.
+
+**The deadline.** `expiresAt` is when the lobby dissolves if it has not filled, in server epoch
+milliseconds. It is fixed at creation and never moves, not even when a seat is vacated. `serverNow`
+is the server's clock when the message was sent. Compute time left as `expiresAt - serverNow` and
+count down from when the message arrived. **Never compare `expiresAt` with the device clock** — an
+absolute time is exactly as wrong as the skew between the two clocks, and phone clocks are wrong by
+seconds. Ticks were not an option: a lobby has no tick counter until its match starts.
+
+### `LOBBY_DISSOLVED` — once, to the lobby room
+
+```ts
+{ matchId, serverTick: null, code, reason: 'TIMEOUT' | 'ESCROW_FAILED' }
+```
+
+Sent before the lobby is discarded. After it, the code is unknown and every session in the lobby is
+gone: `JOIN` with those tokens returns `UNKNOWN_SESSION`. Go back to the entry screen.
+
+- `TIMEOUT` — the lobby did not fill within `lobbyFillTimeoutSec` (60s) of creation.
+- `ESCROW_FAILED` — the fourth player sat down and escrow refused the lock. That player's
+  `JOIN_LOBBY` ack says `ESCROW_FAILED`; the other three learn it here.
+
+In both cases **no escrow was taken**: nothing locks until all four seats are filled and the lock
+succeeds as a whole, so there is nothing to refund and nothing on chain to undo.
+
+### Leaving a lobby
+
+There is no leave message. **Close the socket.** A seat whose socket has gone is freed on the same
+rule as a match disconnect (§5) — from the later of the socket closing and the heartbeat lapsing —
+plus a lobby grace of 15 seconds: about 21 seconds after the last sign of life. The room gets a
+`LOBBY_UPDATE` without that player, and their `sessionToken` stops working.
+
+The grace is there so that backgrounding the app — to paste the invite code into a chat, say — does
+not cost a seat. Come back inside it, reconnect, and `JOIN` with the same token as usual; the seat
+is still yours and a `LOBBY_UPDATE` arrives. Keep sending `HEARTBEAT` while seated.
+
+A seat whose ticket was issued but never followed by `JOIN` is freed the same way, counted from when
+it was issued, as is one whose socket has since sent `JOIN` for a different lobby. Once the fourth
+seat is taken no seat is freed: the lobby is committed to escrow.
 
 ### Identity
 

@@ -88,8 +88,10 @@ LOBBY -> ESCROWED -> IN_PROGRESS -> SETTLING -> SETTLED
                           \-> VOIDING -> VOIDED
 ```
 
-- **LOBBY** — players join a lobby. 60s fill timeout. No escrow taken. On timeout,
-  dissolve silently.
+- **LOBBY** — players join a lobby. 60s fill timeout. No escrow taken. The room sees
+  `LOBBY_UPDATE` on every seat change and `LOBBY_DISSOLVED` before the lobby is discarded.
+  A seat whose socket has gone is freed after the heartbeat window plus a 15s lobby grace.
+  **[D]**
 - **ESCROWED** — server has confirmed four `join_match` transactions at `confirmed`
   commitment. Only now are roles assigned and `MATCH_START` sent.
 - **IN_PROGRESS** — 3 rounds × (60s tap / 45s chat / 15s vote).
@@ -410,6 +412,8 @@ HEARTBEAT   {}
 **Server → client, added:**
 
 ```
+LOBBY_UPDATE   { code, seated, capacity, players, expiresAt, serverNow }  // serverTick null
+LOBBY_DISSOLVED { code, reason }     // TIMEOUT | ESCROW_FAILED; serverTick null
 MATCH_STARTED  { fullPrivateView }   // carries config — the only time it is ever sent
 BOARD_UPDATE   { round, stage, secondsLeft, lanes, boardTotal, players }
 CHAT_MESSAGE   { from, text, tick }  // pushed once, when posted

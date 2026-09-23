@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs'
 import { createServer as createHttpServer, type Server as HttpServer } from 'node:http'
 import { Server, type Socket } from 'socket.io'
-import type { MatchConfig } from '../engine/config.js'
+import { MVP_CONFIG, type MatchConfig } from '../engine/config.js'
 import { computeSettlement } from '../engine/settlement.js'
 import { consoleLogger, type Logger } from '../log.js'
 import { inMemoryEscrow, type EscrowProvider } from '../match/escrow.js'
-import { createLobbyService, type LobbyService } from '../match/lobby.js'
+import { createLobbyService, lobbyView, type Lobby, type LobbyService } from '../match/lobby.js'
 import { createRegistry, enqueue, type MatchRegistry, type RuntimeMatch } from '../match/registry.js'
 import { createTickLoop, type TickLoop } from '../match/tick.js'
 import { createConnections, type ConnectionRegistry } from './auth.js'
@@ -85,6 +85,14 @@ export function createGameServer(options: ServerOptions = {}): GameServer {
     },
   }
 
+  // A lobby has a matchId from the moment it is created, but no match clock until it fills, so
+  // lobby messages carry a null serverTick rather than a tick that means nothing.
+  const sendLobby = (target: Lobby, socketId?: string): void => {
+    const payload = { matchId: target.matchId, serverTick: null, ...lobbyView(target, config ?? MVP_CONFIG, now()) }
+    if (socketId === undefined) emitter.toRoom(target.matchId, 'LOBBY_UPDATE', payload)
+    else emitter.toSocket(socketId, 'LOBBY_UPDATE', payload)
+  }
+
   const lobby = createLobbyService({
     registry,
     escrow,
@@ -100,6 +108,14 @@ export function createGameServer(options: ServerOptions = {}): GameServer {
         sendMatchStarted(emitter, match, socketId, playerId)
       }
     },
+    onChange: (changed) => sendLobby(changed),
+    onDissolve: (dissolved, reason) =>
+      emitter.toRoom(dissolved.matchId, 'LOBBY_DISSOLVED', {
+        matchId: dissolved.matchId,
+        serverTick: null,
+        code: dissolved.code,
+        reason,
+      }),
   })
 
   const deps: HandlerDeps = { registry, connections, lobby, emitter, logger, now }
@@ -181,7 +197,17 @@ export function createGameServer(options: ServerOptions = {}): GameServer {
         if (match.state.resolution !== null) settle(match)
       },
 
-      onInterval: (nowMs) => void lobby.sweep(nowMs),
+      onInterval: (nowMs) => {
+        // Before the sweep, so a lobby that is both expiring and losing a seat says it dissolved.
+        for (const open of lobby.open()) {
+          for (const { playerId, seatedAtMs } of [...open.seats]) {
+            if (connections.seatAbandoned(open.matchId, playerId, seatedAtMs, nowMs)) {
+              lobby.vacate(open.matchId, playerId)
+            }
+          }
+        }
+        lobby.sweep(nowMs)
+      },
     },
   })
 
@@ -203,12 +229,15 @@ export function createGameServer(options: ServerOptions = {}): GameServer {
     })
 
     socket.on('JOIN', (payload: unknown, respond: unknown) => {
+      const previous = connections.bySocket(socket.id)
       const result = handleJoin(deps, socket.id, payload)
       if (typeof result === 'string') {
         logger('info', 'join refused', { error: result })
         return ack(respond, { ok: false, error: result })
       }
 
+      // A socket rebinding to another lobby stops hearing the one it left.
+      if (previous !== undefined && previous.matchId !== result.matchId) void socket.leave(previous.matchId)
       void socket.join(result.matchId)
 
       const match = registry.get(result.matchId)
@@ -216,7 +245,11 @@ export function createGameServer(options: ServerOptions = {}): GameServer {
         // Seated but the lobby has not filled. The socket waits in the room and MATCH_STARTED
         // arrives when the fourth player does.
         logger('info', 'player waiting in lobby', { matchId: result.matchId, playerId: result.playerId })
-        return ack(respond, { ok: true, playerId: result.playerId, waiting: true, reconnected: false })
+        ack(respond, { ok: true, playerId: result.playerId, waiting: true, reconnected: false })
+        // The roster so far, once, to this socket; the room hears every change after this.
+        const waitingIn = lobby.byMatch(result.matchId)
+        if (waitingIn !== undefined) sendLobby(waitingIn, socket.id)
+        return
       }
 
       const key = `${result.matchId}:${result.playerId}`

@@ -91,6 +91,9 @@ export type LobbyError = 'UNKNOWN_CODE' | 'LOBBY_FULL' | 'ESCROW_FAILED'
 
 export type JoinError = 'INVALID_PAYLOAD' | 'UNKNOWN_SESSION' | 'WRONG_MATCH'
 
+/** Why a lobby was discarded before its match started. No escrow was taken in either case. */
+export type DissolveReason = 'TIMEOUT' | 'ESCROW_FAILED'
+
 export type SettlementError =
   | 'NOT_STARTED'
   | 'CONFIG_MISMATCH'
@@ -252,8 +255,29 @@ export type JoinAck =
 // Server -> client
 // ---------------------------------------------------------------------------------------------
 
-/** Every server message carries these. ACTION_REJECTED may carry nulls; nothing else does. */
+/** Every server message carries these. ACTION_REJECTED may carry nulls, and lobby messages always do for serverTick. */
 export type Envelope = { matchId: string; serverTick: number }
+
+/** A lobby has its matchId from creation but no match clock until it fills. */
+export type LobbyEnvelope = { matchId: string; serverTick: null }
+
+export type LobbyView = {
+  code: string
+  seated: number
+  capacity: number
+  /** In seat order. `seated` is the seat number now, and moves down when an earlier seat is vacated. */
+  players: { seated: number; id: PlayerId; name: string }[]
+  /** Server epoch ms when the lobby dissolves if unfilled. Fixed for the life of the lobby. */
+  expiresAt: number
+  /** Server epoch ms at send. Time left is expiresAt - serverNow; never compare expiresAt to the device clock. */
+  serverNow: number
+}
+
+/** To the room on every seat taken or vacated, and once to a socket when its JOIN finds a lobby. */
+export type LobbyUpdateMessage = LobbyEnvelope & LobbyView
+
+/** To the room, once, before a lobby is discarded. Its sessions no longer exist. */
+export type LobbyDissolvedMessage = LobbyEnvelope & { code: string; reason: DissolveReason }
 
 export type MatchStartedMessage = Envelope & { view: PrivateView }
 export type ResumeStateMessage = Envelope & { view: PrivateView }
@@ -294,6 +318,8 @@ export type ActionRejectedMessage = {
 }
 
 export type ServerMessages = {
+  LOBBY_UPDATE: LobbyUpdateMessage
+  LOBBY_DISSOLVED: LobbyDissolvedMessage
   MATCH_STARTED: MatchStartedMessage
   RESUME_STATE: ResumeStateMessage
   BOARD_UPDATE: BoardUpdateMessage
@@ -310,4 +336,4 @@ export type ServerMessages = {
 export type ServerEvent = keyof ServerMessages
 
 // Client -> server: CREATE_LOBBY, JOIN_LOBBY, JOIN, TAP_BATCH, SET_TIER, SIPHON, TRACE, CHAT, VOTE, HEARTBEAT
-// Server -> client: MATCH_STARTED, RESUME_STATE, BOARD_UPDATE, CHAT_MESSAGE, STAGE_CHANGE, CREDITS, SIPHON_RESULT, TRACE_RESULT, VOTE_RESULT, MATCH_END, ACTION_REJECTED
+// Server -> client: LOBBY_UPDATE, LOBBY_DISSOLVED, MATCH_STARTED, RESUME_STATE, BOARD_UPDATE, CHAT_MESSAGE, STAGE_CHANGE, CREDITS, SIPHON_RESULT, TRACE_RESULT, VOTE_RESULT, MATCH_END, ACTION_REJECTED
