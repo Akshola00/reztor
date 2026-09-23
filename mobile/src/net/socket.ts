@@ -26,6 +26,8 @@ type ClientToServer = {
 // Every server event, as a runtime list, so `onAny` can tell a known message from an unknown one.
 // The assertion below fails to compile if protocol/generated.ts gains an event this list lacks.
 const SERVER_EVENTS = [
+  'LOBBY_UPDATE',
+  'LOBBY_DISSOLVED',
   'MATCH_STARTED',
   'RESUME_STATE',
   'BOARD_UPDATE',

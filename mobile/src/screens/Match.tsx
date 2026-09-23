@@ -36,10 +36,12 @@ import { Reveal } from './Reveal'
 
 /**
  * Taps stop this many ticks before the stage's end tick. A batch is applied on the tick after it
- * arrives, and the last BOARD_UPDATE can be up to a tick old, so a tap in the final half-second
- * could land after the boundary and come back WRONG_STAGE — which a well-behaved client never sees.
+ * arrives, and the server drains queued taps before it closes the stage, so a batch that reaches it
+ * before the closing tick still lands (../server/src/engine/step.ts:43-57). One tick is the
+ * network's allowance: a batch sent later could arrive after the boundary and come back
+ * WRONG_STAGE, which a well-behaved client never sees.
  */
-const STAGE_CLOSE_MARGIN_TICKS = 2
+const STAGE_CLOSE_MARGIN_TICKS = 1
 
 const readMatchId = () => match.snapshot()?.matchId ?? null
 

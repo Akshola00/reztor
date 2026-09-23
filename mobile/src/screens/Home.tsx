@@ -22,7 +22,10 @@ const ERRORS: Record<LobbyError, string> = {
 }
 
 const NOTICES: Record<string, string> = {
-  dissolved: 'The gathering dissolved. Four did not kneel in time.',
+  // PROTOCOL.md §2: nothing locks until all four seats are filled, so a dissolve takes nothing.
+  dissolvedTimeout: 'The gathering dissolved. Four did not kneel in time. Nothing was taken.',
+  dissolvedEscrow: 'The gathering dissolved. The rite could not be paid for. Nothing was taken.',
+  seatLost: 'Your seat in the gathering is gone. Nothing was taken.',
   lost: 'The server no longer knows your seat.',
 }
 

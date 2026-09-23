@@ -1,6 +1,14 @@
 import { AppState } from 'react-native'
 
-import type { JoinAck, JoinTicket, LobbyAck, PrivateView, Tier, VoteTarget } from '../../protocol/generated'
+import type {
+  DissolveReason,
+  JoinTicket,
+  LobbyAck,
+  LobbyUpdateMessage,
+  PrivateView,
+  Tier,
+  VoteTarget,
+} from '../../protocol/generated'
 import { createMatchStore } from '../state/match'
 import { createLoopback, type Loopback } from './loopback'
 import { BATCH_INTERVAL_MS, createOutbox, tapBatches, type Outbox } from './outbox'
@@ -22,11 +30,11 @@ export const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? `http://localhos
 const HEARTBEAT_INTERVAL_MS = 2000
 
 /**
- * ../server/src/engine/config.ts MVP_CONFIG.lobbyFillTimeoutSec. A lobby's timeout lives in
- * `config`, and config only arrives with MATCH_STARTED — so a waiting client cannot learn it from
- * the wire and has to mirror it. See the item 3 report.
+ * The last LOBBY_UPDATE for this seat's lobby, and when it arrived on this phone's clock.
+ * PROTOCOL.md §2: time left is `expiresAt - serverNow`, counted from arrival. The two clocks are
+ * never compared with each other.
  */
-export const LOBBY_FILL_TIMEOUT_SEC = 60
+export type LobbyState = { update: LobbyUpdateMessage; receivedAtMs: number }
 
 /** PROTOCOL.md §4: chat messages are at most 240 characters. */
 export const CHAT_MAX = 240
@@ -61,10 +69,13 @@ let rehearsalCount = 0
 /** The vote this client last cast, and in which round. Survives the Judgement region remounting. */
 let myVote: { round: number; target: VoteTarget } | null = null
 let lastChatAtMs = 0
+let lobby: LobbyState | null = null
 
 const startedListeners = new Set<() => void>()
 const resumeListeners = new Set<() => void>()
 const lostListeners = new Set<() => void>()
+const lobbyListeners = new Set<() => void>()
+const dissolvedListeners = new Set<(reason: DissolveReason) => void>()
 
 const emit = (listeners: Set<() => void>) => {
   for (const listener of listeners) listener()
@@ -80,6 +91,17 @@ function getClient(): ReztorClient {
     // Every (re)connect re-binds this socket to the seat. The server answers with RESUME_STATE
     // when the match is running, or `waiting` while the lobby fills.
     if (ticket !== null) void rejoin()
+  })
+
+  // Only this seat's lobby: a socket can briefly hear a room it is leaving.
+  c.on('LOBBY_UPDATE', (message) => {
+    if (message.matchId !== ticket?.matchId) return
+    lobby = { update: message, receivedAtMs: Date.now() }
+    emit(lobbyListeners)
+  })
+  c.on('LOBBY_DISSOLVED', ({ matchId, reason }) => {
+    if (matchId !== ticket?.matchId) return
+    for (const listener of dissolvedListeners) listener(reason)
   })
 
   c.on('MATCH_STARTED', (message) => {
@@ -177,6 +199,7 @@ export const session = {
     const ack = await request
     if (!ack.ok) return ack
     match.clear()
+    lobby = null
     ticket = ack.ticket
     startHeartbeat()
     watchAppState()
@@ -184,22 +207,15 @@ export const session = {
     return ack
   },
 
-  /**
-   * A lobby that times out dissolves silently: its sessions are deleted and no message is sent
-   * (PROTOCOL.md §2). The only way to learn it happened is that JOIN now fails.
-   */
-  async checkSeat(): Promise<JoinAck | null> {
-    if (ticket === null) return null
-    try {
-      return await getClient().request('JOIN', { matchId: ticket.matchId, sessionToken: ticket.sessionToken })
-    } catch {
-      return null
-    }
-  },
+  lobby: (): LobbyState | null => lobby,
 
-  /** There is no LEAVE message in the protocol; see the item 3 report. This forgets the seat. */
+  /**
+   * PROTOCOL.md §2: there is no leave message. Closing the socket is the leave; the server frees
+   * the seat about 21s later and tells the room.
+   */
   leave() {
     ticket = null
+    lobby = null
     markingPending = false
     if (heartbeat !== null) clearInterval(heartbeat)
     heartbeat = null
@@ -229,7 +245,23 @@ export const session = {
       resumeListeners.delete(listener)
     }
   },
-  /** The server no longer knows this seat: a dissolved lobby, or a match that has gone. */
+  onLobby(listener: () => void) {
+    lobbyListeners.add(listener)
+    return () => {
+      lobbyListeners.delete(listener)
+    }
+  },
+  /** LOBBY_DISSOLVED for this seat's lobby. The session is already gone on the server. */
+  onDissolved(listener: (reason: DissolveReason) => void) {
+    dissolvedListeners.add(listener)
+    return () => {
+      dissolvedListeners.delete(listener)
+    }
+  },
+  /**
+   * The server no longer knows this seat: a lobby that dissolved or freed it while this phone was
+   * away, or a match that has gone.
+   */
   onLost(listener: () => void) {
     lostListeners.add(listener)
     return () => {
