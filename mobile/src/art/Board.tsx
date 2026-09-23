@@ -30,13 +30,15 @@ type BoardProps = {
   laneUnits: Record<PlayerId, SharedValue<number>>
   config: MatchConfig
   youId: PlayerId
+  /** Owners whose player is disconnected and inside the grace period. */
+  disconnected: ReadonlySet<PlayerId>
   crossed: boolean
   /** §6.1's header band. Supplied by the stage, so its readouts refresh without re-rendering the board. */
   header: ReactNode
   children?: ReactNode
 }
 
-export function Board({ lanes, laneUnits, config, youId, crossed, header, children }: BoardProps) {
+export function Board({ lanes, laneUnits, config, youId, disconnected, crossed, header, children }: BoardProps) {
   const insets = useSafeAreaInsets()
   const { width: screenWidth } = useWindowDimensions()
   // The conduits flex, so their pixel height is only known after layout, and the geometry that
@@ -89,6 +91,7 @@ export function Board({ lanes, laneUnits, config, youId, crossed, header, childr
                       seat={seat}
                       own={own}
                       dormant={lane.dormant}
+                      disconnected={disconnected.has(lane.owner)}
                       units={units}
                       capacity={config.laneCapacity}
                       height={conduitHeight}

@@ -87,15 +87,19 @@ src/
     NamePlate.tsx        carved sigil + name. Replaces the cut Figure — BUILD-PLAN.md §2.
                          Off the board since item 1b; kept for chat rows and vote tokens.
     Sigil.tsx
+    Marking.tsx          §7.2's role reveal overlay: one schedule for both roles, no skip
     TapBand.tsx          §7.3's tap band: the onTouchStart surface, press layer, spark pool
     SkrMark.tsx          the SKR glyph drawn as SVG. U+27E1 is absent from IBM Plex Sans, so
                          as text Android substitutes an uncontrolled face. Never set it as text.
   screens/               one file per route in BUILD-PLAN.md §3
   net/
-    socket.ts            socket.io client
+    socket.ts            typed socket.io client over protocol/generated.ts. Logs no payloads
+    session.ts           the one connection: ticket, JOIN, heartbeat, AppState reconnect, and
+                         the match store the socket writes. Server URL from EXPO_PUBLIC_SERVER_URL
     messages.ts          re-exports the unions from protocol/generated.ts
     outbox.ts            client intents (TAP_BATCH, SET_TIER) queued in order; item 3 sends them
-    loopback.ts          dev stand-in for the server until item 3. No game rules; "drop 30%" lever
+    loopback.ts          dev rehearsal stand-in for the server. No game rules; "drop 30%" lever.
+                         Refused while a socket is connected, stopped when one connects
   state/
     match.ts             authoritative server state
     optimistic.ts        local prediction layer

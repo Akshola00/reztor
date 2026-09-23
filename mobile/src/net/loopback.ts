@@ -1,9 +1,11 @@
-import type { MatchConfig, PlayerId, Tier } from '../../protocol/generated'
+import type { PlayerId, Tier } from '../../protocol/generated'
 import type { MatchStore } from '../state/match'
 import type { Outbox } from './outbox'
 
-// Dev only, and deleted at item 3 when the socket takes its place. It stands in for the server's
-// BOARD_UPDATE and CREDITS by writing state/match.ts through the same door the socket will.
+// Dev only: a stand-in for the server during a rehearsal, when no socket is connected. It writes
+// state/match.ts through the same doors the socket handlers use — applyBoard and applyCredits —
+// so the match screen cannot tell the difference. net/session.ts refuses to start it while a
+// socket is connected, and stops it the moment one connects.
 //
 // It applies no game rules — no bucket, no credit clamp, no headroom. It accepts whatever the
 // client batched, which the client has already clamped, and reports it back. Its one lever is
@@ -22,7 +24,7 @@ export type Loopback = {
   setDrop: (on: boolean) => void
 }
 
-export function createLoopback(outbox: Outbox, match: MatchStore, config: MatchConfig, you: PlayerId): Loopback {
+export function createLoopback(outbox: Outbox, match: MatchStore, you: PlayerId): Loopback {
   let cursor = 0
   let tier: Tier = 1
   let drop = false
@@ -32,6 +34,9 @@ export function createLoopback(outbox: Outbox, match: MatchStore, config: MatchC
 
   return {
     tick() {
+      const snapshot = match.snapshot()
+      if (snapshot === null) return
+
       const entries = outbox.entries()
       let units = 0
       let cost = 0
@@ -47,23 +52,27 @@ export function createLoopback(outbox: Outbox, match: MatchStore, config: MatchC
           accepted = Math.floor(exact)
           carry = exact - accepted
         }
-        units += accepted * config.tapTiers[tier].units
-        cost += accepted * config.tapTiers[tier].cost
+        units += accepted * snapshot.config.tapTiers[tier].units
+        cost += accepted * snapshot.config.tapTiers[tier].cost
       }
 
-      const snapshot = match.snapshot()
+      // A rehearsal's clock stands still: the stage never closes, so tapping never stops.
+      const serverTick = snapshot.serverTick
       const lanes = snapshot.lanes.map((lane) => (lane.owner === you ? { ...lane, units: lane.units + units } : lane))
-      const boardTotal = lanes.reduce((sum, lane) => sum + lane.units, 0)
 
       // BOARD_UPDATE before CREDITS, so a reconcile run between the two sees the new lane.
-      match.applyBoard({
-        round: snapshot.round,
-        stage: snapshot.stage,
-        secondsLeft: snapshot.secondsLeft,
-        lanes,
-        boardTotal,
-      })
-      match.applyCredits({ credits: snapshot.credits - cost, tier })
+      match.applyBoard(
+        {
+          round: snapshot.round,
+          stage: snapshot.stage,
+          secondsLeft: snapshot.secondsLeft,
+          lanes,
+          boardTotal: lanes.reduce((sum, lane) => sum + lane.units, 0),
+          players: snapshot.players,
+        },
+        serverTick,
+      )
+      match.applyCredits({ credits: snapshot.credits - cost, spent: snapshot.spent + cost, tier }, serverTick)
     },
 
     setDrop(on) {

@@ -49,6 +49,12 @@ const duration = {
   // role cannot be inferred from timing. No skip.
   markingTotal: 4000,
   markStroke: 1200,
+  // §7.2's later beats, chosen in item 3. Identical for both roles; only the colour each beat
+  // resolves to differs. Whatever of markingTotal these leave over is the hold before the lift.
+  markResolve: 400,
+  markTurn: 400,
+  markLine: 400,
+  markLift: 500,
 
   // §7.3's spark at the touch point. §8 names no duration for it; 400 matches the toll embers,
   // which is the other single-shot mark on the board, so the two read as one vocabulary.
@@ -62,10 +68,6 @@ const creditPulsePeriod = 2000
 // §7.3 — px the tap band sinks while touched.
 const plinthPressDepth = 2
 
-// §7.3 — how far the counter's opacity falls at the bottom of each slow pulse. §7.3 names no
-// depth. 0.5 is visible at a glance without the number ever becoming hard to read.
-const creditPulseOpacity = 0.5
-
 // CLAUDE.md hard rule 3 — the credit counter updates at most 10x/sec, never per tap. The board
 // percentage and the crossing flag, which also follow the player's own taps, poll on the same
 // interval, so no readout re-renders the Offering screen per tap.
@@ -73,9 +75,8 @@ const readoutInterval = 100
 
 // The §8 rows that name a curve, prepared to spread straight into `withTiming`.
 //
-// Deliberately absent: thresholdCrossing, castOut and markingTotal/markStroke. §8 calls the first
-// two "orchestrated" and §7.2 names no curve at all, so picking one here would be inventing a
-// design value. Choose it when the beat is built, then add it here.
+// Deliberately absent: thresholdCrossing and castOut. §8 calls both "orchestrated", so picking a
+// curve here would be inventing a design value. Choose it when the beat is built, then add it.
 const transition = {
   frontierRise: { duration: duration.frontierRise, easing: easing.linear },
   frontierFall: { duration: duration.frontierFall, easing: easing.easeOut },
@@ -90,6 +91,13 @@ const transition = {
   plinthRelease: { duration: duration.plinthRelease, easing: easing.easeOut },
   // §7.3's slow pulse. Half a period each way, ease-in-out, so it breathes rather than blinks.
   creditPulse: { duration: creditPulsePeriod / 2, easing: easing.easeInOut },
+  // §7.2. Strokes are drawn at an even hand; the colour beats ease both ways; the lift decelerates
+  // off the board.
+  markStroke: { duration: duration.markStroke, easing: easing.linear },
+  markResolve: { duration: duration.markResolve, easing: easing.easeInOut },
+  markTurn: { duration: duration.markTurn, easing: easing.easeInOut },
+  markLine: { duration: duration.markLine, easing: easing.easeOut },
+  markLift: { duration: duration.markLift, easing: easing.easeOut },
 } as const
 
 export const motion = {
@@ -99,6 +107,5 @@ export const motion = {
   transition,
   plinthPressDepth,
   creditPulsePeriod,
-  creditPulseOpacity,
   readoutInterval,
 } as const

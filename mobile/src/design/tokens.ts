@@ -30,6 +30,10 @@ const palette = {
   // that clears the floor: 4.51:1 on void. Text only — embers, drains and every other toll mark
   // keep `toll`.
   tollText: '#A46B65',
+  // §7.3 — the other half of the counter's slow pulse below 20 credits. Toll mixed 45% toward
+  // `bone`: 5.91:1 on void. The pulse crossfades the two, so every frame of it clears 4.5:1 —
+  // the opacity pulse it replaces dimmed `tollText` back under the floor.
+  tollTextBright: '#AF8380',
 
   // Settlement
   gold: '#C9A227',
@@ -117,6 +121,10 @@ const type = {
   body: { fontSize: 15, lineHeight: 22.5, fontFamily: fontFamily.uiRegular },
   data: { fontSize: 14, lineHeight: 16.8, fontFamily: fontFamily.uiRegular },
   fine: { fontSize: 12, lineHeight: 15.6, fontFamily: fontFamily.uiRegular },
+  // §7.1: the lobby's invite code, "large enough to read aloud across a room". The t-heart step,
+  // but in IBM Plex rather than Grenze Gotisch: the code is typed by hand from what is read out,
+  // and blackletter capitals are exactly the shapes a reader confuses. Chosen in item 3.
+  code: { fontSize: 56, lineHeight: 56, fontFamily: fontFamily.uiMedium },
 } as const
 
 // §3.2 / §10.1. React Native does not expose font-variant-numeric; this is the closest the
@@ -135,6 +143,13 @@ const layout = {
   tapBandGap: 24,
   tapBand: 240,
   minTouchTarget: 44,
+
+  // Item 3's screens outside the match: home and lobby. The design doc names no spacing, so these
+  // are chosen, and kept to three. The gutter matches §6.1's conduit margin so every screen
+  // shares one edge.
+  screenGutter: 16,
+  stackGap: 12,
+  sectionGap: 32,
 } as const
 
 // §3.3. A tiled PNG above the background and below content. It does not animate.
@@ -224,6 +239,22 @@ const art = {
   coldLightness: 0.55,
   // §6.2 / §7.7: a cold conduit's token drops to this opacity and its sigil goes boneFaint.
   coldTokenOpacity: 0.4,
+  // §5.3: a disconnected player's token drops to this, and nothing else marks the absence.
+  disconnectedTokenOpacity: 0.25,
+
+  // §7.2's Marking: the player's own token "larger than it will ever appear again", inside a mark
+  // drawn stroke by stroke. Chosen in item 3. The mark is a square set on its point, four strokes
+  // drawn in one continuous path, so each stroke is a quarter of `motion.duration.markStroke`.
+  markingDisc: 120,
+  markingSigil: 64,
+  markingRing: 3,
+  markingMarkSize: 200,
+  markingMarkStroke: 3,
+  // The ring's opacity before the turn, and where each role takes it: the Faithful's ring
+  // steadies to full, the Hollow's dims. §7.2 names neither value.
+  markingRingStart: 0.6,
+  markingRingSteady: 1,
+  markingRingDim: 0.25,
 
   // §6.1's Threshold is a short carved mark across each conduit — a light edge with a dark edge
   // under it, per §3.3's bevel logic. It stops at the conduit walls and never spans the gaps.

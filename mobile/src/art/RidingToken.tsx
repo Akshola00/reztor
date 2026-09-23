@@ -23,6 +23,8 @@ type RidingTokenProps = {
   seat: SeatNumber
   own: boolean
   dormant: boolean
+  /** §5.3: the owner's socket is gone and their grace clock is running. */
+  disconnected: boolean
   /** The lane's displayed units — the same shared value its Conduit reads. */
   units: SharedValue<number>
   capacity: number
@@ -30,7 +32,7 @@ type RidingTokenProps = {
   height: number
 }
 
-export function RidingToken({ seat, own, dormant, units, capacity, height }: RidingTokenProps) {
+export function RidingToken({ seat, own, dormant, disconnected, units, capacity, height }: RidingTokenProps) {
   const { art, palette } = tokens
 
   const disc = own ? art.tokenDiscOwn : art.tokenDisc
@@ -53,7 +55,10 @@ export function RidingToken({ seat, own, dormant, units, capacity, height }: Rid
   )
 
   return (
-    <Animated.View pointerEvents="none" style={[styles.wrap, rideStyle, dormant ? styles.dormant : null]}>
+    <Animated.View
+      pointerEvents="none"
+      style={[styles.wrap, rideStyle, dormant ? styles.dormant : null, disconnected ? styles.disconnected : null]}
+    >
       {own ? <View style={[styles.ring, { width: outer, height: outer, borderRadius: outer / 2 }]}>{face}</View> : face}
     </Animated.View>
   )
@@ -81,5 +86,9 @@ const styles = StyleSheet.create({
   },
   dormant: {
     opacity: tokens.art.coldTokenOpacity,
+  },
+  // §5.3: nothing else marks the absence — no outline, no badge, no countdown on the board.
+  disconnected: {
+    opacity: tokens.art.disconnectedTokenOpacity,
   },
 })
