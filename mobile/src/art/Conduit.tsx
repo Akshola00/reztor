@@ -1,6 +1,6 @@
-import { useEffect, useId } from 'react'
+import { useId } from 'react'
 import { StyleSheet, View } from 'react-native'
-import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated'
+import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated'
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg'
 
 import { tokens } from '../design/tokens'
@@ -37,7 +37,12 @@ import { tokens } from '../design/tokens'
 // conduit walls and never spans the gaps between them.
 
 type ConduitProps = {
-  units: number
+  /**
+   * The lane's displayed units. Its writers are the Offering tap handler (instant, own lane only)
+   * and reconciliation (a lerp, every lane) — never this component. The fill and the surface both
+   * derive from it on the UI thread, through `conduitGeometry`.
+   */
+  units: SharedValue<number>
   capacity: number
   dormant: boolean
   width: number
@@ -47,6 +52,9 @@ type ConduitProps = {
   crossed: boolean
 }
 
+// Pulled out of `tokens` so the worklet below captures three numbers rather than the whole module.
+const { surfaceArcHeight, apertureEdge, fillScaleFloor } = tokens.art
+
 /**
  * Where the surface and its token sit, for a given fill. Exported so the riding token and the
  * aperture cannot drift apart: both read their vertical position from this one function.
@@ -55,19 +63,22 @@ type ConduitProps = {
  * capped lane still shows its frontier meeting the top per §6.2. The token is clamped by its own
  * radius, so it stays wholly inside the aperture at capacity and rests on the base at 0 units.
  * They therefore ride together everywhere except the last few pixels at each end.
+ *
+ * A worklet: the fill, the surface and the riding token all call it inside `useAnimatedStyle`,
+ * so it stays the single source for every moving Y value on the UI thread.
  */
 export function conduitGeometry(units: number, capacity: number, height: number, tokenDiameter: number) {
-  const { art } = tokens
+  'worklet'
   const fraction = Math.max(0, Math.min(1, capacity > 0 ? units / capacity : 0))
   const fillTop = height - fraction * height
 
   // The arc's chord — its two ends, level with the top of the fill at the conduit walls.
-  const chordY = Math.max(art.surfaceArcHeight + art.apertureEdge, Math.min(height - art.apertureEdge, fillTop))
+  const chordY = Math.max(surfaceArcHeight + apertureEdge, Math.min(height - apertureEdge, fillTop))
   // The arc's highest point, and the surface layer's own translateY.
-  const apexY = chordY - art.surfaceArcHeight
+  const apexY = chordY - surfaceArcHeight
 
   const radius = tokenDiameter / 2
-  const tokenCentreY = Math.max(radius + art.apertureEdge, Math.min(height - radius - art.apertureEdge, apexY))
+  const tokenCentreY = Math.max(radius + apertureEdge, Math.min(height - radius - apertureEdge, apexY))
 
   return {
     fraction,
@@ -76,7 +87,7 @@ export function conduitGeometry(units: number, capacity: number, height: number,
     // fell back to 1, drawing an empty conduit completely full. A native view scales to 0
     // honestly, so this is now only belt and braces — but the fill's opacity is still gated on
     // `consecrated`, which is what actually guarantees an empty lane stays empty.
-    fillScale: Math.max(art.fillScaleFloor, fraction),
+    fillScale: Math.max(fillScaleFloor, fraction),
     surfaceTranslateY: apexY,
     tokenCentreY,
   }
@@ -95,23 +106,19 @@ export function Conduit({ units, capacity, dormant, width, height, thresholdFrac
 
   const { art, palette, cold } = tokens
 
-  const geometry = conduitGeometry(units, capacity, height, art.tokenDisc)
-  const { consecrated, fillScale, surfaceTranslateY } = geometry
   const thresholdY = height * (1 - thresholdFraction)
 
-  // The two moving values, held as shared values so the fill and the surface animate on the UI
-  // thread per hard rule 3. This effect is only their *first* writer: item 2's tap handler and
-  // its BOARD_UPDATE reconciliation replace it, exactly as the socket replaces the dev loopback
-  // that writes state/match.ts at item 3. Nothing downstream changes when the writer does.
-  const fill = useSharedValue(fillScale)
-  const surface = useSharedValue(surfaceTranslateY)
-  useEffect(() => {
-    fill.set(fillScale)
-    surface.set(surfaceTranslateY)
-  }, [fill, surface, fillScale, surfaceTranslateY])
-
-  const fillStyle = useAnimatedStyle(() => ({ transform: [{ scaleY: fill.get() }] }))
-  const surfaceStyle = useAnimatedStyle(() => ({ transform: [{ translateY: surface.get() - surfacePad }] }))
+  // Hard rule 3: both moving layers derive from the one `units` shared value on the UI thread.
+  // `consecrated` gates opacity here too, so an empty lane stays empty at any scale.
+  const tokenDisc = art.tokenDisc
+  const fillStyle = useAnimatedStyle(() => {
+    const g = conduitGeometry(units.get(), capacity, height, tokenDisc)
+    return { opacity: g.consecrated ? 1 : 0, transform: [{ scaleY: g.fillScale }] }
+  })
+  const surfaceStyle = useAnimatedStyle(() => {
+    const g = conduitGeometry(units.get(), capacity, height, tokenDisc)
+    return { opacity: g.consecrated ? 1 : 0, transform: [{ translateY: g.surfaceTranslateY - surfacePad }] }
+  })
 
   // §6.2: a dormant lane keeps its fill but desaturates and darkens, and its frontier goes flat.
   const base = dormant ? cold.flameDeep : palette.flameDeep
@@ -169,7 +176,7 @@ export function Conduit({ units, capacity, dormant, width, height, thresholdFrac
       {/* 2. The fill. §6.2's two-stop gradient, with flameDeep holding the lower seven-eighths so
              the ramp to flame crowns the surface rather than lighting the whole column. Item 1c
              judged this against a darker base and a translucent body on the phone and kept it. */}
-      <Animated.View style={[styles.layer, styles.fill, { width, height, opacity: consecrated ? 1 : 0 }, fillStyle]}>
+      <Animated.View style={[styles.layer, styles.fill, { width, height }, fillStyle]}>
         <Svg width={width} height={height}>
           <Defs>
             <LinearGradient id={fillId} x1="0" y1="1" x2="0" y2="0" gradientUnits="objectBoundingBox">
@@ -191,7 +198,7 @@ export function Conduit({ units, capacity, dormant, width, height, thresholdFrac
 
       {/* 4. The surface. One layer, one translateY: the glow, the cap and the frontier all ride
              together, so a change in units moves a single transform for the whole thing. */}
-      <Animated.View style={[styles.layer, { opacity: consecrated ? 1 : 0 }, surfaceStyle]}>
+      <Animated.View style={[styles.layer, surfaceStyle]}>
         <Svg width={width} height={surfaceHeight}>
           {/* The glow, stroked copies of the arc under everything else, so only the part that
               spills above the surface shows. Hidden on a cold lane: a dead conduit does not

@@ -1,6 +1,8 @@
 import { StyleSheet, View } from 'react-native'
+import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated'
 
 import { tokens } from '../design/tokens'
+import { conduitGeometry } from './Conduit'
 import { SEAT_COLOURS, Sigil, type SeatNumber } from './Sigil'
 
 // §6.2. The conduit owner's sigil on a small stone disc, riding the arced surface. It replaces
@@ -13,23 +15,32 @@ import { SEAT_COLOURS, Sigil, type SeatNumber } from './Sigil'
 // Your own token is larger and ringed in boneDim, and that is the *only* difference between your
 // conduit and anyone else's (§6.1). Never a seat colour for the ring, never flame.
 //
-// Item 2 animates `centreY` and nothing else: the wrapper's translateY is the single moving prop.
+// The wrapper's translateY is the single moving prop. It is derived on the UI thread from the
+// lane's `units` shared value through `conduitGeometry` — the same call that places the surface,
+// so the token and the frontier cannot drift apart.
 
 type RidingTokenProps = {
   seat: SeatNumber
   own: boolean
   dormant: boolean
-  /** Centre of the disc in conduit pixels, from `conduitGeometry`. */
-  centreY: number
+  /** The lane's displayed units — the same shared value its Conduit reads. */
+  units: SharedValue<number>
+  capacity: number
+  /** The conduit's height in pixels. */
+  height: number
 }
 
-export function RidingToken({ seat, own, dormant, centreY }: RidingTokenProps) {
+export function RidingToken({ seat, own, dormant, units, capacity, height }: RidingTokenProps) {
   const { art, palette } = tokens
 
   const disc = own ? art.tokenDiscOwn : art.tokenDisc
   const sigil = own ? art.tokenSigilOwn : art.tokenSigil
   // The ring sits outside the disc, so an own token occupies this much in total.
   const outer = own ? disc + art.tokenRing * 2 : disc
+
+  const rideStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: conduitGeometry(units.get(), capacity, height, outer).tokenCentreY - outer / 2 }],
+  }))
 
   // §6.2 / §7.7: a cold conduit's token recedes rather than disappearing — the seat still owns
   // the conduit, and its contribution still stands.
@@ -42,12 +53,9 @@ export function RidingToken({ seat, own, dormant, centreY }: RidingTokenProps) {
   )
 
   return (
-    <View
-      pointerEvents="none"
-      style={[styles.wrap, { transform: [{ translateY: centreY - outer / 2 }] }, dormant ? styles.dormant : null]}
-    >
+    <Animated.View pointerEvents="none" style={[styles.wrap, rideStyle, dormant ? styles.dormant : null]}>
       {own ? <View style={[styles.ring, { width: outer, height: outer, borderRadius: outer / 2 }]}>{face}</View> : face}
-    </View>
+    </Animated.View>
   )
 }
 

@@ -25,6 +25,11 @@ const palette = {
   // The toll — loss, drain, damage
   toll: '#8E3B2F',
   tollSmoke: '#4A2A26',
+  // §7.3 — toll for text. `toll` measures 2.61:1 on `void`, below the 4.5:1 text floor, and the
+  // credit counter carries information. This is toll mixed 30% toward `bone`, the smallest step
+  // that clears the floor: 4.51:1 on void. Text only — embers, drains and every other toll mark
+  // keep `toll`.
+  tollText: '#A46B65',
 
   // Settlement
   gold: '#C9A227',
@@ -286,10 +291,6 @@ const art = {
   // §7.3's spark at the touch point. Small: it marks where the thumb landed, it is not an
   // effect. flameCold, because a spark is an offering entering the conduit — see §3.1.
   sparkSize: 10,
-  // Pre-mounted and recycled round-robin, so nothing mounts or unmounts per tap. Sized from the
-  // rate limit: at 6 taps/sec with a 400ms fade, at most three are alive at once, so eight is
-  // comfortable headroom without a pool that costs anything to hold.
-  sparkPoolSize: 8,
 
   // §7.3's credit thresholds. Below the first the counter shifts to toll; below the second it
   // also pulses. The doc names both numbers.

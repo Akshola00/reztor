@@ -62,11 +62,20 @@ const creditPulsePeriod = 2000
 // §7.3 — px the tap band sinks while touched.
 const plinthPressDepth = 2
 
+// §7.3 — how far the counter's opacity falls at the bottom of each slow pulse. §7.3 names no
+// depth. 0.5 is visible at a glance without the number ever becoming hard to read.
+const creditPulseOpacity = 0.5
+
+// CLAUDE.md hard rule 3 — the credit counter updates at most 10x/sec, never per tap. The board
+// percentage and the crossing flag, which also follow the player's own taps, poll on the same
+// interval, so no readout re-renders the Offering screen per tap.
+const readoutInterval = 100
+
 // The §8 rows that name a curve, prepared to spread straight into `withTiming`.
 //
-// Deliberately absent: thresholdCrossing, castOut, markingTotal/markStroke and plinthRelease.
-// §8 calls the first two "orchestrated" and §7.2/§7.3 name no curve at all, so picking one
-// here would be inventing a design value. Choose it when the beat is built, then add it here.
+// Deliberately absent: thresholdCrossing, castOut and markingTotal/markStroke. §8 calls the first
+// two "orchestrated" and §7.2 names no curve at all, so picking one here would be inventing a
+// design value. Choose it when the beat is built, then add it here.
 const transition = {
   frontierRise: { duration: duration.frontierRise, easing: easing.linear },
   frontierFall: { duration: duration.frontierFall, easing: easing.easeOut },
@@ -76,6 +85,11 @@ const transition = {
   overlay: { duration: duration.overlay, easing: easing.easeOut },
   // A spark fades out and never back in, so ease-out is the only sensible curve.
   spark: { duration: duration.spark, easing: easing.easeOut },
+  // §7.3 names 80ms and no curve; chosen in item 2. Ease-out, so the band leaves the thumb fast
+  // and settles into place — stone returning, not a fade.
+  plinthRelease: { duration: duration.plinthRelease, easing: easing.easeOut },
+  // §7.3's slow pulse. Half a period each way, ease-in-out, so it breathes rather than blinks.
+  creditPulse: { duration: creditPulsePeriod / 2, easing: easing.easeInOut },
 } as const
 
 export const motion = {
@@ -85,4 +99,6 @@ export const motion = {
   transition,
   plinthPressDepth,
   creditPulsePeriod,
+  creditPulseOpacity,
+  readoutInterval,
 } as const
