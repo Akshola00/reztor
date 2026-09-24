@@ -1,7 +1,7 @@
 import { useKeepAwake } from 'expo-keep-awake'
-import { Redirect } from 'expo-router'
+import { Redirect, router } from 'expo-router'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native'
+import { BackHandler, Keyboard, Pressable, StyleSheet, Text, View } from 'react-native'
 import Animated, {
   makeMutable,
   useAnimatedStyle,
@@ -24,6 +24,7 @@ import { createOptimisticStore } from '../state/optimistic'
 import { Council } from './Council'
 import { Judgement } from './Judgement'
 import { LiveHeader, Offering, usePolled } from './Offering'
+import { ActionSheet } from './ActionSheet'
 import { Reveal } from './Reveal'
 
 // /match — one screen for the whole rite, driven by the server's stage. The board is mounted once
@@ -226,6 +227,44 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
     if (stage !== 'chat') Keyboard.dismiss()
   }, [stage])
 
+  // -- The action sheet and hardware back --------------------------------------------------------
+
+  // §7.4: the sheet belongs to the Offering it was opened in. It remembers which one, so any stage
+  // change underneath it dismisses it cleanly — and reopening needs a new press.
+  const stageKey = `${current.round}:${stage}`
+  const [sheetFor, setSheetFor] = useState<string | null>(null)
+  const sheetOpen = sheetFor === stageKey
+  const setSheetOpen = useCallback((open: boolean) => setSheetFor(open ? stageKey : null), [stageKey])
+
+  // CLAUDE.md, Android: back during a match does not exit. The first press asks, stating that the
+  // stake is forfeit; a second press, or Leave, leaves. With the sheet open, back closes the sheet
+  // first — it is the thing on top.
+  const [confirmLeave, setConfirmLeave] = useState(false)
+  const leaveMatch = useCallback(() => {
+    // There is no leave message: closing the socket is the leave, and the server's grace clock
+    // does the rest. The seat is forfeit either way.
+    session.leave()
+    router.replace('/')
+  }, [])
+  // Dev only: a live board never idles, so tests read these edges from the log instead of the
+  // view hierarchy.
+  useEffect(() => {
+    if (__DEV__) console.log('[ui] leave confirmation', confirmLeave ? 'shown' : 'hidden')
+  }, [confirmLeave])
+  useEffect(() => {
+    if (__DEV__) console.log('[ui] sheet', sheetOpen ? 'open' : 'closed')
+  }, [sheetOpen])
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (sheetOpen) setSheetOpen(false)
+      else if (confirmLeave) leaveMatch()
+      else setConfirmLeave(true)
+      return true
+    })
+    return () => sub.remove()
+  }, [sheetOpen, setSheetOpen, confirmLeave, leaveMatch])
+
   // Until the vote resolves on screen, the board must not announce it: BOARD_UPDATE marks the
   // ejected lane dormant on the same tick as VOTE_RESULT, so its conduit is held warm until the
   // Cast Out beat begins.
@@ -237,6 +276,8 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
   const seat = seats[youId]
   const rehearsal = session.isRehearsal()
   const alive = ownStatus === 'alive' || ownStatus === 'disconnected'
+  // The sheet is the Offering's: never over a Reveal, a later stage, a cast-out player or an ended rite.
+  const sheetShown = sheetOpen && stage === 'tap' && !ended && alive && reveal === null
   const compact = reveal !== null || stage !== 'tap'
 
   // In the Offering the lower region keeps a fixed height, so the board never reflows while tapping.
@@ -289,6 +330,7 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
         onPredicted={onPredicted}
         canTap={canTap}
         onTierPress={onTierPress}
+        onAction={() => setSheetOpen(true)}
       />
     )
   }
@@ -319,7 +361,20 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
 
       {DEV_TOOLS && rehearsal ? <RehearsalStrip /> : null}
 
+      {sheetShown ? (
+        <ActionSheet
+          config={config}
+          youId={youId}
+          seats={seats}
+          laneUnits={laneUnits}
+          prediction={prediction}
+          onClose={() => setSheetOpen(false)}
+        />
+      ) : null}
+
       {marking ? <Marking role={initial.you.role} seat={seat} onDone={() => setMarking(false)} /> : null}
+
+      {confirmLeave ? <LeaveConfirm onStay={() => setConfirmLeave(false)} onLeave={leaveMatch} /> : null}
     </View>
   )
 }
@@ -341,6 +396,44 @@ function StagePanel({ fill, bottomInset, children }: { fill: boolean; bottomInse
   // The Offering's band already runs under the gesture bar; the compact stages keep clear of it.
   return (
     <Animated.View style={[fill ? styles.fill : null, { paddingBottom: bottomInset }, style]}>{children}</Animated.View>
+  )
+}
+
+/**
+ * CLAUDE.md, Android: back during a match asks first, and says what leaving costs. §8's overlay
+ * timing; the board stays visible behind it.
+ */
+function LeaveConfirm({ onStay, onLeave }: { onStay: () => void; onLeave: () => void }) {
+  const open = useSharedValue(0)
+  useEffect(() => {
+    open.set(withTiming(1, motion.transition.overlay))
+  }, [open])
+  const backdrop = useAnimatedStyle(() => ({ opacity: open.get() * tokens.art.sheetBackdropOpacity }))
+  const panel = useAnimatedStyle(() => ({
+    opacity: open.get(),
+    transform: [{ scale: motion.overlayScaleFrom + (1 - motion.overlayScaleFrom) * open.get() }],
+  }))
+  return (
+    <View style={[StyleSheet.absoluteFill, styles.confirmRoot]} accessibilityViewIsModal>
+      <Animated.View style={[StyleSheet.absoluteFill, styles.confirmBackdrop, backdrop]} />
+      <Animated.View style={[styles.confirmPanel, panel]}>
+        <Text style={styles.confirmTitle}>Leave the rite?</Text>
+        <Text style={styles.confirmLine}>Your stake is forfeit. The rite goes on without you.</Text>
+        <View style={styles.confirmRow}>
+          <Pressable onPress={onStay} accessibilityRole="button" accessibilityLabel="Stay" style={styles.confirmButton}>
+            <Text style={styles.confirmLabel}>Stay</Text>
+          </Pressable>
+          <Pressable
+            onPress={onLeave}
+            accessibilityRole="button"
+            accessibilityLabel="Leave and forfeit the stake"
+            style={styles.confirmButton}
+          >
+            <Text style={styles.confirmLabel}>Leave</Text>
+          </Pressable>
+        </View>
+      </Animated.View>
+    </View>
   )
 }
 
@@ -396,6 +489,45 @@ const styles = StyleSheet.create({
   },
   fill: {
     flex: 1,
+  },
+  confirmRoot: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: tokens.layout.screenGutter,
+  },
+  confirmBackdrop: {
+    backgroundColor: tokens.palette.void,
+  },
+  confirmPanel: {
+    ...tokens.material.raisedStoneFace,
+    borderRadius: tokens.radii.panel,
+    alignSelf: 'stretch',
+    padding: tokens.layout.screenGutter,
+    gap: tokens.layout.stackGap,
+  },
+  confirmTitle: {
+    ...tokens.type.stage,
+    color: tokens.palette.bone,
+  },
+  confirmLine: {
+    ...tokens.type.body,
+    color: tokens.palette.boneDim,
+  },
+  confirmRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: tokens.layout.stackGap,
+  },
+  confirmButton: {
+    ...tokens.material.insetStoneFace,
+    borderRadius: tokens.radii.chip,
+    minHeight: tokens.layout.minTouchTarget,
+    paddingHorizontal: tokens.layout.screenGutter,
+    justifyContent: 'center',
+  },
+  confirmLabel: {
+    ...tokens.type.body,
+    color: tokens.palette.bone,
   },
   placeholder: {
     alignItems: 'center',

@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { AppState } from 'react-native'
 
 import type {
@@ -5,7 +6,9 @@ import type {
   JoinTicket,
   LobbyAck,
   LobbyUpdateMessage,
+  PlayerId,
   PrivateView,
+  Side,
   Tier,
   VoteTarget,
 } from '../../protocol/generated'
@@ -19,8 +22,10 @@ import { createClient, type ReztorClient } from './socket'
 // writes. Module state rather than React context: the tap path and the batch timer read it
 // synchronously, and it has to outlive route changes.
 //
-// The session token lives in memory only. A cold start loses it, and with it the seat; persisting
-// it needs a storage dependency, which item 3 does not add.
+// The ticket — and with it the session token, the only thing that can reclaim the seat — is also
+// written to AsyncStorage (item 5), so an app the OS killed, or the player force-stopped, rejoins
+// its match on launch. It is cleared on MATCH_END, on a confirmed leave, and when the lobby
+// dissolves or the server no longer knows the seat.
 
 /** ../server/src/main.ts: `PORT ?? 3000`. Socket.IO's default path, /socket.io/. */
 export const DEFAULT_PORT = 3000
@@ -66,10 +71,36 @@ let appState: { remove: () => void } | null = null
 let markingPending = false
 let rehearsal: { outbox: Outbox; loopback: Loopback; timer: ReturnType<typeof setInterval> } | null = null
 let rehearsalCount = 0
+let rehearsalRole: Side = 'crew'
 /** The vote this client last cast, and in which round. Survives the Judgement region remounting. */
 let myVote: { round: number; target: VoteTarget } | null = null
 let lastChatAtMs = 0
 let lobby: LobbyState | null = null
+
+const TICKET_KEY = 'reztor.ticket'
+
+function persistTicket(value: JoinTicket) {
+  // Fire and forget: a failed write costs only the rejoin after a restart, never the match.
+  AsyncStorage.setItem(TICKET_KEY, JSON.stringify(value)).catch(() => undefined)
+}
+
+function forgetTicket() {
+  AsyncStorage.removeItem(TICKET_KEY).catch(() => undefined)
+}
+
+async function readTicket(): Promise<JoinTicket | null> {
+  try {
+    const raw = await AsyncStorage.getItem(TICKET_KEY)
+    return raw === null ? null : (JSON.parse(raw) as JoinTicket)
+  } catch {
+    return null
+  }
+}
+
+/** Where the app opens: home, the lobby this seat is waiting in, or the running match. */
+export type BootTarget = { route: 'home' } | { route: 'lobby'; code: string } | { route: 'match' }
+let booted: Promise<BootTarget> | null = null
+let bootTarget: BootTarget | null = null
 
 const startedListeners = new Set<() => void>()
 const resumeListeners = new Set<() => void>()
@@ -101,6 +132,7 @@ function getClient(): ReztorClient {
   })
   c.on('LOBBY_DISSOLVED', ({ matchId, reason }) => {
     if (matchId !== ticket?.matchId) return
+    forgetTicket()
     for (const listener of dissolvedListeners) listener(reason)
   })
 
@@ -119,7 +151,22 @@ function getClient(): ReztorClient {
   c.on('CREDITS', (message) => match.applyCredits(message, message.serverTick))
   c.on('STAGE_CHANGE', (message) => match.applyStageChange(message, message.serverTick))
   c.on('CHAT_MESSAGE', ({ from, text, tick }) => match.appendChat({ from, text, tick }))
-  c.on('MATCH_END', () => match.applyEnd())
+  c.on('MATCH_END', () => {
+    forgetTicket()
+    match.applyEnd()
+  })
+  c.on('TRACE_RESULT', ({ target, result }) => {
+    // Dev only, so a test can check the card against what the server sent. The reading is this
+    // player's own purchase; it carries no role.
+    if (__DEV__) console.log('[net] TRACE_RESULT', target, result)
+    match.applyTraceResult({ target, result })
+  })
+  // Hard rule 1: only the toll's size is kept. The source and sink are dropped here, unread — and
+  // the dev log below prints the size alone, for the same reason.
+  c.on('SIPHON_RESULT', ({ destroyed }) => {
+    if (__DEV__) console.log('[net] SIPHON_RESULT destroyed', destroyed)
+    match.applySiphonDestroyed(destroyed)
+  })
   c.on('VOTE_RESULT', ({ round, votes, ejected, serverTick }) => {
     match.applyVoteResult({ round, votes, ejected }, serverTick)
     myVote = null
@@ -128,8 +175,6 @@ function getClient(): ReztorClient {
     // PROTOCOL.md §3: a well-behaved client sees none. Logged so a test can count them.
     console.warn('[net] ACTION_REJECTED', action, code, reason)
   })
-  // SIPHON_RESULT and TRACE_RESULT are known and have no reader until item 5.
-  // SIPHON_RESULT must never be drawn as a pairing, on any client — hard rule 1.
 
   client = c
   return c
@@ -145,7 +190,10 @@ async function rejoin(): Promise<void> {
   if (ticket === null) return
   try {
     const ack = await getClient().request('JOIN', { matchId: ticket.matchId, sessionToken: ticket.sessionToken })
-    if (!ack.ok) emit(lostListeners)
+    if (!ack.ok) {
+      forgetTicket()
+      emit(lostListeners)
+    }
   } catch {
     // Timed out or dropped. The next connect event tries again.
   }
@@ -201,6 +249,7 @@ export const session = {
     match.clear()
     lobby = null
     ticket = ack.ticket
+    persistTicket(ack.ticket)
     startHeartbeat()
     watchAppState()
     await rejoin()
@@ -210,10 +259,52 @@ export const session = {
   lobby: (): LobbyState | null => lobby,
 
   /**
+   * Once per launch, before home renders: if a ticket survived a restart, JOIN with it. A running
+   * match answers with RESUME_STATE, applied before the ack resolves, so the match screen opens on
+   * the real board. UNKNOWN_SESSION or WRONG_MATCH clears the ticket and opens home. An unreachable
+   * server keeps the ticket for the next launch and opens home.
+   */
+  boot(): Promise<BootTarget> {
+    booted ??= (async (): Promise<BootTarget> => {
+      const saved = await readTicket()
+      if (saved === null) return { route: 'home' }
+      let ack
+      try {
+        // `ticket` stays null until the ack, so the connect handler does not send a second JOIN.
+        ack = await ensureConnected().request('JOIN', { matchId: saved.matchId, sessionToken: saved.sessionToken })
+      } catch {
+        return { route: 'home' }
+      }
+      if (!ack.ok) {
+        forgetTicket()
+        return { route: 'home' }
+      }
+      ticket = saved
+      startHeartbeat()
+      watchAppState()
+      if (ack.waiting === true) return { route: 'lobby', code: saved.code }
+      return match.snapshot() === null ? { route: 'home' } : { route: 'match' }
+    })().then((target) => {
+      if (__DEV__) console.log('[boot] route', target.route)
+      bootTarget = target
+      return target
+    })
+    return booted
+  },
+
+  /** The launch destination, once: the home route redirects on it the first time and never again. */
+  takeBootTarget(): BootTarget {
+    const target = bootTarget ?? { route: 'home' }
+    bootTarget = { route: 'home' }
+    return target
+  },
+
+  /**
    * PROTOCOL.md §2: there is no leave message. Closing the socket is the leave; the server frees
    * the seat about 21s later and tells the room.
    */
   leave() {
+    forgetTicket()
     ticket = null
     lobby = null
     markingPending = false
@@ -304,6 +395,16 @@ export const session = {
     client.send('VOTE', { target })
   },
 
+  /** Augury. The sheet checks every rule the server would, so nothing sent here is refused. */
+  trace(target: PlayerId) {
+    if (client?.connected()) client.send('TRACE', { target })
+  },
+
+  /** The Draw. The sheet checks every rule the server would, so nothing sent here is refused. */
+  siphon(source: PlayerId, sink: PlayerId) {
+    if (client?.connected()) client.send('SIPHON', { source, sink })
+  },
+
   setTier(tier: Tier) {
     if (rehearsal !== null) {
       rehearsal.outbox.pushSetTier(tier)
@@ -320,11 +421,12 @@ export const session = {
    * A local match with fixture lanes and the loopback standing in for the server. Refused unless
    * dev tools are on and no socket is connected; a socket connecting later stops it.
    */
-  startRehearsal(): boolean {
+  startRehearsal(role: Side = rehearsalRole): boolean {
     if (!DEV_TOOLS || client?.connected()) return false
+    rehearsalRole = role
     stopRehearsal()
     rehearsalCount += 1
-    match.applyView(rehearsalView(`rehearsal-${rehearsalCount}`), 0)
+    match.applyView(rehearsalView(`rehearsal-${rehearsalCount}`, role), 0)
     const outbox = createOutbox()
     const loopback = createLoopback(outbox, match, REHEARSAL_YOU)
     const timer = setInterval(() => {
@@ -348,10 +450,14 @@ export const session = {
 
 const REHEARSAL_YOU = 'p-you'
 
-function rehearsalView(matchId: string): PrivateView {
+// `role` exists so the closed board can be captured for both roles and compared (item 5): the
+// rehearsal renders through the same components a live match does.
+function rehearsalView(matchId: string, role: Side): PrivateView {
   const lanes = [
     { owner: 'p-2', units: 220, dormant: false },
-    { owner: 'p-3', units: 700, dormant: false },
+    // Four units short of capacity: less room than a Draw delivers, so the rehearsal shows the
+    // sheet refusing it as a sink. The own lane, at 0, shows a source below the pull.
+    { owner: 'p-3', units: 996, dormant: false },
     { owner: 'p-4', units: 172, dormant: false },
     { owner: REHEARSAL_YOU, units: 0, dormant: false },
   ]
@@ -384,7 +490,7 @@ function rehearsalView(matchId: string): PrivateView {
     chat: [],
     voteHistory: [],
     resolution: null,
-    you: { id: REHEARSAL_YOU, role: 'crew', credits: 1200, spent: 0, tier: 1, traceUsed: false },
+    you: { id: REHEARSAL_YOU, role, credits: 1200, spent: 0, tier: 1, traceUsed: false },
     currentVote: null,
     traces: [],
     siphonActivity: null,

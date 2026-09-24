@@ -11,6 +11,7 @@ import type {
   Side,
   Stage,
   Tier,
+  TraceResult,
   VoteTarget,
 } from '../../protocol/generated'
 
@@ -48,6 +49,15 @@ export type MatchSnapshot = {
   voteHistory: RevealedVoteRound[]
   /** This player's vote in the current vote stage, as the server last reported it (views only). */
   currentVote: VoteTarget | null
+  /** This player's Augury readings: the view's on a resume, plus each TRACE_RESULT since. */
+  traces: { target: PlayerId; result: TraceResult }[]
+  /** Whether this player has spent their Augury, from the view; a TRACE_RESULT also sets it. */
+  traceUsed: boolean
+  /**
+   * The Hollow's private running toll: SIPHON_RESULT's `destroyed`, summed. Only a total — hard
+   * rule 1 forbids keeping or showing which conduit fed which.
+   */
+  tollTaken: number
   resolution: Resolution | null
   /** Set by MATCH_END. */
   ended: boolean
@@ -67,6 +77,10 @@ export type MatchStore = {
   appendChat: (message: ChatMessage) => void
   /** VOTE_RESULT. */
   applyVoteResult: (result: RevealedVoteRound, serverTick: number) => void
+  /** TRACE_RESULT, sent to the purchaser alone. */
+  applyTraceResult: (trace: { target: PlayerId; result: TraceResult }) => void
+  /** SIPHON_RESULT, sent to the Hollow alone. Only `destroyed` is kept. */
+  applySiphonDestroyed: (destroyed: number) => void
   applyEnd: () => void
   clear: () => void
   laneUnits: (owner: PlayerId) => number
@@ -116,6 +130,9 @@ export function createMatchStore(): MatchStore {
         chat: view.chat,
         voteHistory: view.voteHistory,
         currentVote: view.currentVote,
+        traces: view.traces.map(({ target, result }) => ({ target, result })),
+        traceUsed: view.you.traceUsed,
+        tollTaken: view.siphonActivity?.destroyed ?? 0,
         resolution: view.resolution,
         ended: view.resolution !== null,
       }
@@ -156,6 +173,16 @@ export function createMatchStore(): MatchStore {
       if (snapshot === null) return
       if (snapshot.voteHistory.some((r) => r.round === result.round)) return
       update({ serverTick, voteHistory: [...snapshot.voteHistory, result], currentVote: null })
+    },
+
+    applyTraceResult(trace) {
+      if (snapshot === null) return
+      update({ traces: [...snapshot.traces, trace], traceUsed: true })
+    },
+
+    applySiphonDestroyed(destroyed) {
+      if (snapshot === null) return
+      update({ tollTaken: snapshot.tollTaken + destroyed })
     },
 
     applyEnd() {

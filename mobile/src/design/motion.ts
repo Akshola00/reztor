@@ -78,6 +78,10 @@ const plinthPressDepth = 2
 // interval, so no readout re-renders the Offering screen per tap.
 const readoutInterval = 100
 
+// §8's overlay row: "Scale from 0.98, no blur". Applies to the action sheet and the leave
+// confirmation.
+const overlayScaleFrom = 0.98
+
 // The §8 rows that name a curve, prepared to spread straight into `withTiming`.
 //
 // Deliberately absent: thresholdCrossing. §8 calls it "orchestrated", so picking a curve here
@@ -115,4 +119,5 @@ export const motion = {
   plinthPressDepth,
   creditPulsePeriod,
   readoutInterval,
+  overlayScaleFrom,
 } as const

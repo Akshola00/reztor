@@ -1,6 +1,6 @@
 import { Redirect, router } from 'expo-router'
 import { useEffect, useState, useSyncExternalStore } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import type { DissolveReason, LobbyUpdateMessage } from '../../protocol/generated'
@@ -94,6 +94,16 @@ function Gathering({ code, you }: { code: string; you: string }) {
     session.leave()
     router.replace('/')
   }
+
+  // Hardware back on the lobby is the Leave control: nothing is at stake before the rite begins.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      session.leave()
+      router.replace('/')
+      return true
+    })
+    return () => sub.remove()
+  }, [])
 
   const players = lobby?.update.players ?? []
   const remaining = lobby === null ? null : secondsLeft(lobby, now)

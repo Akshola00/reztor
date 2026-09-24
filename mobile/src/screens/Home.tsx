@@ -67,8 +67,8 @@ export function Home() {
     }
   }
 
-  const rehearse = () => {
-    if (session.startRehearsal()) router.replace('/match')
+  const rehearse = (role: Side) => {
+    if (session.startRehearsal(role)) router.replace('/match')
     else setError('A rehearsal cannot run while connected to the server.')
   }
 
@@ -140,7 +140,8 @@ export function Home() {
           <View style={styles.group}>
             <Text style={styles.label}>Dev</Text>
             <View style={styles.row}>
-              <Button label="Rehearse alone" onPress={rehearse} />
+              <Button label="Rehearse alone" onPress={() => rehearse('crew')} />
+              <Button label="Rehearse as Hollow" onPress={() => rehearse('impostor')} />
               <Button label="Faithful" onPress={() => setPreview('crew')} />
               <Button label="Hollow" onPress={() => setPreview('impostor')} />
             </View>

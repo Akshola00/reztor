@@ -274,6 +274,16 @@ const art = {
   voteSigil: 30,
   voteMark: 10,
 
+  // §7.4's sheet, chosen in item 5. The void behind it dims to this, so the board stays readable
+  // above the sheet while it is open — the Hollow is pretending to watch it.
+  sheetBackdropOpacity: 0.6,
+  // The Draw's "current conduit height as a small bar", beside each seat token. Drawn in boneDim,
+  // not fire: §3.1 lists every place flame may appear, and a sheet is not one of them.
+  drawBarWidth: 6,
+  drawBarHeight: 32,
+  // §7.4's "brief --toll pulse on the sheet edge" after each Draw.
+  drawPulseHeight: 2,
+
   // §6.1's Threshold is a short carved mark across each conduit — a light edge with a dark edge
   // under it, per §3.3's bevel logic. It stops at the conduit walls and never spans the gaps.
   thresholdThickness: 1,

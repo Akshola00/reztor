@@ -35,9 +35,11 @@ type OfferingProps = {
   /** False once the stage is about to close, or when this player cannot tap. Checked per touch. */
   canTap: () => boolean
   onTierPress: () => void
+  /** Opens §7.4's sheet. The button is the same for every role; the sheet decides what it holds. */
+  onAction: () => void
 }
 
-export function Offering({ config, prediction, ownUnits, onPredicted, canTap, onTierPress }: OfferingProps) {
+export function Offering({ config, prediction, ownUnits, onPredicted, canTap, onTierPress, onAction }: OfferingProps) {
   const press = useSharedValue(0)
   const [sparks] = useState(() => createSparkPool(sparkPoolSize(config.tapRatePerSec)))
   // Re-renders only when the tier changes: getSnapshot runs per tap, but returns the same value.
@@ -79,9 +81,9 @@ export function Offering({ config, prediction, ownUnits, onPredicted, canTap, on
 
         <CreditCounter prediction={prediction} />
 
-        {/* Identical for every role, in the same place, at the same size. Hard rule 4. Opens
-            nothing until item 5. */}
-        <ControlButton accessibilityLabel="Augury">
+        {/* Identical for every role, in the same place, at the same size, with the same label and
+            handler. Hard rule 4: role reaches only the sheet it opens, never this button. */}
+        <ControlButton accessibilityLabel="Augury" onPress={onAction}>
           <Text style={styles.buttonLabel}>Augury</Text>
         </ControlButton>
       </View>

@@ -93,7 +93,8 @@ src/
     SkrMark.tsx          the SKR glyph drawn as SVG. U+27E1 is absent from IBM Plex Sans, so
                          as text Android substitutes an uncontrolled face. Never set it as text.
   screens/               one file per route in BUILD-PLAN.md §3, plus the match's lower regions:
-                         Offering, Council, Judgement and Reveal. Only the lower region changes
+                         Offering, Council, Judgement and Reveal, and ActionSheet (§7.4: Augury,
+                         and the Draw for the Hollow). Only the lower region changes
                          between stages; the board in Match.tsx never remounts
   net/
     socket.ts            typed socket.io client over protocol/generated.ts. Logs no payloads
@@ -224,6 +225,20 @@ Cast-out players stay in the match screen as spectators. Remove their inputs ent
 - Respect `AccessibilityInfo.isReduceMotionEnabled()` — it removes the embers and the Threshold flood, per design doc §8. Frontier movement stays, because it is information, and the surface and token ride with it.
 - Player identity is never carried by colour alone; the sigil is always present.
 - Text contrast meets 4.5:1 against its background.
+
+## Testing autonomy
+
+Where a test checks whether something functions — messages, state, timing, layout, secrecy,
+reconnection — drive it yourself. Script the other seats the way item 4 did, drive the phone over
+adb, and verify from logs, the view hierarchy and screenshot comparison. Do not ask the owner to
+open browser tabs or press things for a functional check.
+
+Where a test needs human judgement — how something feels under the thumb, whether a beat lands,
+whether a screen reads well, which of two options to keep — stop and hand it to the owner with
+clear instructions on what to do and what to report back. Do not substitute your own judgement for
+theirs on those.
+
+When unsure which kind a test is, ask before running it.
 
 ## Before calling anything done
 

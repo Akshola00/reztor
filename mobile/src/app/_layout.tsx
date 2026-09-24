@@ -4,11 +4,12 @@ import { useFonts } from 'expo-font'
 import { Stack } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Image, StyleSheet, View } from 'react-native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 
 import { tokens } from '../design/tokens'
+import { session } from '../net/session'
 
 // Module scope, not inside the component: the splash has to be held before the first render.
 SplashScreen.preventAutoHideAsync()
@@ -22,18 +23,26 @@ export default function RootLayout() {
     IBMPlexSans_500Medium,
   })
 
+  // A ticket that survived a restart rejoins before anything renders, so a player the OS or a
+  // force-stop took out of a match lands back on its board rather than on home. Bounded by the
+  // JOIN ack's own timeout, so the splash cannot hang on an unreachable server.
+  const [booted, setBooted] = useState(false)
+  useEffect(() => {
+    void session.boot().then(() => setBooted(true))
+  }, [])
+
   useEffect(() => {
     if (fontError) {
       console.warn('Font loading failed; rendering with platform fallback faces.', fontError)
     }
     // Never hang on the splash. An error hides it and renders anyway.
-    if (fontsLoaded || fontError) {
+    if ((fontsLoaded || fontError) && booted) {
       SplashScreen.hideAsync()
     }
-  }, [fontsLoaded, fontError])
+  }, [fontsLoaded, fontError, booted])
 
   // The board percentage must not reflow, so render nothing until the faces resolve.
-  if (!fontsLoaded && !fontError) {
+  if ((!fontsLoaded && !fontError) || !booted) {
     return null
   }
 
