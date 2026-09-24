@@ -33,6 +33,15 @@ export const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? `http://localhos
 
 /** PROTOCOL.md §4 and server/src/net/auth.ts. Three missed beats start the grace clock. */
 const HEARTBEAT_INTERVAL_MS = 2000
+/** PROTOCOL.md §5: the heartbeat lapses after three missed beats, six seconds. */
+const HEARTBEAT_LAPSE_MS = 3 * HEARTBEAT_INTERVAL_MS
+
+/**
+ * The socket's state, for the screens that must say so (§7.9). `idle` before anything has tried to
+ * connect and after a leave; `offline` after a failed attempt or a dropped socket, while Socket.IO
+ * retries on its own backoff.
+ */
+export type ConnectionStatus = 'idle' | 'connecting' | 'online' | 'offline'
 
 /**
  * The last LOBBY_UPDATE for this seat's lobby, and when it arrived on this phone's clock.
@@ -76,6 +85,10 @@ let rehearsalRole: Side = 'crew'
 let myVote: { round: number; target: VoteTarget } | null = null
 let lastChatAtMs = 0
 let lobby: LobbyState | null = null
+let status: ConnectionStatus = 'idle'
+/** When the socket last dropped, and when this phone last sent a heartbeat over a live socket. */
+let lostAtMs = 0
+let lastBeatAtMs = 0
 
 const TICKET_KEY = 'reztor.ticket'
 
@@ -97,8 +110,11 @@ async function readTicket(): Promise<JoinTicket | null> {
   }
 }
 
-/** Where the app opens: home, the lobby this seat is waiting in, or the running match. */
-export type BootTarget = { route: 'home' } | { route: 'lobby'; code: string } | { route: 'match' }
+/**
+ * Where the app opens: home, the lobby this seat is waiting in, or the running match. `ended` is
+ * home after a JOIN found the match already resolved.
+ */
+export type BootTarget = { route: 'home'; ended?: boolean } | { route: 'lobby'; code: string } | { route: 'match' }
 let booted: Promise<BootTarget> | null = null
 let bootTarget: BootTarget | null = null
 
@@ -116,7 +132,19 @@ function getClient(): ReztorClient {
   if (client !== null) return client
   const c = createClient(SERVER_URL)
 
+  // The dev log lines carry the transition only, never a payload.
+  c.onDisconnect(() => {
+    if (__DEV__) console.log('[net] disconnected')
+    if (status === 'online') lostAtMs = Date.now()
+    status = 'offline'
+  })
+  c.onConnectError(() => {
+    status = 'offline'
+  })
   c.onConnect(() => {
+    if (__DEV__) console.log('[net] connected')
+    status = 'online'
+    lastBeatAtMs = Date.now()
     // A live socket and a rehearsal can never run together.
     stopRehearsal()
     // Every (re)connect re-binds this socket to the seat. The server answers with RESUME_STATE
@@ -151,9 +179,14 @@ function getClient(): ReztorClient {
   c.on('CREDITS', (message) => match.applyCredits(message, message.serverTick))
   c.on('STAGE_CHANGE', (message) => match.applyStageChange(message, message.serverTick))
   c.on('CHAT_MESSAGE', ({ from, text, tick }) => match.appendChat({ from, text, tick }))
-  c.on('MATCH_END', () => {
+  c.on('MATCH_END', (message) => {
+    // The seat is finished. Nothing may rejoin it: not a reconnect, not the next launch.
     forgetTicket()
-    match.applyEnd()
+    ticket = null
+    stopHeartbeat()
+    match.applyEnd(
+      'error' in message ? { error: message.error } : { reveal: message.reveal, settlement: message.settlement },
+    )
   })
   c.on('TRACE_RESULT', ({ target, result }) => {
     // Dev only, so a test can check the card against what the server sent. The reading is this
@@ -182,7 +215,10 @@ function getClient(): ReztorClient {
 
 function ensureConnected(): ReztorClient {
   const c = getClient()
-  if (!c.connected()) c.connect()
+  if (!c.connected()) {
+    if (status !== 'offline') status = 'connecting'
+    c.connect()
+  }
   return c
 }
 
@@ -202,8 +238,15 @@ async function rejoin(): Promise<void> {
 function startHeartbeat() {
   if (heartbeat !== null) return
   heartbeat = setInterval(() => {
-    if (client?.connected()) client.send('HEARTBEAT', {})
+    if (!client?.connected()) return
+    client.send('HEARTBEAT', {})
+    lastBeatAtMs = Date.now()
   }, HEARTBEAT_INTERVAL_MS)
+}
+
+function stopHeartbeat() {
+  if (heartbeat !== null) clearInterval(heartbeat)
+  heartbeat = null
 }
 
 function watchAppState() {
@@ -279,11 +322,25 @@ export const session = {
         forgetTicket()
         return { route: 'home' }
       }
+      if (ack.waiting === true) {
+        ticket = saved
+        startHeartbeat()
+        watchAppState()
+        return { route: 'lobby', code: saved.code }
+      }
+      const resumed = match.snapshot()
+      if (resumed === null) return { route: 'home' }
+      // A match that resolved while this phone was gone. MATCH_END went to the room once and is
+      // not resent, so there is no reveal to show — only that the rite is over. Never rejoin it.
+      if (resumed.resolution !== null) {
+        forgetTicket()
+        match.clear()
+        return { route: 'home', ended: true }
+      }
       ticket = saved
       startHeartbeat()
       watchAppState()
-      if (ack.waiting === true) return { route: 'lobby', code: saved.code }
-      return match.snapshot() === null ? { route: 'home' } : { route: 'match' }
+      return { route: 'match' }
     })().then((target) => {
       if (__DEV__) console.log('[boot] route', target.route)
       bootTarget = target
@@ -308,13 +365,51 @@ export const session = {
     ticket = null
     lobby = null
     markingPending = false
-    if (heartbeat !== null) clearInterval(heartbeat)
-    heartbeat = null
+    stopHeartbeat()
     appState?.remove()
     appState = null
     stopRehearsal()
     match.clear()
     client?.disconnect()
+    status = 'idle'
+  },
+
+  status: (): ConnectionStatus => status,
+
+  /**
+   * §7.9's grace countdown: seconds this seat has left to return, counted down from when the socket
+   * dropped. PROTOCOL.md §5 starts the server's clock at the later of the socket closing and the
+   * heartbeat lapsing, and the server can only learn of the close after this phone does, so this
+   * errs early — it never promises more time than the seat has. Null while connected.
+   */
+  graceLeftSec(graceSec: number): number | null {
+    if (status === 'online') return null
+    const start = Math.max(lostAtMs, lastBeatAtMs + HEARTBEAT_LAPSE_MS)
+    return Math.max(0, Math.ceil((start + graceSec * 1000 - Date.now()) / 1000))
+  },
+
+  /** Home connects on open, so it can say whether the server is there before anyone presses. */
+  connect() {
+    if (rehearsal !== null) return
+    const c = getClient()
+    if (c.connected() || status === 'connecting') return
+    status = 'connecting'
+    c.connect()
+  },
+
+  /**
+   * Home's retry: a fresh attempt now rather than at the end of Socket.IO's backoff, then the
+   * launch-time rejoin again, in case a ticket was kept because the server was down at launch.
+   */
+  retry(): Promise<BootTarget> {
+    const c = getClient()
+    if (!c.connected()) {
+      c.disconnect()
+      status = 'connecting'
+      c.connect()
+    }
+    booted = null
+    return this.boot().then(() => this.takeBootTarget())
   },
 
   /** True once per MATCH_STARTED, for the match screen to play the Marking. */
@@ -422,7 +517,13 @@ export const session = {
    * dev tools are on and no socket is connected; a socket connecting later stops it.
    */
   startRehearsal(role: Side = rehearsalRole): boolean {
-    if (!DEV_TOOLS || client?.connected()) return false
+    if (!DEV_TOOLS) return false
+    // Home's own connection is only a probe; a seat's socket is not given up for a rehearsal.
+    if (client?.connected()) {
+      if (ticket !== null) return false
+      client.disconnect()
+      status = 'idle'
+    }
     rehearsalRole = role
     stopRehearsal()
     rehearsalCount += 1
@@ -443,6 +544,17 @@ export const session = {
 
   dumpRehearsalOutbox() {
     if (rehearsal !== null) console.log('[outbox]', JSON.stringify(rehearsal.outbox.entries()))
+  },
+
+  /**
+   * Ends the rehearsal with MATCH_END's error variant, which the dev server cannot produce: its
+   * settlement only fails on a corrupt log. Written through the store's own door, so the match
+   * screen takes the same path to the broken state as it would for a live one.
+   */
+  endRehearsalWithError() {
+    if (rehearsal === null) return
+    stopRehearsal()
+    match.applyEnd({ error: 'UNBALANCED' })
   },
 }
 

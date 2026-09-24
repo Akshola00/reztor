@@ -90,12 +90,15 @@ src/
     Marking.tsx          §7.2's role reveal overlay: one schedule for both roles, no skip
     SeatToken.tsx        a seat's sigil on a still stone disc, warm or cold: the vote row and Reveal
     TapBand.tsx          §7.3's tap band: the onTouchStart surface, press layer, spark pool
+    StillBoard.tsx       the board after the rite, held still: §7.8's final board, §7.9's dark one
     SkrMark.tsx          the SKR glyph drawn as SVG. U+27E1 is absent from IBM Plex Sans, so
                          as text Android substitutes an uncontrolled face. Never set it as text.
   screens/               one file per route in BUILD-PLAN.md §3, plus the match's lower regions:
                          Offering, Council, Judgement and Reveal, and ActionSheet (§7.4: Augury,
                          and the Draw for the Hollow). Only the lower region changes
-                         between stages; the board in Match.tsx never remounts
+                         between stages; the board in Match.tsx never remounts.
+                         Reckoning (§7.8) and Broken (§7.9: a voided rite, or MATCH_END's error)
+                         render from the MATCH_END payload the match store keeps
   net/
     socket.ts            typed socket.io client over protocol/generated.ts. Logs no payloads
     session.ts           the one connection: ticket, JOIN, heartbeat, AppState reconnect, and

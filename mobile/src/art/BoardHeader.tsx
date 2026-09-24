@@ -16,7 +16,8 @@ import { tokens } from '../design/tokens'
 // whatever the round and timer say.
 //
 // §3.1: the percentage sits in bone for the whole match and takes flameWhite only during the
-// Threshold crossing. That is the one time fire touches it.
+// Threshold crossing. That is the one time fire touches it — and the Reckoning's final board, which
+// reuses `Percent`, never passes it fire.
 
 type BoardHeaderProps = {
   round: number
@@ -38,37 +39,46 @@ function clock(totalSeconds: number): string {
 }
 
 export function BoardHeader({ round, percent, secondsLeft, crossed }: BoardHeaderProps) {
-  const slot = Math.round(percentType.fontSize * tokens.art.percentDigitSlotRatio)
-  const digits = String(percent).split('')
-  const glyphStyle = [styles.percentGlyph, crossed ? styles.percentCrossed : null]
-
   return (
     <View style={styles.row}>
       <View style={styles.side}>
         <Text style={styles.meta}>{`Round ${round}`}</Text>
       </View>
 
-      {/* `accessible` collapses the digit slots into one announcement. Without it Android walks
-          the slots individually and a screen reader reads the percentage as "5", "8", "%" — the
-          fixed-slot layout is a typographic device and must not leak into the a11y tree. */}
-      <View
-        style={styles.percent}
-        accessible
-        accessibilityRole="text"
-        accessibilityLabel={`The Heart is ${percent} percent full`}
-      >
-        {digits.map((digit, i) => (
-          // Index keys: these are glyph slots at fixed positions, not a reorderable list.
-          <View key={i} style={{ width: slot }}>
-            <Text style={glyphStyle}>{digit}</Text>
-          </View>
-        ))}
-        <Text style={glyphStyle}>%</Text>
-      </View>
+      <Percent percent={percent} colour={crossed ? tokens.palette.flameWhite : tokens.palette.bone} />
 
       <View style={styles.side}>
         <Text style={[styles.meta, styles.timer]}>{clock(secondsLeft)}</Text>
       </View>
+    </View>
+  )
+}
+
+/**
+ * The percentage in its fixed digit slots. Shared with the Reckoning's final board and the broken
+ * state's dark one, which set it in other colours but must not set it differently.
+ */
+export function Percent({ percent, colour }: { percent: number; colour: string }) {
+  const slot = Math.round(percentType.fontSize * tokens.art.percentDigitSlotRatio)
+  const digits = String(percent).split('')
+  const glyphStyle = [styles.percentGlyph, { color: colour }]
+  // `accessible` collapses the digit slots into one announcement. Without it Android walks the
+  // slots individually and a screen reader reads the percentage as "5", "8", "%" — the fixed-slot
+  // layout is a typographic device and must not leak into the a11y tree.
+  return (
+    <View
+      style={styles.percent}
+      accessible
+      accessibilityRole="text"
+      accessibilityLabel={`The Heart is ${percent} percent full`}
+    >
+      {digits.map((digit, i) => (
+        // Index keys: these are glyph slots at fixed positions, not a reorderable list.
+        <View key={i} style={{ width: slot }}>
+          <Text style={glyphStyle}>{digit}</Text>
+        </View>
+      ))}
+      <Text style={glyphStyle}>%</Text>
     </View>
   )
 }
@@ -98,11 +108,6 @@ const styles = StyleSheet.create({
   },
   percentGlyph: {
     ...percentType,
-    color: tokens.palette.bone,
     textAlign: 'center',
-  },
-  // §3.1 / §6.4: the crossing is the only moment fire touches the percentage.
-  percentCrossed: {
-    color: tokens.palette.flameWhite,
   },
 })

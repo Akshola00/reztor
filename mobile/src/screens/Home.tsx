@@ -1,12 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import type { LobbyAck, Side } from '../../protocol/generated'
 import { Marking } from '../art/Marking'
 import { tokens } from '../design/tokens'
-import { CODE_ALPHABET, CODE_LENGTH, DEV_TOOLS, NAME_MAX, session } from '../net/session'
+import { CODE_ALPHABET, CODE_LENGTH, DEV_TOOLS, NAME_MAX, session, type BootTarget } from '../net/session'
+import { usePolled } from './Offering'
 
 // / — §7.1's Home: a name, create, and join by code, with the rules below the actions rather than
 // behind a link. No wallet UI of any kind until the contract lands (BUILD-PLAN.md §4).
@@ -27,6 +28,9 @@ const NOTICES: Record<string, string> = {
   dissolvedEscrow: 'The gathering dissolved. The rite could not be paid for. Nothing was taken.',
   seatLost: 'Your seat in the gathering is gone. Nothing was taken.',
   lost: 'The server no longer knows your seat.',
+  // A launch or retry that found the rite already resolved. Its MATCH_END was sent once, to the
+  // room, while this phone was away, so there is no Reckoning to show.
+  ended: 'The rite you knelt in has ended.',
 }
 
 /** Upper-cases, and keeps only the server's alphabet: no I, O, 0 or 1. */
@@ -37,9 +41,17 @@ function cleanCode(text: string): string {
     .slice(0, CODE_LENGTH)
 }
 
-export function Home() {
+export function Home({ initialNotice }: { initialNotice?: string }) {
   const insets = useSafeAreaInsets()
-  const { notice } = useLocalSearchParams<{ notice?: string }>()
+  const params = useLocalSearchParams<{ notice?: string }>()
+  const notice = params.notice ?? initialNotice
+  // §7.9: home says plainly when the server cannot be reached, rather than waiting for a press.
+  const status = usePolled(session.status)
+  useEffect(() => session.connect(), [])
+  const online = status === 'online'
+  useEffect(() => {
+    if (__DEV__) console.log('[ui] home status', status)
+  }, [status])
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
@@ -65,6 +77,20 @@ export function Home() {
     } finally {
       setBusy(false)
     }
+  }
+
+  const retry = async () => {
+    setBusy(true)
+    setError(null)
+    let target: BootTarget
+    try {
+      target = await session.retry()
+    } finally {
+      setBusy(false)
+    }
+    // A ticket kept from a launch the server missed may still hold a seat.
+    if (target.route === 'match') router.replace('/match')
+    else if (target.route === 'lobby') router.replace({ pathname: '/lobby/[code]', params: { code: target.code } })
   }
 
   const rehearse = (role: Side) => {
@@ -100,9 +126,20 @@ export function Home() {
           />
         </View>
 
+        {status === 'offline' ? (
+          <View style={styles.group}>
+            <Text style={styles.notice} accessibilityLiveRegion="polite">
+              {`The server cannot be reached. It is expected at ${session.serverUrl}.`}
+            </Text>
+            <View style={styles.row}>
+              <Button label="Try again" disabled={busy} onPress={retry} />
+            </View>
+          </View>
+        ) : null}
+
         <Button
           label="Open a gathering"
-          disabled={!nameOk || busy}
+          disabled={!nameOk || busy || !online}
           onPress={() => run(() => session.createLobby(trimmed))}
         />
 
@@ -124,7 +161,7 @@ export function Home() {
             />
             <Button
               label="Join"
-              disabled={!nameOk || !codeOk || busy}
+              disabled={!nameOk || !codeOk || busy || !online}
               onPress={() => run(() => session.joinLobby(code, trimmed))}
             />
           </View>

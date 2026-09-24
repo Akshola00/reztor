@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { StyleSheet, View } from 'react-native'
 import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated'
 
@@ -30,9 +31,15 @@ type RidingTokenProps = {
   capacity: number
   /** The conduit's height in pixels. */
   height: number
+  /**
+   * §7.9: the grace countdown, beside the player's own token while their socket is gone. It rides
+   * with the token. Only this player's own client ever passes one — §5.3 puts no countdown on
+   * anyone else's token.
+   */
+  badge?: ReactNode
 }
 
-export function RidingToken({ seat, own, dormant, disconnected, units, capacity, height }: RidingTokenProps) {
+export function RidingToken({ seat, own, dormant, disconnected, units, capacity, height, badge }: RidingTokenProps) {
   const { art, palette } = tokens
 
   const disc = own ? art.tokenDiscOwn : art.tokenDisc
@@ -60,8 +67,39 @@ export function RidingToken({ seat, own, dormant, disconnected, units, capacity,
       style={[styles.wrap, rideStyle, dormant ? styles.dormant : null, disconnected ? styles.disconnected : null]}
     >
       {own ? <View style={[styles.ring, { width: outer, height: outer, borderRadius: outer / 2 }]}>{face}</View> : face}
+      {badge === undefined ? null : (
+        <Badge units={units} capacity={capacity} height={height} outer={outer}>
+          {badge}
+        </Badge>
+      )}
     </Animated.View>
   )
+}
+
+/**
+ * Above the token, or below it when the token rides too high for the badge to fit inside the
+ * aperture. Its own component, so a token without a badge runs no second worklet per frame.
+ */
+function Badge({
+  units,
+  capacity,
+  height,
+  outer,
+  children,
+}: {
+  units: SharedValue<number>
+  capacity: number
+  height: number
+  outer: number
+  children: ReactNode
+}) {
+  const space = tokens.type.data.lineHeight + tokens.art.graceCountGap
+  const below = outer + tokens.art.graceCountGap
+  const style = useAnimatedStyle(() => {
+    const top = conduitGeometry(units.get(), capacity, height, outer).tokenCentreY - outer / 2
+    return { transform: [{ translateY: top < space ? below : -space }] }
+  })
+  return <Animated.View style={[styles.badge, style]}>{children}</Animated.View>
 }
 
 const styles = StyleSheet.create({
@@ -83,6 +121,13 @@ const styles = StyleSheet.create({
     borderColor: tokens.palette.boneDim,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
   },
   dormant: {
     opacity: tokens.art.coldTokenOpacity,

@@ -3,11 +3,14 @@ import type {
   ChatMessage,
   LaneSnapshot,
   MatchConfig,
+  MatchEndError,
+  MatchEndView,
   PlayerId,
   PlayerSnapshot,
   PrivateView,
   Resolution,
   RevealedVoteRound,
+  Settlement,
   Side,
   Stage,
   Tier,
@@ -61,7 +64,16 @@ export type MatchSnapshot = {
   resolution: Resolution | null
   /** Set by MATCH_END. */
   ended: boolean
+  /**
+   * MATCH_END's payload: the reveal and settlement, or the error when the match could not be
+   * settled. Null until it arrives — and on a resume into a match that has already resolved, where
+   * the view carries the resolution but MATCH_END, sent once to the room, was missed.
+   */
+  end: MatchEnd | null
 }
+
+/** MATCH_END without its envelope. */
+export type MatchEnd = { reveal: MatchEndView; settlement: Settlement } | { error: MatchEndError }
 
 export type MatchStore = {
   snapshot: () => MatchSnapshot | null
@@ -81,7 +93,8 @@ export type MatchStore = {
   applyTraceResult: (trace: { target: PlayerId; result: TraceResult }) => void
   /** SIPHON_RESULT, sent to the Hollow alone. Only `destroyed` is kept. */
   applySiphonDestroyed: (destroyed: number) => void
-  applyEnd: () => void
+  /** MATCH_END. */
+  applyEnd: (end: MatchEnd) => void
   clear: () => void
   laneUnits: (owner: PlayerId) => number
   subscribe: (listener: () => void) => () => void
@@ -135,6 +148,7 @@ export function createMatchStore(): MatchStore {
         tollTaken: view.siphonActivity?.destroyed ?? 0,
         resolution: view.resolution,
         ended: view.resolution !== null,
+        end: null,
       }
       notify()
     },
@@ -185,8 +199,8 @@ export function createMatchStore(): MatchStore {
       update({ tollTaken: snapshot.tollTaken + destroyed })
     },
 
-    applyEnd() {
-      update({ ended: true })
+    applyEnd(end) {
+      update({ ended: true, end })
     },
 
     clear() {

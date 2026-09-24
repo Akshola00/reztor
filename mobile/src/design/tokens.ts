@@ -105,6 +105,10 @@ const fontFamily = {
   display: 'GrenzeGotisch_700Bold',
   uiRegular: 'IBMPlexSans_400Regular',
   uiMedium: 'IBMPlexSans_500Medium',
+  // §7.8: the Reckoning's role seed is set monospace, the one place §4's ban on monospace does not
+  // reach — it is a string to be checked character by character, not a label. Android's system
+  // monospace face, so nothing new is bundled for one line. Chosen in item 6.
+  mono: 'monospace',
 } as const
 
 // §3.2. `lineHeight` is the doc's ratio multiplied out and left unrounded, because React
@@ -350,6 +354,20 @@ const art = {
   // §7.3's spark at the touch point. Small: it marks where the thumb landed, it is not an
   // effect. flameCold, because a spark is an offering entering the conduit — see §3.1.
   sparkSize: 10,
+
+  // §7.9's countdown beside the player's own token while their socket is gone. It rides with the
+  // token, this far above it — or below it, when the token sits too high for the count to fit
+  // inside the aperture. Chosen in item 6.
+  graceCountGap: 4,
+
+  // §7.8's final board in the Reckoning, and §7.9's dark board on the broken screen: the four
+  // conduits standing still at their last level. Short enough that the verdict and the Hollow stay
+  // above the fold on an 832pt screen. Chosen in item 6.
+  stillBoardHeight: 160,
+  // §7.8's Hollow "marked in toll": the Marking's mark — a square on its point — drawn in toll
+  // around the Hollow's token, at this size. The token itself is the vote row's (voteDisc).
+  // Chosen in item 6.
+  hollowMarkSize: 88,
 
   // §7.3's credit thresholds. Below the first the counter shifts to toll; below the second it
   // also pulses. The doc names both numbers.

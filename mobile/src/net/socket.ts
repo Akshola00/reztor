@@ -64,6 +64,8 @@ export type ReztorClient = {
   disconnect: () => void
   onConnect: (handler: () => void) => () => void
   onDisconnect: (handler: () => void) => () => void
+  /** A connection attempt failed. Socket.IO keeps retrying on its own backoff. */
+  onConnectError: (handler: () => void) => () => void
   on: <E extends ServerEvent>(event: E, handler: (payload: ServerMessages[E]) => void) => () => void
   /** Rejects on timeout or a dropped connection; the ack itself carries `ok: false` for refusals. */
   request: <E extends AckEvent>(event: E, payload: ClientMessages[E]) => Promise<AckFor<E>>
@@ -103,6 +105,13 @@ export function createClient(url: string): ReztorClient {
       socket.on('disconnect', handler)
       return () => {
         socket.off('disconnect', handler)
+      }
+    },
+
+    onConnectError(handler) {
+      socket.on('connect_error', handler)
+      return () => {
+        socket.off('connect_error', handler)
       }
     },
 

@@ -150,6 +150,8 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
   const canTap = useCallback(() => {
     const s = match.snapshot()
     if (s === null || s.ended || s.stage !== 'tap') return false
+    // §7.9: with the socket gone the board is frozen, and so is this player's lane on the server.
+    if (!session.isRehearsal() && session.status() !== 'online') return false
     if (s.serverTick >= s.stageEndsAtTick - STAGE_CLOSE_MARGIN_TICKS) return false
     return s.players.find((p) => p.id === youId)?.status === 'alive'
   }, [youId])
@@ -196,6 +198,7 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
   const readCrossed = useCallback(() => readTotal() >= config.winTarget, [readTotal, config.winTarget])
 
   const readVoteCount = useCallback(() => match.snapshot()?.voteHistory.length ?? 0, [])
+  const readOnline = useCallback(() => session.isRehearsal() || session.status() === 'online', [])
 
   const stage = usePolled(readStage)
   const ended = usePolled(readEnded)
@@ -203,6 +206,7 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
   usePolled(readShape)
   const crossed = usePolled(readCrossed)
   const voteCount = usePolled(readVoteCount)
+  const online = usePolled(readOnline)
 
   // -- The Reveal ----------------------------------------------------------------------------------
   //
@@ -221,6 +225,42 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
 
   const current = match.snapshot() ?? initial
   const reveal = voteCount > revealed ? (current.voteHistory[revealed] ?? null) : null
+
+  // -- The end ------------------------------------------------------------------------------------
+  //
+  // MATCH_END can land mid-Reveal — a Hollow cast out ends the rite on the same tick — so the
+  // Reveal and its Cast Out play out first. Then the final board holds for `endHold` and the screen
+  // gives way: the Reckoning, or §7.9's broken state for a rite that was voided or could not be
+  // settled. A resume into a rite that resolved while this phone was away has no MATCH_END to show,
+  // so it goes home and says only that the rite is over.
+  const revealing = reveal !== null
+  useEffect(() => {
+    if (!ended || revealing) return
+    const id = setTimeout(() => {
+      const end = match.snapshot()?.end ?? null
+      if (__DEV__)
+        console.log('[ui] end', end === null ? 'none' : 'error' in end ? 'error' : end.reveal.resolution.kind)
+      if (end === null) {
+        session.leave()
+        router.replace({ pathname: '/', params: { notice: 'ended' } })
+      } else if ('error' in end || end.reveal.resolution.kind === 'voided') {
+        router.replace('/broken')
+      } else {
+        router.replace('/reckoning')
+      }
+    }, motion.duration.endHold)
+    return () => clearTimeout(id)
+  }, [ended, revealing])
+
+  // The server no longer knows this seat — the match is gone, most likely with a server restart.
+  useEffect(
+    () =>
+      session.onLost(() => {
+        session.leave()
+        router.replace({ pathname: '/', params: { notice: 'lost' } })
+      }),
+    [],
+  )
 
   // Leaving Council takes the keyboard with it.
   useEffect(() => {
@@ -307,6 +347,21 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
   } else if (ended) {
     lowerKey = 'ended'
     lower = <Placeholder height={compact ? undefined : lowerHeight} title="The rite has ended." />
+  } else if (!online) {
+    lowerKey = 'offline'
+    // §7.9: the board freezes — no update reaches it — and this says why, in the lower region
+    // rather than over the board. No modal and no spinner; Socket.IO is already retrying.
+    lower = (
+      <Placeholder
+        height={compact ? undefined : lowerHeight}
+        title="The connection is lost."
+        line={
+          ownStatus === 'ejected'
+            ? 'Trying again.'
+            : 'Trying again. Return before the count beside your conduit ends, or you are cast out.'
+        }
+      />
+    )
   } else if (stage === 'chat') {
     lowerKey = 'chat'
     // A cast-out player reads the Council but has no input at all.
@@ -345,6 +400,9 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
         disconnected={disconnected}
         crossed={crossed}
         compact={compact}
+        ownBadge={
+          !online && !ended && ownStatus !== 'ejected' ? <GraceCount graceSec={config.disconnectGraceSec} /> : undefined
+        }
         header={
           <LiveHeader
             winTarget={config.winTarget}
@@ -437,6 +495,20 @@ function LeaveConfirm({ onStay, onLeave }: { onStay: () => void; onLeave: () => 
   )
 }
 
+/**
+ * §7.9's countdown beside the player's own token: how long the seat has to come back before its
+ * grace runs out. Polled, so only this leaf re-renders, and only while the socket is gone.
+ */
+function GraceCount({ graceSec }: { graceSec: number }) {
+  const read = useCallback(() => session.graceLeftSec(graceSec) ?? graceSec, [graceSec])
+  const left = usePolled(read)
+  return (
+    <Text style={styles.graceCount} accessibilityLabel={`${left} seconds to return`}>
+      {`${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`}
+    </Text>
+  )
+}
+
 function Placeholder({ height, title, line }: { height?: number; title: string; line?: string }) {
   return (
     <View style={[styles.placeholder, height === undefined ? styles.fill : { height }]}>
@@ -466,6 +538,7 @@ function RehearsalStrip() {
       />
       <DevChip label="reset" selected={false} onPress={() => session.startRehearsal()} />
       <DevChip label="dump" selected={false} onPress={() => session.dumpRehearsalOutbox()} />
+      <DevChip label="end: error" selected={false} onPress={() => session.endRehearsalWithError()} />
     </View>
   )
 }
@@ -527,6 +600,11 @@ const styles = StyleSheet.create({
   },
   confirmLabel: {
     ...tokens.type.body,
+    color: tokens.palette.bone,
+  },
+  graceCount: {
+    ...tokens.type.data,
+    ...tokens.tabularFigures,
     color: tokens.palette.bone,
   },
   placeholder: {

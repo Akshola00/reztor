@@ -9,5 +9,5 @@ export default function Index() {
   const [target] = useState(() => session.takeBootTarget())
   if (target.route === 'match') return <Redirect href="/match" />
   if (target.route === 'lobby') return <Redirect href={{ pathname: '/lobby/[code]', params: { code: target.code } }} />
-  return <Home />
+  return <Home initialNotice={target.route === 'home' && target.ended === true ? 'ended' : undefined} />
 }

@@ -44,6 +44,11 @@ const duration = {
   // §7.7, inside castOut: the token drops to cold over this.
   castOutCold: 1000,
 
+  // Between MATCH_END — or the end of the Reveal and Cast Out it arrived with — and the Reckoning.
+  // The final board holds still this long, so the crossing flood (600) lands and the last
+  // positions register before the screen changes. Chosen in item 6.
+  endHold: 2000,
+
   // §8's overlay timing, which BUILD-PLAN.md §2 applies to the Draw bottom sheet.
   overlay: 180,
 

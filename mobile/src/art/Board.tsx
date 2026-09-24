@@ -39,6 +39,8 @@ type BoardProps = {
    * changes — so nothing remounts and every shared value carries through.
    */
   compact?: boolean
+  /** §7.9's grace countdown, beside this player's own token. Absent while connected. */
+  ownBadge?: ReactNode
   /** §6.1's header band. Supplied by the stage, so its readouts refresh without re-rendering the board. */
   header: ReactNode
   children?: ReactNode
@@ -55,6 +57,7 @@ export function Board({
   disconnected,
   crossed,
   compact = false,
+  ownBadge,
   header,
   children,
 }: BoardProps) {
@@ -131,6 +134,7 @@ export function Board({
                       units={units}
                       capacity={config.laneCapacity}
                       height={conduitHeight}
+                      badge={own ? ownBadge : undefined}
                     />
                   </>
                 ) : null}
