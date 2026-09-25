@@ -55,17 +55,15 @@ function readRecord(): Reckoned | null {
   return { reveal, settlement, seats, youId: s.you.id }
 }
 
-/** Kneel again: home, ready to create or join. Shared with the broken screen. */
-export function kneelAgain() {
+/**
+ * Kneel again and Leave: home, with the finished seat and its ticket cleared. Leave does not close
+ * the app — closing it after a screen about someone's money reads as a crash. Shared with the
+ * broken screen.
+ */
+export function goHome() {
   // The seat is finished and its ticket already cleared at MATCH_END; leave() clears the rest.
   session.leave()
   router.replace('/')
-}
-
-/** Leave: the app closes. Everything about the finished seat is cleared first. */
-export function leaveApp() {
-  session.leave()
-  BackHandler.exitApp()
 }
 
 export function Reckoning() {
@@ -75,7 +73,7 @@ export function Reckoning() {
   // Hardware back returns home, as Kneel again does. There is nothing behind this screen.
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      kneelAgain()
+      goHome()
       return true
     })
     return () => sub.remove()
@@ -236,8 +234,8 @@ export function Reckoning() {
         </Section>
 
         <View style={styles.actions}>
-          <Action label="Kneel again" onPress={kneelAgain} />
-          <Action label="Leave" onPress={leaveApp} />
+          <Action label="Kneel again" onPress={goHome} />
+          <Action label="Leave" onPress={goHome} />
         </View>
       </ScrollView>
     </View>

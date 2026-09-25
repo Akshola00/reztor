@@ -8,7 +8,7 @@ import type { SeatNumber } from '../art/Sigil'
 import { StillBoard } from '../art/StillBoard'
 import { tokens } from '../design/tokens'
 import { match } from '../net/session'
-import { Action, kneelAgain, leaveApp, skr } from './Reckoning'
+import { Action, goHome, skr } from './Reckoning'
 
 // /broken — §7.9's void. The moment a player worries about their money, so it is its own screen
 // and never a toast: the percentage and the conduits go dark, and the copy says what happened and
@@ -65,7 +65,7 @@ export function Broken() {
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      kneelAgain()
+      goHome()
       return true
     })
     return () => sub.remove()
@@ -109,8 +109,8 @@ export function Broken() {
         </View>
 
         <View style={styles.actions}>
-          <Action label="Kneel again" onPress={kneelAgain} />
-          <Action label="Leave" onPress={leaveApp} />
+          <Action label="Kneel again" onPress={goHome} />
+          <Action label="Leave" onPress={goHome} />
         </View>
       </ScrollView>
     </View>

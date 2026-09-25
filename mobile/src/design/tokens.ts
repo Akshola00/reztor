@@ -42,6 +42,10 @@ const palette = {
   bone: '#D8DBE2',
   boneDim: '#8A93A5',
   boneFaint: '#545C6C',
+  // §10.4 keeps boneFaint (2.89:1 on void) for decoration only. This is boneFaint mixed 24% toward
+  // bone, the smallest step that clears the 4.5:1 floor: 4.52:1 on void. For information that has to
+  // read as dark and dead — §7.9's broken-state percentage. Chosen in item 6.
+  boneFaintText: '#747A88',
 
   // The four mantles, muted so they cannot be read as fill
   seat1: '#4E7C6B',

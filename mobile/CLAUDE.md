@@ -40,6 +40,10 @@ Before starting work on a screen, read `BUILD-PLAN.md` for its scope, `../docs/P
 
 Install everything with `npx expo install <pkg>` so versions match the SDK. Never pin a React Native or Expo package version by hand.
 
+**One deliberate exception: `react-native-safe-area-context` is 5.10.0, outside SDK 57's `~5.7.0`.** On 5.7.0 every release build crashed at launch with `Unsupported top level event type "topInsetsChange" dispatched`; 5.10.0 launches and renders. expo-doctor flags the minor mismatch and that is accepted. Do not let `expo install --check` or `--fix` take it back to 5.7.x without building release and launching it on the S10 first. It cannot simply be removed either: expo-router lists it as a peer and wraps the app in its `SafeAreaProvider`.
+
+**Release builds need cleartext.** The playtest server is plain `http://` on the LAN, and Android 9+ blocks cleartext outside the debug manifests, so `expo-build-properties` sets `android.usesCleartextTraffic` in `app.config.js`.
+
 Expo publishes skills for AI agents. If `expo-upgrade` or related Expo skills are available in the environment, prefer them over guessing at SDK migration steps.
 
 ## Type and fonts — checked on a device
@@ -220,7 +224,9 @@ Cast-out players stay in the match screen as spectators. Remove their inputs ent
 - `expo-keep-awake` active for the whole match — six minutes of tapping must not hit the screen timeout.
 - Hardware back during a match does not exit. First press shows a leave confirmation that states the stake is forfeit; second press leaves.
 - `android:windowSoftInputMode` must not resize the board when the Council keyboard opens. The chat area scrolls; the board stays put.
-- Test on a mid-range device, not just an emulator. The performance floor is 60fps while tapping on a phone most players actually own.
+- **The target device is the Galaxy S10 (SM-G973F, serial RF8MB3EKCHY, 411x869dp)** for testing, the playtest and the demo recording. `expo run:android --device` names it `SM_G973F`, as `adb devices -l` prints it.
+- The S10 is a flagship, so 60fps there does not prove 60fps on a budget phone. The performance floor is still 60fps while tapping on a phone most players actually own, and no device here measures it.
+- The layout was verified at 384dp on a borrowed Redmi 15 (items 3 and 4), which is gone.
 
 ## Accessibility
 

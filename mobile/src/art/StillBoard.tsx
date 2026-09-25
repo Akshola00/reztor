@@ -14,7 +14,8 @@ import type { SeatNumber } from './Sigil'
 // nothing here moves, so each lane's shared value is made once and never written again.
 //
 // `dark` is §7.9's "the percentage and the conduits go dark": every conduit cold and the
-// percentage in boneFaint. Cold is the product's one word for fire that has gone out.
+// percentage in boneFaintText, the darkest grey that still clears 4.5:1, because it is information.
+// Cold is the product's one word for fire that has gone out.
 //
 // The percentage never takes fire here. §3.1 gives it flame only during the crossing moment, and
 // that moment belonged to the match; the lit Threshold marks are what record a crossing.
@@ -51,7 +52,7 @@ export function StillBoard({ lanes, seatOf, youId, capacity, winTarget, dark = f
 
   return (
     <View style={styles.root}>
-      <Percent percent={percent} colour={dark ? tokens.palette.boneFaint : tokens.palette.bone} />
+      <Percent percent={percent} colour={dark ? tokens.palette.boneFaintText : tokens.palette.bone} />
       <View style={[styles.columns, { gap: art.conduitGap, height }]}>
         {lanes.map((lane) => {
           const value = units[lane.owner]
