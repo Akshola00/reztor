@@ -151,7 +151,12 @@ per-player credits. 499 bytes.
 
 `secondsLeft` is whole seconds remaining in the current stage, computed server-side, so a client
 renders a countdown without knowing what a tick is. `lanes` is `{ owner, units, dormant }` per lane,
-ordered by `playerId`. `players` is `{ id, name, status }`.
+and `players` is `{ id, name, status }`.
+
+**Lanes and players are in seat order** — the order of the last `LOBBY_UPDATE`'s `players`, so lane
+index + 1 is the seat number, and the sigil a player was shown while seated is the one they keep.
+The same order holds in `MATCH_STARTED`, `RESUME_STATE`, the reveal and the settlement's `lines`.
+Nothing about a lane's rules depends on its position; every action names lanes by `playerId`.
 
 ### `CHAT_MESSAGE` — when a message is posted, to the room
 

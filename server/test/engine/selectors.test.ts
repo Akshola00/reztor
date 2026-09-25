@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
+import { initialState } from '../../src/engine/reduce.js'
 import { matchEndView, privateView, publicView } from '../../src/engine/selectors.js'
+import { computeSettlement } from '../../src/engine/settlement.js'
 import type { MatchState, PlayerId } from '../../src/engine/state.js'
 import { accept } from '../helpers/checked.js'
 import { assertSecretsHidden } from '../helpers/secrets.js'
 import {
   SEED,
   advanceStage,
+  matchStarted,
   closeVote,
   crew,
   disconnect,
@@ -38,7 +41,7 @@ function busyMatch() {
 }
 
 describe('publicView', () => {
-  it('shows lanes, the board total, and each player’s name and status, in playerId order', () => {
+  it('shows lanes, the board total, and each player’s name and status, in seat order', () => {
     const { s, imp, a, b } = busyMatch()
     const view = publicView(s)
     expect(view.lanes.map((l) => l.owner)).toEqual(['p1', 'p2', 'p3', 'p4'])
@@ -187,5 +190,40 @@ describe('assertSecretsHidden catches leaky selectors', () => {
       return view && { ...view, table: Object.values(state.players).map((p) => p.credits) }
     }
     expect(() => assertSecretsHidden(s, { publicView, privateView: leaky })).toThrow(/privateView\(p\d\) depends on hidden state/)
+  })
+})
+
+describe('seat order', () => {
+  // The lobby seats players in join order; lanes follow it so a player keeps the sigil they were
+  // shown while seated. Here seat order is deliberately not playerId order.
+  it('orders the board, the reveal and the settlement by seat, not by playerId, through a whole match', () => {
+    const SEATS = ['p3', 'p1', 'p4', 'p2']
+    const started = matchStarted()
+    const byId = new Map(started.players.map((p) => [p.id, p]))
+    const seated = { ...started, players: SEATS.flatMap((id) => byId.get(id) ?? []) }
+
+    // p2 is the impostor for the fixture seed whatever the seat order: roles derive from sorted ids.
+    let s = initialState(seated)
+    expect(s.impostorId).toBe('p2')
+    expect(publicView(s).lanes.map((l) => l.owner)).toEqual(SEATS)
+
+    // Taps, siphons, a trace and an ejection rewrite every record the views read from.
+    s = seedLane(s, 'p1', 40, 1)
+    s = accept(s, siphon(s, 'p2', 'p1', 'p3', 2)).state
+    s = startRound(s, 2)
+    s = accept(s, trace(s, 'p3', 'p1', 481)).state
+    s = advanceStage(s, 900, 2, 'vote')
+    for (const voter of ['p1', 'p3', 'p4']) s = accept(s, vote(s, voter, 'p2', 901)).state
+    s = closeVote(s, 960)
+    expect(s.resolution).toMatchObject({ winner: 'crew', reason: 'IMPOSTOR_EJECTED' })
+
+    const view = publicView(s)
+    expect(view.lanes.map((l) => l.owner)).toEqual(SEATS)
+    expect(view.players.map((p) => p.id)).toEqual(SEATS)
+    expect(matchEndView(s)?.players.map((p) => p.id)).toEqual(SEATS)
+
+    const settlement = computeSettlement(s.eventLog, s.config)
+    expect(settlement.ok && settlement.value.lines.map((line) => line.playerId)).toEqual(SEATS)
+    expect(settlement.ok && settlement.value.winners).toEqual(['p3', 'p1', 'p4'])
   })
 })

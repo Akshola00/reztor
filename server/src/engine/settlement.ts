@@ -73,7 +73,11 @@ export function computeSettlement(
   }
   if (resolution === null) return err('UNRESOLVED')
 
-  const ids = [...spent.keys()].sort()
+  // Seat order, as MATCH_STARTED listed the players, so the settlement lines read in the same order
+  // as the board and the reveal. No amount depends on it: every winner takes an equal share and the
+  // remainder goes to the rake as dust.
+  const ids = started.players.map((p) => p.id)
+  if (ids.length !== spent.size) return err('CORRUPT_LOG')
   const spentOf = (id: PlayerId): number => spent.get(id) ?? 0
   if (!ids.every((id) => Number.isInteger(spentOf(id)) && spentOf(id) >= 0 && spentOf(id) <= buyIn)) {
     return err('CORRUPT_LOG')

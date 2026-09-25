@@ -322,3 +322,42 @@ describe('lobby state on the wire', () => {
     expect(updates(ada).at(-1)?.players.map((p) => p.name)).toEqual(['Ada'])
   }, 30_000)
 })
+
+describe('seat order carries into the match', () => {
+  it('gives each player the lane index of their lobby seat, when seat order is not playerId order', async () => {
+    server = createGameServer({ logger: silentLogger })
+    const port = await server.listen(0)
+    server.loop.stop()
+
+    // Ids are random, so one lobby in 24 seats players in playerId order and proves nothing. Fill
+    // lobbies until one does not; the chance of ten in a row is about 1 in 6e13.
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const ada = await sit(port, 'Ada')
+      const rest = [await sit(port, 'Bo', ada.code), await sit(port, 'Cy', ada.code)]
+      const lastSeen = updates(ada).at(-1)
+      const dee = await sit(port, 'Dee', ada.code)
+      const seats = [ada, ...rest, dee]
+
+      const ids = seats.map((seat) => seat.playerId)
+      if (JSON.stringify(ids) === JSON.stringify([...ids].sort())) continue
+
+      // What the room saw while seated: the last roster before the fourth seat, plus the fourth.
+      expect(lastSeen?.players.map((p) => p.id)).toEqual(ids.slice(0, 3))
+      expect(updates(ada).at(-1)?.players.map((p) => ({ seated: p.seated, id: p.id }))).toEqual(
+        ids.map((id, index) => ({ seated: index + 1, id })),
+      )
+
+      const boards: { board: { lanes: { owner: string }[] } }[] = []
+      ada.socket.on('BOARD_UPDATE', (payload: { board: { lanes: { owner: string }[] } }) => void boards.push(payload))
+      server.loop.runOnce(Date.now())
+      await settle()
+      for (const seat of seats) {
+        const started = seat.inbox.get('MATCH_STARTED')?.[0] as { view: { lanes: { owner: string }[] } }
+        expect(started.view.lanes.map((lane) => lane.owner)).toEqual(ids)
+      }
+      expect(boards.at(-1)?.board.lanes.map((lane) => lane.owner)).toEqual(ids)
+      return
+    }
+    throw new Error('Ten lobbies in a row seated players in playerId order')
+  }, 30_000)
+})

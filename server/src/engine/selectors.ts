@@ -71,13 +71,16 @@ export type MatchEndView = {
   voteHistory: RevealedVoteRound[]
 }
 
-function sortedById<T>(record: Record<PlayerId, T>): T[] {
-  return Object.keys(record)
-    .sort()
-    .flatMap((id) => {
-      const value = record[id]
-      return value === undefined ? [] : [value]
-    })
+// Seat order: the order MATCH_STARTED listed the players, which is the lobby's seat order.
+// initialState inserts players in that order and every reduce copies the record by spread, so
+// the key order survives the match (playerIds are never integer-like, which would reorder them).
+// Lane order is presentation only — no rule reads it — but it is the only way a client can map a
+// lane to the sigil the player was shown while seated.
+function bySeat<T>(state: MatchState, record: Record<PlayerId, T>): T[] {
+  return Object.keys(state.players).flatMap((id) => {
+    const value = record[id]
+    return value === undefined ? [] : [value]
+  })
 }
 
 // CLAUDE.md §5.5: the reveal shows what each player cast, never the tallied `counted` value.
@@ -103,7 +106,7 @@ function siphonActivity(state: MatchState): SiphonActivity {
 // What every player sees, live (spec §6). Built field by field from public state only: it never
 // reads the event log, roles, the seed, credits, tiers, lane deltas, or votes still open.
 export function publicView(state: MatchState): PublicView {
-  const lanes = sortedById(state.lanes).map(({ owner, units, dormant }) => ({ owner, units, dormant }))
+  const lanes = bySeat(state, state.lanes).map(({ owner, units, dormant }) => ({ owner, units, dormant }))
   return {
     matchId: state.matchId,
     config: state.config,
@@ -113,7 +116,7 @@ export function publicView(state: MatchState): PublicView {
     stageEndsAtTick: state.stageEndsAtTick,
     lanes,
     boardTotal: lanes.reduce((sum, lane) => sum + lane.units, 0),
-    players: sortedById(state.players).map(({ id, name, status }) => ({ id, name, status })),
+    players: bySeat(state, state.players).map(({ id, name, status }) => ({ id, name, status })),
     chat: state.chat,
     voteHistory: revealVotes(state.voteHistory),
     resolution: state.resolution,
@@ -200,7 +203,7 @@ export function matchEndView(state: MatchState): MatchEndView | null {
       winTarget: config.winTarget,
       basisPoints: capacity === 0 ? 0 : Math.floor((total * 10_000) / capacity),
     },
-    players: sortedById(state.players).map((p) => ({
+    players: bySeat(state, state.players).map((p) => ({
       id: p.id,
       name: p.name,
       role: p.id === state.impostorId ? 'impostor' : 'crew',
