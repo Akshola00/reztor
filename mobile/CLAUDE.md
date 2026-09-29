@@ -42,7 +42,7 @@ Install everything with `npx expo install <pkg>` so versions match the SDK. Neve
 
 **One deliberate exception: `react-native-safe-area-context` is 5.10.0, outside SDK 57's `~5.7.0`.** On 5.7.0 every release build crashed at launch with `Unsupported top level event type "topInsetsChange" dispatched`; 5.10.0 launches and renders. expo-doctor flags the minor mismatch and that is accepted. Do not let `expo install --check` or `--fix` take it back to 5.7.x without building release and launching it on the S10 first. It cannot simply be removed either: expo-router lists it as a peer and wraps the app in its `SafeAreaProvider`.
 
-**Release builds need cleartext.** The playtest server is plain `http://` on the LAN, and Android 9+ blocks cleartext outside the debug manifests, so `expo-build-properties` sets `android.usesCleartextTraffic` in `app.config.js`.
+**The playtest server is `https://reztor.onrender.com`, and release builds do not allow cleartext.** `EXPO_PUBLIC_SERVER_URL` is inlined into the JS bundle when the release APK is built, so a different server means a new APK. Debug builds still allow cleartext through their own manifests, so a dev build against a LAN or `localhost` server works as before. A release build against a plain `http://` server would need `android.usesCleartextTraffic` back, through `expo-build-properties`, which was removed along with it.
 
 Expo publishes skills for AI agents. If `expo-upgrade` or related Expo skills are available in the environment, prefer them over guessing at SDK migration steps.
 

@@ -31,15 +31,6 @@ module.exports = {
         },
       ],
       'expo-router',
-      [
-        // The game server is plain http:// on the LAN for the playtest. Android 9+ blocks
-        // cleartext by default, and only the debug manifests allow it, so a release build could
-        // not reach the server at all.
-        'expo-build-properties',
-        {
-          android: { usesCleartextTraffic: true },
-        },
-      ],
       'expo-system-ui',
       'expo-font',
       [
