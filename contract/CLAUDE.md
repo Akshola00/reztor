@@ -5,7 +5,8 @@
 - Work one phase at a time. When a phase is done, write the phase report and STOP.
 - Implement only what the spec lists. Put ideas under "Open questions" in the report, not in code.
 - Never change a spec-derived test's expected values to make it pass. If a test and the program disagree, explain which is wrong, cite the spec line, and stop.
-- Program code: no unwrap/expect/panic, checked arithmetic only, no truncating `as` casts, specific ReztorError variants only.
+- Program code: no unwrap/expect/panic, checked arithmetic only, no truncating `as` casts.
+- ReztorError for every check we write ourselves. Anchor's own constraint errors (ConstraintTokenMint, ConstraintSeeds, etc.) are acceptable where Anchor's token/mint constraints raise them.
 - If a build or toolchain problem resists two attempts, stop and report the exact error and versions. Don't thrash.
 - Toolchain versions below are frozen. Do not upgrade anchor, crates or the Rust toolchain.
 - The Solana CLI global config points at mainnet. Always pass --url devnet or --provider.cluster devnet explicitly. Never send a mainnet transaction.

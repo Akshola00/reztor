@@ -93,18 +93,19 @@ Snapshotting config into the match means changing config never affects a live ma
 
 Math (all checked, use u128 intermediates for multiplication):
 ```
-rate          = buy_in_amount / credits_per_buy_in
-refund[i]     = unspent_credits[i] * rate
-escrowed      = buy_in_amount * 4
-pot           = escrowed - sum(refund)
-rake          = pot * rake_bps / 10_000
-distributable = pot - rake
-n             = popcount(winners_mask)
-share         = distributable / n
-dust          = distributable - share * n
-excess        = vault.amount - escrowed          // tokens someone sent to the vault directly
-payout[i]     = refund[i] + (seat i is winner ? share : 0)
-treasury_amt  = rake + dust + excess
+rate        = buy_in_amount / credits_per_buy_in          // exact, guaranteed by config invariant
+spent_c[i]  = credits_per_buy_in − unspent_credits[i]
+pot_c       = Σ spent_c
+rake_c      = pot_c × rake_bps / 10_000                    // floor
+dist_c      = pot_c − rake_c
+n           = popcount(winners_mask)
+share_c     = dist_c / n                                   // floor
+dust_c      = dist_c − share_c × n
+escrowed    = buy_in_amount × 4
+excess      = vault.amount − escrowed                      // require vault.amount ≥ escrowed
+payout[i]   = (unspent_credits[i] + (seat i wins ? share_c : 0)) × rate
+treasury    = (rake_c + dust_c) × rate + excess
+assert Σ payout + treasury == vault.amount
 ```
 - Require `vault.amount >= escrowed`.
 - Assert `sum(payout) + treasury_amt == vault.amount` before transferring.
@@ -151,3 +152,4 @@ Proportional payouts, VRF, on-chain result signatures beyond the authority signe
 3. **"Signed final result" = the authority signs the settle transaction.** No separate off-chain signature scheme.
 4. **Rounding dust and stray vault tokens go to the treasury.** Keeps the vault closable so funds can never get stuck.
 5. **Winner count is checked to be 1 or 3.** A cheap sanity check against a server bug. Remove if lobby size ever changes.
+6. **Settlement math runs in integer credits**, identical to `server/src/engine/settlement.ts`, and converts to base units only at the end. A base-unit split would pay amounts that differ from what the server's reveal screen shows.
