@@ -38,11 +38,13 @@ import { Reveal } from './Reveal'
 /**
  * Taps stop this many ticks before the stage's end tick. A batch is applied on the tick after it
  * arrives, and the server drains queued taps before it closes the stage, so a batch that reaches it
- * before the closing tick still lands (../server/src/engine/step.ts:43-57). One tick is the
- * network's allowance: a batch sent later could arrive after the boundary and come back
- * WRONG_STAGE, which a well-behaved client never sees.
+ * before the closing tick still lands (../server/src/engine/step.ts:43-57). The margin is the
+ * network's allowance: the last BOARD_UPDATE is already half a round trip old, and a batch then
+ * waits up to one batch interval and travels another half. Against the hosted server (~350ms round
+ * trip) one tick let the final batch arrive after the boundary and come back WRONG_STAGE, which a
+ * well-behaved client never sees; three ticks covers it. One tick was enough on localhost only.
  */
-const STAGE_CLOSE_MARGIN_TICKS = 1
+const STAGE_CLOSE_MARGIN_TICKS = 3
 
 const readMatchId = () => match.snapshot()?.matchId ?? null
 

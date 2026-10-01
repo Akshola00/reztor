@@ -44,6 +44,8 @@ Install everything with `npx expo install <pkg>` so versions match the SDK. Neve
 
 **The playtest server is `https://reztor.onrender.com`, and release builds do not allow cleartext.** `EXPO_PUBLIC_SERVER_URL` is inlined into the JS bundle when the release APK is built, so a different server means a new APK. Debug builds still allow cleartext through their own manifests, so a dev build against a LAN or `localhost` server works as before. A release build against a plain `http://` server would need `android.usesCleartextTraffic` back, through `expo-build-properties`, which was removed along with it.
 
+**Network timing constants are tuned for the hosted server, not localhost.** `STAGE_CLOSE_MARGIN_TICKS` in `src/screens/Match.tsx` is 3 because the round trip to Render is ~350ms: at 1 tick, tapping through the end of a tap stage drew `WRONG_STAGE` at most stage ends. A clean run against localhost proves nothing about this value; re-measure against the hosted server if it changes.
+
 Expo publishes skills for AI agents. If `expo-upgrade` or related Expo skills are available in the environment, prefer them over guessing at SDK migration steps.
 
 ## Type and fonts — checked on a device
