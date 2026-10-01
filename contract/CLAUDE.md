@@ -151,3 +151,19 @@ Proportional payouts, VRF, on-chain result signatures beyond the authority signe
 3. **"Signed final result" = the authority signs the settle transaction.** No separate off-chain signature scheme.
 4. **Rounding dust and stray vault tokens go to the treasury.** Keeps the vault closable so funds can never get stuck.
 5. **Winner count is checked to be 1 or 3.** A cheap sanity check against a server bug. Remove if lobby size ever changes.
+## Pinned versions
+
+Frozen for the week once Phase 0 built. Do not bump without asking.
+
+| Tool | Version |
+| :---- | :---- |
+| anchor CLI (via avm) | 1.1.2 |
+| avm | 1.1.2 |
+| anchor-lang crate | =1.1.2 |
+| anchor-spl crate | =1.1.2 (features: token, token_2022, token_2022_extensions) |
+| @anchor-lang/core (TS) | ^1.1.2 |
+| solana CLI (Agave) | 3.1.10 |
+| rustc / cargo (host) | 1.98.1 |
+| Rust toolchain (rust-toolchain.toml) | 1.89.0 |
+| node | 24.10.0 |
+| package manager | pnpm 10.12.1 |
