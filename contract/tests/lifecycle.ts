@@ -5,13 +5,14 @@ import { getAccount, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { expect } from "chai";
 import {
   BUY_IN,
-  CREDITS_PER_BUY_IN,
+  ConfigChanges,
   Player,
   configPda,
   createFundedAta,
   createMatch,
   createMockMint,
   createPlayers,
+  ensureConfig,
   eventsOf,
   expectAnchorError,
   expectFailure,
@@ -20,8 +21,8 @@ import {
   joinMatch,
   matchPda,
   newFundedWallet,
-  programDataAddress,
   tokenBalance,
+  updateConfig,
   vaultPda,
 } from "./helpers";
 
@@ -40,29 +41,16 @@ describe("lifecycle: create_match / join_match", () => {
   const newMatchId = () => nextId++;
   const keys = () => players.map((p) => p.kp.publicKey);
 
-  const noChanges = {
-    authority: null,
-    mint: null,
-    treasury: null,
-    buyInAmount: null,
-    creditsPerBuyIn: null,
-    rakeBps: null,
-    voidTimeoutSecs: null,
-    paused: null,
-  };
-  const updateConfig = (changes: Partial<typeof noChanges>) =>
-    program.methods
-      .updateConfig({ ...noChanges, ...changes }, null)
-      .accountsPartial({ admin: admin.publicKey, config })
-      .rpc({ commitment: "confirmed" });
+  const update = (changes: ConfigChanges) =>
+    updateConfig(program, admin, changes);
 
   /** Runs `fn` with the config paused, always unpausing afterwards. */
   async function whilePaused(fn: () => Promise<void>) {
-    await updateConfig({ paused: true });
+    await update({ paused: true });
     try {
       await fn();
     } finally {
-      await updateConfig({ paused: false });
+      await update({ paused: false });
     }
   }
 
@@ -71,33 +59,10 @@ describe("lifecycle: create_match / join_match", () => {
     mint = await createMockMint(connection, admin);
     players = await createPlayers(connection, admin, mint);
 
-    // Config is a singleton: create it if this file runs alone, then point it
-    // at this file's authority and mint.
-    const existing = await connection.getAccountInfo(config, "confirmed");
-    if (!existing) {
-      await program.methods
-        .initializeConfig(
-          authority.publicKey,
-          mint,
-          Keypair.generate().publicKey,
-          new BN(BUY_IN),
-          CREDITS_PER_BUY_IN,
-          0,
-          new BN(1800)
-        )
-        .accountsPartial({
-          admin: admin.publicKey,
-          config,
-          programData: programDataAddress(program.programId),
-        })
-        .rpc({ commitment: "confirmed" });
-    }
-    await updateConfig({
+    await ensureConfig(program, admin, {
       authority: authority.publicKey,
       mint,
-      buyInAmount: new BN(BUY_IN),
-      creditsPerBuyIn: CREDITS_PER_BUY_IN,
-      paused: false,
+      treasury: Keypair.generate().publicKey,
     });
   });
 
@@ -363,7 +328,7 @@ describe("lifecycle: create_match / join_match", () => {
       const id = newMatchId();
       await createMatch(program, authority, id, keys(), mint);
       const doubled = BUY_IN * 2;
-      await updateConfig({ buyInAmount: new BN(doubled) });
+      await update({ buyInAmount: new BN(doubled) });
       try {
         const c = await program.account.config.fetch(config);
         expect(c.buyInAmount.toNumber()).to.equal(doubled);
@@ -380,7 +345,7 @@ describe("lifecycle: create_match / join_match", () => {
         );
         expect(await tokenBalance(connection, vault)).to.equal(BigInt(BUY_IN));
       } finally {
-        await updateConfig({ buyInAmount: new BN(BUY_IN) });
+        await update({ buyInAmount: new BN(BUY_IN) });
       }
     });
   });

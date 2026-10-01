@@ -1,6 +1,7 @@
 pub mod errors;
 pub mod events;
 pub mod instructions;
+pub mod math;
 pub mod state;
 pub mod utils;
 
@@ -57,8 +58,13 @@ pub mod reztor {
         instructions::join_match::handle_join_match(ctx, match_id)
     }
 
-    pub fn settle_match(ctx: Context<SettleMatch>) -> Result<()> {
-        instructions::settle_match::handle_settle_match(ctx)
+    pub fn settle_match<'info>(
+        ctx: Context<'info, SettleMatch<'info>>,
+        match_id: u64,
+        unspent_credits: [u32; 4],
+        winners_mask: u8,
+    ) -> Result<()> {
+        instructions::settle_match::handle_settle_match(ctx, match_id, unspent_credits, winners_mask)
     }
 
     pub fn void_match(ctx: Context<VoidMatch>) -> Result<()> {

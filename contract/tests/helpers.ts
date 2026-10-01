@@ -276,3 +276,156 @@ export async function joinAll(
   }
   return sigs;
 }
+
+export const NO_CONFIG_CHANGES = {
+  authority: null,
+  mint: null,
+  treasury: null,
+  buyInAmount: null,
+  creditsPerBuyIn: null,
+  rakeBps: null,
+  voidTimeoutSecs: null,
+  paused: null,
+};
+export type ConfigChanges = Partial<{
+  [K in keyof typeof NO_CONFIG_CHANGES]: any;
+}>;
+
+export function updateConfig(
+  program: Program<Reztor>,
+  admin: Keypair,
+  changes: ConfigChanges
+): Promise<string> {
+  return program.methods
+    .updateConfig({ ...NO_CONFIG_CHANGES, ...changes }, null)
+    .accountsPartial({
+      admin: admin.publicKey,
+      config: configPda(program.programId),
+    })
+    .signers([admin])
+    .rpc({ commitment: "confirmed" });
+}
+
+/**
+ * Config is a singleton shared by every test file. Creates it if this file runs alone,
+ * then points it at the caller's authority, mint and treasury with the standard economics.
+ */
+export async function ensureConfig(
+  program: Program<Reztor>,
+  admin: Keypair,
+  keys: { authority: PublicKey; mint: PublicKey; treasury: PublicKey }
+): Promise<void> {
+  const config = configPda(program.programId);
+  const existing = await program.provider.connection.getAccountInfo(
+    config,
+    "confirmed"
+  );
+  if (!existing) {
+    await program.methods
+      .initializeConfig(
+        keys.authority,
+        keys.mint,
+        keys.treasury,
+        new BN(BUY_IN),
+        CREDITS_PER_BUY_IN,
+        0,
+        new BN(1800)
+      )
+      .accountsPartial({
+        admin: admin.publicKey,
+        config,
+        programData: programDataAddress(program.programId),
+      })
+      .signers([admin])
+      .rpc({ commitment: "confirmed" });
+  }
+  await updateConfig(program, admin, {
+    ...keys,
+    buyInAmount: new BN(BUY_IN),
+    creditsPerBuyIn: CREDITS_PER_BUY_IN,
+    rakeBps: 0,
+    voidTimeoutSecs: new BN(1800),
+    paused: false,
+  });
+}
+
+/** A treasury wallet (no SOL needed) and its mock-SKR ATA. */
+export async function createTreasury(
+  connection: Connection,
+  payer: Keypair,
+  mint: PublicKey
+): Promise<{ owner: PublicKey; ata: PublicKey }> {
+  const owner = Keypair.generate().publicKey;
+  const ata = await createFundedAta(connection, payer, mint, owner, 0);
+  return { owner, ata };
+}
+
+/** A Program client whose provider wallet (fee payer) is `kp`. */
+export function programAs(
+  program: Program<Reztor>,
+  kp: Keypair
+): Program<Reztor> {
+  const provider = new anchor.AnchorProvider(
+    program.provider.connection,
+    new anchor.Wallet(kp),
+    { commitment: "confirmed" }
+  );
+  return new Program<Reztor>(program.idl, provider);
+}
+
+export function settleMatch(
+  program: Program<Reztor>,
+  authority: Keypair,
+  matchId: number,
+  unspentCredits: number[],
+  winnersMask: number,
+  mint: PublicKey,
+  seatAccounts: PublicKey[],
+  treasuryTokenAccount: PublicKey
+): Promise<string> {
+  const matchAccount = matchPda(program.programId, matchId);
+  return program.methods
+    .settleMatch(new BN(matchId), unspentCredits, winnersMask)
+    .accountsPartial({
+      authority: authority.publicKey,
+      config: configPda(program.programId),
+      matchAccount,
+      mint,
+      vault: vaultPda(program.programId, matchAccount),
+      treasuryTokenAccount,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .remainingAccounts(
+      seatAccounts.map((pubkey) => ({
+        pubkey,
+        isWritable: true,
+        isSigner: false,
+      }))
+    )
+    .signers([authority])
+    .rpc({ commitment: "confirmed" });
+}
+
+export function maskOf(seats: number[]): number {
+  return seats.reduce((m, s) => m | (1 << s), 0);
+}
+
+export type SettlementVector = {
+  name: string;
+  buyIn: number;
+  creditsPerBuyIn: number;
+  rakeBps: number;
+  unspentCredits: number[];
+  winners: number[];
+  expected: {
+    payouts: number[];
+    rake: number;
+    dust: number;
+    refunds: number[];
+  };
+};
+
+export function loadSettlementVectors(): SettlementVector[] {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require("./fixtures/settlement-vectors.json");
+}
