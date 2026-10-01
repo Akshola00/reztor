@@ -14,12 +14,35 @@ declare_id!("4hAFR3JFKmE5GkJFDSVUHB1LwcsZkQBszCq9kwFu5MHZ");
 pub mod reztor {
     use super::*;
 
-    pub fn initialize_config(ctx: Context<InitializeConfig>) -> Result<()> {
-        instructions::initialize_config::handle_initialize_config(ctx)
+    #[allow(clippy::too_many_arguments)]
+    pub fn initialize_config(
+        ctx: Context<InitializeConfig>,
+        authority: Pubkey,
+        mint: Pubkey,
+        treasury: Pubkey,
+        buy_in_amount: u64,
+        credits_per_buy_in: u32,
+        rake_bps: u16,
+        void_timeout_secs: i64,
+    ) -> Result<()> {
+        instructions::initialize_config::handle_initialize_config(
+            ctx,
+            authority,
+            mint,
+            treasury,
+            buy_in_amount,
+            credits_per_buy_in,
+            rake_bps,
+            void_timeout_secs,
+        )
     }
 
-    pub fn update_config(ctx: Context<UpdateConfig>) -> Result<()> {
-        instructions::update_config::handle_update_config(ctx)
+    pub fn update_config(
+        ctx: Context<UpdateConfig>,
+        args: UpdateConfigArgs,
+        new_admin: Option<Pubkey>,
+    ) -> Result<()> {
+        instructions::update_config::handle_update_config(ctx, args, new_admin)
     }
 
     pub fn create_match(ctx: Context<CreateMatch>) -> Result<()> {

@@ -22,7 +22,8 @@ Frozen for the week once Phase 0 built. Do not bump without asking.
 | avm | 1.1.2 |
 | anchor-lang crate | =1.1.2 |
 | anchor-spl crate | =1.1.2 (features: token, token_2022, token_2022_extensions) |
-| @anchor-lang/core (TS) | ^1.1.2 |
+| @anchor-lang/core (TS) | 1.1.2 exact (borsh, errors pinned via pnpm.overrides) |
+| @solana/spl-token (TS, tests) | 0.4.15 |
 | solana CLI (Agave) | 3.1.10 |
 | rustc / cargo (host) | 1.98.1 |
 | Rust toolchain (rust-toolchain.toml) | 1.89.0 |
