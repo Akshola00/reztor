@@ -34,4 +34,8 @@ pub enum ReztorError {
     VaultUnderfunded,
     #[msg("Payouts do not sum to the vault balance")]
     PayoutMismatch,
+    #[msg("Player must not be the default pubkey")]
+    InvalidPlayer,
+    #[msg("Mint does not match")]
+    InvalidMint,
 }

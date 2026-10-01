@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 
+use crate::state::Config;
+
 /// Carries the full config after the change, so listeners don't need to refetch.
 #[event]
 pub struct ConfigUpdated {
@@ -12,6 +14,22 @@ pub struct ConfigUpdated {
     pub rake_bps: u16,
     pub void_timeout_secs: i64,
     pub paused: bool,
+}
+
+impl From<&Config> for ConfigUpdated {
+    fn from(c: &Config) -> Self {
+        Self {
+            admin: c.admin,
+            authority: c.authority,
+            mint: c.mint,
+            treasury: c.treasury,
+            buy_in_amount: c.buy_in_amount,
+            credits_per_buy_in: c.credits_per_buy_in,
+            rake_bps: c.rake_bps,
+            void_timeout_secs: c.void_timeout_secs,
+            paused: c.paused,
+        }
+    }
 }
 
 #[event]

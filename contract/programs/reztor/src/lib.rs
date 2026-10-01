@@ -45,12 +45,16 @@ pub mod reztor {
         instructions::update_config::handle_update_config(ctx, args, new_admin)
     }
 
-    pub fn create_match(ctx: Context<CreateMatch>) -> Result<()> {
-        instructions::create_match::handle_create_match(ctx)
+    pub fn create_match(
+        ctx: Context<CreateMatch>,
+        match_id: u64,
+        players: [Pubkey; 4],
+    ) -> Result<()> {
+        instructions::create_match::handle_create_match(ctx, match_id, players)
     }
 
-    pub fn join_match(ctx: Context<JoinMatch>) -> Result<()> {
-        instructions::join_match::handle_join_match(ctx)
+    pub fn join_match(ctx: Context<JoinMatch>, match_id: u64) -> Result<()> {
+        instructions::join_match::handle_join_match(ctx, match_id)
     }
 
     pub fn settle_match(ctx: Context<SettleMatch>) -> Result<()> {

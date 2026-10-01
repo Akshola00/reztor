@@ -1,5 +1,5 @@
 import * as anchor from "@anchor-lang/core";
-import { Program } from "@anchor-lang/core";
+import { BN, Program } from "@anchor-lang/core";
 import {
   Keypair,
   LAMPORTS_PER_SOL,
@@ -9,6 +9,7 @@ import {
 import {
   TOKEN_PROGRAM_ID,
   createMint,
+  getAccount,
   getOrCreateAssociatedTokenAccount,
   mintTo,
 } from "@solana/spl-token";
@@ -31,6 +32,26 @@ export function getProgram(): Program<Reztor> {
 export function configPda(programId: PublicKey): PublicKey {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("config")],
+    programId
+  )[0];
+}
+
+export function matchPda(
+  programId: PublicKey,
+  matchId: number | BN
+): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("match"), new BN(matchId).toArrayLike(Buffer, "le", 8)],
+    programId
+  )[0];
+}
+
+export function vaultPda(
+  programId: PublicKey,
+  matchAccount: PublicKey
+): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("vault"), matchAccount.toBuffer()],
     programId
   )[0];
 }
@@ -144,4 +165,114 @@ export async function expectFailure(
     return;
   }
   expect.fail("expected the call to fail, but it succeeded");
+}
+
+export async function tokenBalance(
+  connection: Connection,
+  tokenAccount: PublicKey
+): Promise<bigint> {
+  const acc = await getAccount(
+    connection,
+    tokenAccount,
+    "confirmed",
+    TOKEN_PROGRAM_ID
+  );
+  return acc.amount;
+}
+
+/** Decodes this program's events from a confirmed transaction's logs. */
+export async function eventsOf(
+  program: Program<Reztor>,
+  signature: string
+): Promise<{ name: string; data: any }[]> {
+  const tx = await program.provider.connection.getTransaction(signature, {
+    commitment: "confirmed",
+    maxSupportedTransactionVersion: 0,
+  });
+  const parser = new anchor.EventParser(program.programId, program.coder);
+  return [...parser.parseLogs(tx!.meta!.logMessages!)];
+}
+
+export type Player = { kp: Keypair; ata: PublicKey };
+
+/** Creates 4 wallets with SOL and a mock-SKR ATA holding `tokens` base units each. */
+export async function createPlayers(
+  connection: Connection,
+  payer: Keypair,
+  mint: PublicKey,
+  tokens: number | bigint = BUY_IN * 20,
+  count = 4
+): Promise<Player[]> {
+  const players: Player[] = [];
+  for (let i = 0; i < count; i++) {
+    const kp = await newFundedWallet(connection, 2);
+    const ata = await createFundedAta(
+      connection,
+      payer,
+      mint,
+      kp.publicKey,
+      tokens
+    );
+    players.push({ kp, ata });
+  }
+  return players;
+}
+
+export function createMatch(
+  program: Program<Reztor>,
+  authority: Keypair,
+  matchId: number,
+  players: PublicKey[],
+  mint: PublicKey
+): Promise<string> {
+  const matchAccount = matchPda(program.programId, matchId);
+  return program.methods
+    .createMatch(new BN(matchId), players)
+    .accountsPartial({
+      authority: authority.publicKey,
+      config: configPda(program.programId),
+      mint,
+      matchAccount,
+      vault: vaultPda(program.programId, matchAccount),
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .signers([authority])
+    .rpc({ commitment: "confirmed" });
+}
+
+export function joinMatch(
+  program: Program<Reztor>,
+  matchId: number,
+  player: Keypair,
+  playerTokenAccount: PublicKey,
+  mint: PublicKey,
+  overrides: { vault?: PublicKey } = {}
+): Promise<string> {
+  const matchAccount = matchPda(program.programId, matchId);
+  return program.methods
+    .joinMatch(new BN(matchId))
+    .accountsPartial({
+      player: player.publicKey,
+      config: configPda(program.programId),
+      matchAccount,
+      mint,
+      playerTokenAccount,
+      vault: overrides.vault ?? vaultPda(program.programId, matchAccount),
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .signers([player])
+    .rpc({ commitment: "confirmed" });
+}
+
+export async function joinAll(
+  program: Program<Reztor>,
+  matchId: number,
+  players: Player[],
+  mint: PublicKey
+): Promise<string[]> {
+  const sigs: string[] = [];
+  for (const p of players) {
+    sigs.push(await joinMatch(program, matchId, p.kp, p.ata, mint));
+  }
+  return sigs;
 }

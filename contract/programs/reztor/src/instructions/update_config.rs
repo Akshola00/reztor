@@ -68,16 +68,6 @@ pub fn handle_update_config(
 
     config.validate()?;
 
-    emit!(ConfigUpdated {
-        admin: config.admin,
-        authority: config.authority,
-        mint: config.mint,
-        treasury: config.treasury,
-        buy_in_amount: config.buy_in_amount,
-        credits_per_buy_in: config.credits_per_buy_in,
-        rake_bps: config.rake_bps,
-        void_timeout_secs: config.void_timeout_secs,
-        paused: config.paused,
-    });
+    emit!(ConfigUpdated::from(&**config));
     Ok(())
 }

@@ -69,7 +69,7 @@ Snapshotting config into the match means changing config never affects a live ma
 - Any field optional except admin transfer is its own explicit param.
 - Re-validate all invariants.
 
-**Config invariants:** `credits_per_buy_in > 0`, `buy_in_amount > 0`, `buy_in_amount % credits_per_buy_in == 0`, `rake_bps <= 1000`, `void_timeout_secs > 0`.
+**Config invariants:** `credits_per_buy_in > 0`, `buy_in_amount > 0`, `buy_in_amount % credits_per_buy_in == 0`, `rake_bps <= 1000`, `void_timeout_secs > 0`, `authority`, `mint` and `treasury` are not the default pubkey.
 
 ### `create_match(match_id: u64, players: [Pubkey; 4])` — authority only
 - Requires `!config.paused`.
@@ -138,7 +138,7 @@ Because `create_match` guarantees distinct players and each account must be owne
 
 ## 6. Errors
 
-One `ReztorError` enum with specific variants (e.g. `Paused`, `InvalidConfig`, `DuplicatePlayer`, `NotSeated`, `AlreadyJoined`, `MatchNotOpen`, `MatchNotActive`, `InvalidWinners`, `UnspentExceedsBuyIn`, `InvalidTokenAccount`, `WrongRemainingAccountsCount`, `VoidTimeoutNotReached`, `Unauthorized`, `MathOverflow`, `VaultUnderfunded`, `PayoutMismatch`). Never use generic errors or `unwrap()` in program code.
+One `ReztorError` enum with specific variants (e.g. `Paused`, `InvalidConfig`, `DuplicatePlayer`, `NotSeated`, `AlreadyJoined`, `MatchNotOpen`, `MatchNotActive`, `InvalidWinners`, `UnspentExceedsBuyIn`, `InvalidTokenAccount`, `WrongRemainingAccountsCount`, `VoidTimeoutNotReached`, `Unauthorized`, `MathOverflow`, `VaultUnderfunded`, `PayoutMismatch`, `InvalidPlayer`, `InvalidMint`). Never use generic errors or `unwrap()` in program code.
 
 ## 7. Out of scope for the program (MVP)
 

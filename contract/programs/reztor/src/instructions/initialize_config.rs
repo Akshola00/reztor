@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{
     errors::ReztorError,
+    events::ConfigUpdated,
     program::Reztor,
     state::{Config, CONFIG_SEED},
 };
@@ -48,5 +49,7 @@ pub fn handle_initialize_config(
         paused: false,
         bump: ctx.bumps.config,
     });
-    ctx.accounts.config.validate()
+    ctx.accounts.config.validate()?;
+    emit!(ConfigUpdated::from(&*ctx.accounts.config));
+    Ok(())
 }

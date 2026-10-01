@@ -36,6 +36,9 @@ impl Config {
         require!(remainder == 0, ReztorError::InvalidConfig);
         require!(self.rake_bps <= MAX_RAKE_BPS, ReztorError::InvalidConfig);
         require!(self.void_timeout_secs > 0, ReztorError::InvalidConfig);
+        require_keys_neq!(self.authority, Pubkey::default(), ReztorError::InvalidConfig);
+        require_keys_neq!(self.mint, Pubkey::default(), ReztorError::InvalidConfig);
+        require_keys_neq!(self.treasury, Pubkey::default(), ReztorError::InvalidConfig);
         Ok(())
     }
 }

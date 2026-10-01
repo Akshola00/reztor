@@ -7,6 +7,7 @@ import {
   CREDITS_PER_BUY_IN,
   configPda,
   createMockMint,
+  eventsOf,
   expectAnchorError,
   expectFailure,
   getProgram,
@@ -29,12 +30,15 @@ describe("config", () => {
   let mint: PublicKey;
 
   type InitParams = {
+    authority: PublicKey;
+    mint: PublicKey;
+    treasury: PublicKey;
     buyIn: number;
     credits: number;
     rakeBps: number;
     voidTimeout: number;
   };
-  const valid: InitParams = {
+  const valid: Omit<InitParams, "authority" | "mint" | "treasury"> = {
     buyIn: BUY_IN,
     credits: CREDITS_PER_BUY_IN,
     rakeBps: 0,
@@ -45,12 +49,12 @@ describe("config", () => {
     p: Partial<InitParams> = {},
     signer: Keypair = upgradeAuthority
   ) {
-    const q = { ...valid, ...p };
+    const q = { authority: serverAuthority, mint, treasury, ...valid, ...p };
     return program.methods
       .initializeConfig(
-        serverAuthority,
-        mint,
-        treasury,
+        q.authority,
+        q.mint,
+        q.treasury,
         new BN(q.buyIn),
         q.credits,
         q.rakeBps,
@@ -88,6 +92,15 @@ describe("config", () => {
     mint = await createMockMint(connection, upgradeAuthority);
   });
 
+  // Config is a singleton shared with later test files: hand admin back to the
+  // upgrade authority and unpause once this file is done.
+  let currentAdmin: Keypair = upgradeAuthority;
+  after(async () => {
+    if (!currentAdmin.publicKey.equals(upgradeAuthority.publicKey)) {
+      await update(currentAdmin, { paused: false }, upgradeAuthority.publicKey);
+    }
+  });
+
   describe("initialize_config", () => {
     it("fails from a signer that is not the upgrade authority", async () => {
       const impostor = await newFundedWallet(connection);
@@ -118,8 +131,36 @@ describe("config", () => {
       await expectAnchorError(init({ voidTimeout: -1 }), "InvalidConfig");
     });
 
+    it("rejects a default authority", async () => {
+      await expectAnchorError(
+        init({ authority: PublicKey.default }),
+        "InvalidConfig"
+      );
+    });
+
+    it("rejects a default mint", async () => {
+      await expectAnchorError(
+        init({ mint: PublicKey.default }),
+        "InvalidConfig"
+      );
+    });
+
+    it("rejects a default treasury", async () => {
+      await expectAnchorError(
+        init({ treasury: PublicKey.default }),
+        "InvalidConfig"
+      );
+    });
+
     it("succeeds from the upgrade authority with valid params", async () => {
-      await init();
+      const sig = await init();
+      const events = await eventsOf(program, sig);
+      expect(events.map((e) => e.name)).to.deep.equal(["configUpdated"]);
+      expect(events[0].data.admin.toBase58()).to.equal(
+        upgradeAuthority.publicKey.toBase58()
+      );
+      expect(events[0].data.buyInAmount.toNumber()).to.equal(BUY_IN);
+
       const c = await program.account.config.fetch(config);
       expect(c.admin.toBase58()).to.equal(
         upgradeAuthority.publicKey.toBase58()
@@ -149,12 +190,7 @@ describe("config", () => {
       expect(c.rakeBps).to.equal(1000); // 1000 is the inclusive max
       expect(c.paused).to.equal(true);
 
-      const tx = await connection.getTransaction(sig, {
-        commitment: "confirmed",
-        maxSupportedTransactionVersion: 0,
-      });
-      const parser = new anchor.EventParser(program.programId, program.coder);
-      const events = [...parser.parseLogs(tx!.meta!.logMessages!)];
+      const events = await eventsOf(program, sig);
       expect(events.map((e) => e.name)).to.deep.equal(["configUpdated"]);
       expect(events[0].data.rakeBps).to.equal(1000);
       expect(events[0].data.paused).to.equal(true);
@@ -203,6 +239,7 @@ describe("config", () => {
         "Unauthorized"
       );
 
+      currentAdmin = newAdmin;
       await update(newAdmin, { paused: true });
       c = await program.account.config.fetch(config);
       expect(c.paused).to.equal(true);
