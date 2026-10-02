@@ -67,7 +67,7 @@ pub mod reztor {
         instructions::settle_match::handle_settle_match(ctx, match_id, unspent_credits, winners_mask)
     }
 
-    pub fn void_match(ctx: Context<VoidMatch>) -> Result<()> {
-        instructions::void_match::handle_void_match(ctx)
+    pub fn void_match<'info>(ctx: Context<'info, VoidMatch<'info>>, match_id: u64) -> Result<()> {
+        instructions::void_match::handle_void_match(ctx, match_id)
     }
 }

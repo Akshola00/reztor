@@ -139,7 +139,7 @@ Because `create_match` guarantees distinct players and each account must be owne
 
 ## 6. Errors
 
-One `ReztorError` enum with specific variants (e.g. `Paused`, `InvalidConfig`, `DuplicatePlayer`, `NotSeated`, `AlreadyJoined`, `MatchNotOpen`, `MatchNotActive`, `InvalidWinners`, `UnspentExceedsBuyIn`, `InvalidTokenAccount`, `WrongRemainingAccountsCount`, `VoidTimeoutNotReached`, `Unauthorized`, `MathOverflow`, `VaultUnderfunded`, `PayoutMismatch`, `InvalidPlayer`, `InvalidMint`). Never use generic errors or `unwrap()` in program code.
+One `ReztorError` enum with specific variants (e.g. `Paused`, `InvalidConfig`, `DuplicatePlayer`, `NotSeated`, `AlreadyJoined`, `MatchNotOpen`, `MatchNotActive`, `InvalidWinners`, `UnspentExceedsBuyIn`, `InvalidTokenAccount`, `WrongRemainingAccountsCount`, `VoidTimeoutNotReached`, `Unauthorized`, `MathOverflow`, `VaultUnderfunded`, `PayoutMismatch`, `InvalidPlayer`, `InvalidMint`, `NotJoined`, `InvalidJoinedMask`). Never use generic errors or `unwrap()` in program code.
 
 ## 7. Out of scope for the program (MVP)
 

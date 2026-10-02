@@ -54,10 +54,8 @@ pub fn handle_join_match(ctx: Context<JoinMatch>, match_id: u64) -> Result<()> {
     let player = ctx.accounts.player.key();
     let match_account = &ctx.accounts.match_account;
 
-    let seat = (0u8..)
-        .zip(match_account.players.iter())
-        .find(|(_, p)| **p == player)
-        .map(|(seat, _)| seat)
+    let seat = match_account
+        .seat_of(&player)
         .ok_or(ReztorError::NotSeated)?;
     let seat_bit = 1u8
         .checked_shl(u32::from(seat))

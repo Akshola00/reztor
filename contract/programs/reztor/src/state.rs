@@ -66,3 +66,13 @@ pub struct Match {
     pub created_at: i64,
     pub started_at: i64,
 }
+
+impl Match {
+    /// The seat index of `player`, if seated.
+    pub fn seat_of(&self, player: &Pubkey) -> Option<u8> {
+        (0u8..)
+            .zip(self.players.iter())
+            .find(|(_, p)| *p == player)
+            .map(|(seat, _)| seat)
+    }
+}

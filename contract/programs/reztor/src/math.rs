@@ -5,7 +5,8 @@ use crate::errors::ReztorError;
 
 const BPS_DENOMINATOR: u128 = 10_000;
 const MAX_WINNERS_MASK: u8 = 0b1111;
-const SEAT_BITS: [u8; 4] = [0b0001, 0b0010, 0b0100, 0b1000];
+const MAX_JOINED_MASK: u8 = 0b1111;
+pub const SEAT_BITS: [u8; 4] = [0b0001, 0b0010, 0b0100, 0b1000];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SettlementAmounts {
@@ -91,6 +92,51 @@ pub fn compute_settlement(
     })
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct VoidAmounts {
+    pub refunds: [u64; 4],
+    pub treasury: u64,
+}
+
+/// contract-spec.md §3 void_match: every joined seat gets its buy-in back; anything else in the
+/// vault (tokens sent to it directly) goes to the treasury.
+pub fn compute_void(
+    buy_in_amount: u64,
+    joined_mask: u8,
+    vault_amount: u64,
+) -> Result<VoidAmounts, ReztorError> {
+    if joined_mask > MAX_JOINED_MASK {
+        return Err(ReztorError::InvalidJoinedMask);
+    }
+    let buy_in = u128::from(buy_in_amount);
+    let escrowed = buy_in
+        .checked_mul(u128::from(joined_mask.count_ones()))
+        .ok_or(ReztorError::MathOverflow)?;
+    let vault = u128::from(vault_amount);
+    if vault < escrowed {
+        return Err(ReztorError::VaultUnderfunded);
+    }
+    let treasury = vault.checked_sub(escrowed).ok_or(ReztorError::MathOverflow)?;
+
+    let mut refunds = [0u64; 4];
+    let mut paid: u128 = 0;
+    for (refund, bit) in refunds.iter_mut().zip(SEAT_BITS) {
+        if joined_mask & bit != 0 {
+            *refund = buy_in_amount;
+            paid = paid.checked_add(buy_in).ok_or(ReztorError::MathOverflow)?;
+        }
+    }
+
+    if paid.checked_add(treasury).ok_or(ReztorError::MathOverflow)? != vault {
+        return Err(ReztorError::PayoutMismatch);
+    }
+
+    Ok(VoidAmounts {
+        refunds,
+        treasury: u64::try_from(treasury).map_err(|_| ReztorError::MathOverflow)?,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -157,6 +203,60 @@ mod tests {
         }
         println!("{ran} settle vectors passed, {skipped_void} void vectors skipped");
         assert!(ran > 0, "no settle vectors were loaded");
+    }
+
+    #[test]
+    fn server_void_vectors() {
+        let raw = include_str!("../../../tests/fixtures/settlement-vectors.json");
+        let vectors: serde_json::Value = serde_json::from_str(raw).expect("vectors parse");
+        let mut ran = 0;
+        for v in vectors.as_array().expect("vectors are an array") {
+            if !v["winners"].as_array().expect("winners").is_empty() {
+                continue;
+            }
+            let name = v["name"].as_str().expect("name");
+            let buy_in = v["buyIn"].as_u64().expect("buyIn") * 1_000_000;
+            // A void vector is a match that started, so all four seats had joined.
+            let got = compute_void(buy_in, 0b1111, buy_in * 4)
+                .unwrap_or_else(|e| panic!("{name}: {e:?}"));
+            let refunds = v["expected"]["refunds"].as_array().expect("refunds");
+            for i in 0..4 {
+                assert_eq!(got.refunds[i], refunds[i].as_u64().expect("refund") * RATE, "{name}: seat {i}");
+            }
+            assert_eq!(got.treasury, 0, "{name}: treasury");
+            println!("void vector ok: {name} | refunds {:?} | treasury {}", got.refunds, got.treasury);
+            ran += 1;
+        }
+        assert_eq!(ran, 2, "expected the fixture's 2 void vectors");
+    }
+
+    #[test]
+    fn void_none_joined_empty_vault() {
+        let a = compute_void(BUY_IN, 0, 0).unwrap();
+        assert_eq!(a.refunds, [0; 4]);
+        assert_eq!(a.treasury, 0);
+    }
+
+    #[test]
+    fn void_two_of_four_joined() {
+        let a = compute_void(BUY_IN, 0b0101, BUY_IN * 2).unwrap();
+        assert_eq!(a.refunds, [BUY_IN, 0, BUY_IN, 0]);
+        assert_eq!(a.treasury, 0);
+    }
+
+    #[test]
+    fn void_excess_goes_to_treasury() {
+        let a = compute_void(BUY_IN, 0b1010, BUY_IN * 2 + 777).unwrap();
+        assert_eq!(a.refunds, [0, BUY_IN, 0, BUY_IN]);
+        assert_eq!(a.treasury, 777);
+        // Nobody joined but someone sent tokens: all of it to treasury.
+        assert_eq!(compute_void(BUY_IN, 0, 5).unwrap().treasury, 5);
+    }
+
+    #[test]
+    fn void_rejections() {
+        assert!(matches!(compute_void(BUY_IN, 0b0111, BUY_IN * 3 - 1), Err(ReztorError::VaultUnderfunded)));
+        assert!(matches!(compute_void(BUY_IN, 0b1_0000, BUY_IN), Err(ReztorError::InvalidJoinedMask)));
     }
 
     #[test]

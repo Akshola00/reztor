@@ -38,4 +38,8 @@ pub enum ReztorError {
     InvalidPlayer,
     #[msg("Mint does not match")]
     InvalidMint,
+    #[msg("Seat has not joined")]
+    NotJoined,
+    #[msg("Joined mask is invalid")]
+    InvalidJoinedMask,
 }

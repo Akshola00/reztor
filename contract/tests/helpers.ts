@@ -429,3 +429,63 @@ export function loadSettlementVectors(): SettlementVector[] {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require("./fixtures/settlement-vectors.json");
 }
+
+export function voidMatch(
+  program: Program<Reztor>,
+  caller: Keypair,
+  matchId: number,
+  mint: PublicKey,
+  seatAccounts: PublicKey[],
+  treasuryTokenAccount: PublicKey,
+  authority: PublicKey
+): Promise<string> {
+  const matchAccount = matchPda(program.programId, matchId);
+  return program.methods
+    .voidMatch(new BN(matchId))
+    .accountsPartial({
+      caller: caller.publicKey,
+      authority,
+      config: configPda(program.programId),
+      matchAccount,
+      mint,
+      vault: vaultPda(program.programId, matchAccount),
+      treasuryTokenAccount,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .remainingAccounts(
+      seatAccounts.map((pubkey) => ({
+        pubkey,
+        isWritable: true,
+        isSigner: false,
+      }))
+    )
+    .signers([caller])
+    .rpc({ commitment: "confirmed" });
+}
+
+/** Fee actually charged for a confirmed transaction. */
+export async function feeOf(
+  connection: Connection,
+  signature: string
+): Promise<number> {
+  const tx = await connection.getTransaction(signature, {
+    commitment: "confirmed",
+    maxSupportedTransactionVersion: 0,
+  });
+  return tx!.meta!.fee;
+}
+
+/** Lamports a match + vault pair holds (what the authority gets back on close). */
+export async function matchRent(
+  connection: Connection,
+  programId: PublicKey,
+  matchId: number
+): Promise<number> {
+  const matchAccount = matchPda(programId, matchId);
+  const m = await connection.getAccountInfo(matchAccount, "confirmed");
+  const v = await connection.getAccountInfo(
+    vaultPda(programId, matchAccount),
+    "confirmed"
+  );
+  return m!.lamports + v!.lamports;
+}
