@@ -9,3 +9,5 @@ test-ledger
 # keypairs: never commit
 *keypair*.json
 id.json
+# script keypairs (server authority, test players): never commit
+scripts/keys/

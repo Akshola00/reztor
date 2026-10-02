@@ -1,0 +1,13 @@
+{
+  "mockMint": "Ds5SeZQyNdFHQ15v6R2UUqj756u8MWFGE4pf1kwSMWt2",
+  "programId": "4hAFR3JFKmE5GkJFDSVUHB1LwcsZkQBszCq9kwFu5MHZ",
+  "configPda": "GKBdrUgc3VXHeCEkYSS7NzJZyT3yDc7o8QRmykcF5kzM",
+  "admin": "Bk66k4cN1avGLWVvQj8N4Lbd3NgGAgGRGfHuxbAeDCzP",
+  "authority": "3QoGoCeyN31KvjxB44dUqaLRTZECiNe4RMfaybxrW7mm",
+  "treasury": "8FkaeCdqZmNUjFSLejZQpDgv5f1bzryAVoz7ZTqD7Ddw",
+  "treasuryTokenAccount": "CG92LNaKA4C2jinHJpPR7fZwtFToMeQ5cax5f7SVcY29",
+  "smokeMatch1": "17909393421181",
+  "smokeMatch1Settle": "3MzXRcdVJcYsxg4WxVopQ9QUNgzSau11kCEHn16yNbAWBCoDpA14LmJq7s48BVRSVBcRWp1f9zFqZCnKNojsMsLw",
+  "smokeMatch2": "17909393421182",
+  "smokeMatch2Void": "4duCiZRzMX3Gm1DiduCjMoaD3HqkaEaR9YdRuHkNB9kASA4UDFj4K1vLS2XV4cq9XUsR5pqZsiQXv5V7nqC7J654"
+}
