@@ -1,9 +1,38 @@
-import { createGameServer } from './net/server.js'
+import { chainConfigFrom, escrowModeFrom } from './chain/config.js'
+import { connectChain } from './chain/escrow.js'
+import { consoleLogger } from './log.js'
+import { createGameServer, type ServerOptions } from './net/server.js'
 
-// Dev entry point. Not the production process: no signal handling, no config from the environment
-// beyond the port, and the in-memory escrow fake.
+// Dev entry point. Not the production process: no signal handling, and config from the environment
+// only for the port and the escrow. ESCROW_MODE=fake (the default) is the in-memory escrow;
+// ESCROW_MODE=chain is the Solana program, configured by RPC_URL, PROGRAM_ID, MINT and
+// AUTHORITY_SECRET_KEY.
 const port = Number(process.env.PORT ?? 3000)
-const server = createGameServer()
+
+function fail(problems: string[]): never {
+  for (const problem of problems) console.error(`could not start: ${problem}`)
+  process.exit(1)
+}
+
+const mode = escrowModeFrom(process.env)
+if (!mode.ok) fail([mode.error])
+
+let options: ServerOptions = {}
+if (mode.value === 'chain') {
+  const config = chainConfigFrom(process.env)
+  if (!config.ok) fail(config.error)
+  const chain = await connectChain(config.value, consoleLogger)
+  if (!chain.ok) fail([chain.error])
+  // Before listening: nothing may stake into a match while its predecessors are being voided.
+  try {
+    await chain.value.recover()
+  } catch (error) {
+    fail([`startup recovery could not list open matches: ${error instanceof Error ? error.message : String(error)}`])
+  }
+  options = { escrow: chain.value.escrow, wallets: chain.value.wallets }
+}
+
+const server = createGameServer(options)
 
 try {
   await server.listen(port)
@@ -17,5 +46,5 @@ try {
   process.exit(1)
 }
 
-console.log(`reztor server listening on http://localhost:${port}`)
+console.log(`reztor server listening on http://localhost:${port} (escrow: ${mode.value})`)
 console.log(`dev client:  http://localhost:${port}/dev`)

@@ -37,7 +37,7 @@ Violating any of these is a bug, not a style preference.
 | Language | TypeScript, `strict: true`, `noUncheckedIndexedAccess: true` |
 | Transport | Socket.IO (chosen for reconnect + buffering, see §8) |
 | DB | Postgres via Drizzle |
-| Chain | `@coral-xyz/anchor` + `@solana/web3.js` |
+| Chain | `@anchor-lang/core` 1.1.2 + `@solana/web3.js` 1.99.0 + `@solana/spl-token` 0.4.15, exact (borsh, errors pinned via pnpm.overrides, as in contract/) |
 | Test | Vitest |
 | Validation | Zod on every inbound socket payload, no exceptions |
 
@@ -67,10 +67,12 @@ src/
     registry.ts      # Map<matchId, RuntimeMatch>
     tick.ts          # the single 250ms loop
     lobby.ts         # invite-code lobbies + fill timeout
-    escrow.ts        # EscrowProvider interface + in-memory fake
-  chain/
-    client.ts        # Anchor program wrapper
-    settle.ts        # settlement queue, idempotent
+    escrow.ts        # EscrowProvider funding-flow interface, in-memory fake, guard
+  chain/             # ESCROW_MODE=chain only
+    client.ts        # Anchor program wrapper, ported from contract/scripts/lib.ts
+    config.ts        # RPC_URL, PROGRAM_ID, MINT, AUTHORITY_SECRET_KEY, fail fast
+    escrow.ts        # chain EscrowProvider: retries, funding poll, startup recovery
+    idl/             # copied from contract/ after `anchor build`
   sim/
     replay.ts        # replay an event log, assert final state
 test/
@@ -413,7 +415,10 @@ HEARTBEAT   {}
 
 ```
 LOBBY_UPDATE   { code, seated, capacity, players, expiresAt, serverNow }  // serverTick null
-LOBBY_DISSOLVED { code, reason }     // TIMEOUT | ESCROW_FAILED; serverTick null
+LOBBY_DISSOLVED { code, reason }     // TIMEOUT | ESCROW_FAILED | STAKE_TIMEOUT; serverTick null
+STAKE_REQUEST  { tx, expiresAt, serverNow }  // chain mode only, see ../docs/CHAIN-PROTOCOL-CHANGES.md
+STAKE_UPDATE   { staked }                    // chain mode only
+SETTLEMENT_CONFIRMED { signature, payouts }  // chain mode only, after MATCH_END
 MATCH_STARTED  { fullPrivateView }   // carries config — the only time it is ever sent
 BOARD_UPDATE   { round, stage, secondsLeft, lanes, boardTotal, players }
 CHAT_MESSAGE   { from, text, tick }  // pushed once, when posted

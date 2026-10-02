@@ -2,10 +2,18 @@ import { readFileSync } from 'node:fs'
 import { createServer as createHttpServer, type Server as HttpServer } from 'node:http'
 import { Server, type Socket } from 'socket.io'
 import { MVP_CONFIG, type MatchConfig } from '../engine/config.js'
-import { computeSettlement } from '../engine/settlement.js'
+import { computeSettlement, type Settlement } from '../engine/settlement.js'
 import { consoleLogger, type Logger } from '../log.js'
-import { inMemoryEscrow, type EscrowProvider } from '../match/escrow.js'
-import { createLobbyService, lobbyView, type Lobby, type LobbyService } from '../match/lobby.js'
+import { guardEscrow, inMemoryEscrow, type EscrowProvider, type SettleReceipt } from '../match/escrow.js'
+import {
+  createLobbyService,
+  lobbyView,
+  stakedSeats,
+  type Lobby,
+  type LobbyService,
+  type StakeRequest,
+  type WalletPolicy,
+} from '../match/lobby.js'
 import { createRegistry, enqueue, type MatchRegistry, type RuntimeMatch } from '../match/registry.js'
 import { createTickLoop, type TickLoop } from '../match/tick.js'
 import { createConnections, type ConnectionRegistry } from './auth.js'
@@ -42,6 +50,8 @@ export type GameServer = {
 export type ServerOptions = {
   config?: MatchConfig
   escrow?: EscrowProvider
+  // Chain mode: lobby messages must carry a funded wallet. Absent, wallets stay optional.
+  wallets?: WalletPolicy
   logger?: Logger
   now?: () => number
 }
@@ -53,7 +63,8 @@ const ack = (respond: unknown, response: unknown): void => {
 }
 
 export function createGameServer(options: ServerOptions = {}): GameServer {
-  const { config, escrow = inMemoryEscrow(), logger = consoleLogger, now = () => Date.now() } = options
+  const { config, wallets, logger = consoleLogger, now = () => Date.now() } = options
+  const escrow = guardEscrow(options.escrow ?? inMemoryEscrow(), logger)
 
   // The throwaway browser client, served as one file with no build step. Socket.IO installs its
   // own handler for /socket.io/ ahead of this one and passes everything else through.
@@ -93,6 +104,12 @@ export function createGameServer(options: ServerOptions = {}): GameServer {
     else emitter.toSocket(socketId, 'LOBBY_UPDATE', payload)
   }
 
+  // Private: the transaction is only ever useful to the wallet it names.
+  const sendStakeRequest = (target: Lobby, socketId: string, request: StakeRequest): void =>
+    emitter.toSocket(socketId, 'STAKE_REQUEST', { matchId: target.matchId, serverTick: null, ...request })
+
+  const stakeUpdate = (target: Lobby) => ({ matchId: target.matchId, serverTick: null, staked: stakedSeats(target) })
+
   const lobby = createLobbyService({
     registry,
     escrow,
@@ -109,6 +126,13 @@ export function createGameServer(options: ServerOptions = {}): GameServer {
       }
     },
     onChange: (changed) => sendLobby(changed),
+    // A player not connected right now gets theirs, freshly built, when their JOIN arrives.
+    onStakeRequest: (funding, playerId, request) => {
+      const socketId = connections.socketFor(funding.matchId, playerId)
+      if (socketId !== undefined) sendStakeRequest(funding, socketId, request)
+    },
+    onStakeUpdate: (funding) => emitter.toRoom(funding.matchId, 'STAKE_UPDATE', stakeUpdate(funding)),
+    ...(wallets === undefined ? {} : { wallets }),
     onDissolve: (dissolved, reason) =>
       emitter.toRoom(dissolved.matchId, 'LOBBY_DISSOLVED', {
         matchId: dissolved.matchId,
@@ -123,6 +147,29 @@ export function createGameServer(options: ServerOptions = {}): GameServer {
   // A player receives MATCH_STARTED once; every later JOIN for them is a reconnect.
   const greeted = new Set<string>()
   const settled = new Set<string>()
+
+  // Chain mode only: the fake signs nothing. MATCH_END has already gone out with the server's numbers;
+  // this confirms them, and says so loudly if the chain paid anything else.
+  const confirmSettlement = (match: RuntimeMatch, settlement: Settlement, receipt: SettleReceipt): void => {
+    if (receipt.signature === null) return
+    const expected = settlement.lines.map((line) => BigInt(line.refund + line.payout) * receipt.baseUnitsPerCredit)
+    const payouts = receipt.payouts.map(String)
+    if (expected.length !== receipt.payouts.length || expected.some((amount, seat) => amount !== receipt.payouts[seat])) {
+      logger('error', 'CHAIN PAYOUTS DIFFER FROM THE SERVER SETTLEMENT', {
+        matchId: match.matchId,
+        tick: match.tick,
+        signature: receipt.signature,
+        expected: expected.map(String),
+        paid: payouts,
+      })
+    }
+    emitter.toRoom(match.matchId, 'SETTLEMENT_CONFIRMED', {
+      matchId: match.matchId,
+      serverTick: match.tick,
+      signature: receipt.signature,
+      payouts,
+    })
+  }
 
   const settle = (match: RuntimeMatch): void => {
     if (settled.has(match.matchId)) return
@@ -146,6 +193,8 @@ export function createGameServer(options: ServerOptions = {}): GameServer {
       return
     }
 
+    // A chain provider retries before it answers, so this runs once the chain has confirmed or the
+    // last retry has failed — never while a settlement might still land.
     void escrow.settle(match.matchId, settlement.value).then((result) => {
       if (result.ok) {
         logger('info', 'match settled', {
@@ -155,6 +204,7 @@ export function createGameServer(options: ServerOptions = {}): GameServer {
           rake: settlement.value.rakeCredits,
           dust: settlement.value.dustCredits,
         })
+        confirmSettlement(match, settlement.value, result.value)
       } else {
         logger('error', 'escrow refused the settlement, voiding', { ...fields, error: result.error })
         void escrow.void(match.matchId, `ESCROW_${result.error}`)
@@ -211,10 +261,15 @@ export function createGameServer(options: ServerOptions = {}): GameServer {
     },
   })
 
+  // Chain mode requires a wallet that can sign. Checked with the payload, so a missing or malformed
+  // one is refused the same way as any other bad field.
+  const walletInvalid = (wallet: string | null | undefined): boolean =>
+    wallets !== undefined && (wallet == null || !wallets.isAddress(wallet))
+
   io.on('connection', (socket: Socket) => {
     socket.on('CREATE_LOBBY', (payload: unknown, respond: unknown) => {
       const parsed = CreateLobbySchema.safeParse(payload)
-      if (!parsed.success) return ack(respond, { ok: false, error: 'INVALID_PAYLOAD' })
+      if (!parsed.success || walletInvalid(parsed.data.wallet)) return ack(respond, { ok: false, error: 'INVALID_PAYLOAD' })
       void lobby.create(parsed.data.name, parsed.data.wallet ?? null).then((result) => {
         ack(respond, result.ok ? { ok: true, ticket: result.value } : { ok: false, error: result.error })
       })
@@ -222,7 +277,7 @@ export function createGameServer(options: ServerOptions = {}): GameServer {
 
     socket.on('JOIN_LOBBY', (payload: unknown, respond: unknown) => {
       const parsed = JoinLobbySchema.safeParse(payload)
-      if (!parsed.success) return ack(respond, { ok: false, error: 'INVALID_PAYLOAD' })
+      if (!parsed.success || walletInvalid(parsed.data.wallet)) return ack(respond, { ok: false, error: 'INVALID_PAYLOAD' })
       void lobby.join(parsed.data.code, parsed.data.name, parsed.data.wallet ?? null).then((result) => {
         ack(respond, result.ok ? { ok: true, ticket: result.value } : { ok: false, error: result.error })
       })
@@ -249,6 +304,14 @@ export function createGameServer(options: ServerOptions = {}): GameServer {
         // The roster so far, once, to this socket; the room hears every change after this.
         const waitingIn = lobby.byMatch(result.matchId)
         if (waitingIn !== undefined) sendLobby(waitingIn, socket.id)
+        // Joining, or rejoining, mid-funding: where the stakes stand, and this seat's transaction
+        // if it has yet to pay.
+        if (waitingIn?.funding != null) {
+          emitter.toSocket(socket.id, 'STAKE_UPDATE', stakeUpdate(waitingIn))
+          void lobby.stakeRequest(result.matchId, result.playerId).then((request) => {
+            if (request !== null) sendStakeRequest(waitingIn, socket.id, request)
+          })
+        }
         return
       }
 

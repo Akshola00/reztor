@@ -87,12 +87,16 @@ export type RejectionCode =
 /** The message never reached the engine. These may carry a null matchId and serverTick. */
 export type TransportCode = 'NOT_JOINED' | 'NO_MATCH' | 'INVALID_PAYLOAD' | 'TOO_MANY_MESSAGES'
 
-export type LobbyError = 'UNKNOWN_CODE' | 'LOBBY_FULL' | 'ESCROW_FAILED'
+/** WALLET_UNFUNDED and WALLET_TAKEN only happen when the server runs with on-chain escrow. */
+export type LobbyError = 'UNKNOWN_CODE' | 'LOBBY_FULL' | 'ESCROW_FAILED' | 'WALLET_UNFUNDED' | 'WALLET_TAKEN'
 
 export type JoinError = 'INVALID_PAYLOAD' | 'UNKNOWN_SESSION' | 'WRONG_MATCH'
 
-/** Why a lobby was discarded before its match started. No escrow was taken in either case. */
-export type DissolveReason = 'TIMEOUT' | 'ESCROW_FAILED'
+/**
+ * Why a lobby was discarded before its match started. Anyone who had already staked has been
+ * refunded on chain before this is sent. STAKE_TIMEOUT only happens with on-chain escrow.
+ */
+export type DissolveReason = 'TIMEOUT' | 'ESCROW_FAILED' | 'STAKE_TIMEOUT'
 
 export type SettlementError =
   | 'NOT_STARTED'
@@ -202,6 +206,7 @@ export type Settlement = {
 // Client -> server
 // ---------------------------------------------------------------------------------------------
 
+/** With on-chain escrow `wallet` is required: a base58 Solana address that can sign. */
 export type CreateLobbyPayload = { name: string; wallet?: string | null }
 export type JoinLobbyPayload = { code: string; name: string; wallet?: string | null }
 export type JoinPayload = { matchId: string; sessionToken: string }
@@ -279,6 +284,24 @@ export type LobbyUpdateMessage = LobbyEnvelope & LobbyView
 /** To the room, once, before a lobby is discarded. Its sessions no longer exist. */
 export type LobbyDissolvedMessage = LobbyEnvelope & { code: string; reason: DissolveReason }
 
+/** STAKE_REQUEST's payload, without the envelope. */
+export type StakeRequest = {
+  /** Base64 of an unsigned legacy transaction, fee payer = your wallet. Sign it and send it. */
+  tx: string
+  /** Server epoch ms when the funding stage ends. Time left is expiresAt - serverNow. */
+  expiresAt: number
+  serverNow: number
+}
+
+/** Privately, to each seat that has yet to pay, once the lobby fills. On-chain escrow only. */
+export type StakeRequestMessage = LobbyEnvelope & StakeRequest
+
+/** To the room whenever a stake lands, and to a socket whose JOIN finds the lobby funding. */
+export type StakeUpdateMessage = LobbyEnvelope & {
+  /** Seat numbers (LobbyView's `seated`) that have paid, ascending. */
+  staked: number[]
+}
+
 export type MatchStartedMessage = Envelope & { view: PrivateView }
 export type ResumeStateMessage = Envelope & { view: PrivateView }
 export type BoardUpdateMessage = Envelope & { board: BoardView }
@@ -309,6 +332,16 @@ export type MatchEndMessage =
   | (Envelope & { reveal: MatchEndView; settlement: Settlement })
   | (Envelope & { error: MatchEndError })
 
+/** To the room, after MATCH_END, once the chain has paid out. On-chain escrow only. */
+export type SettlementConfirmedMessage = Envelope & {
+  signature: string
+  /**
+   * What each seat received, refund included, in seat order (index 0 is seat 1). Decimal strings of
+   * the token's base units, since a u64 does not fit a JSON number.
+   */
+  payouts: string[]
+}
+
 export type ActionRejectedMessage = {
   matchId: string | null
   serverTick: number | null
@@ -320,6 +353,8 @@ export type ActionRejectedMessage = {
 export type ServerMessages = {
   LOBBY_UPDATE: LobbyUpdateMessage
   LOBBY_DISSOLVED: LobbyDissolvedMessage
+  STAKE_REQUEST: StakeRequestMessage
+  STAKE_UPDATE: StakeUpdateMessage
   MATCH_STARTED: MatchStartedMessage
   RESUME_STATE: ResumeStateMessage
   BOARD_UPDATE: BoardUpdateMessage
@@ -330,10 +365,11 @@ export type ServerMessages = {
   TRACE_RESULT: TraceResultMessage
   VOTE_RESULT: VoteResultMessage
   MATCH_END: MatchEndMessage
+  SETTLEMENT_CONFIRMED: SettlementConfirmedMessage
   ACTION_REJECTED: ActionRejectedMessage
 }
 
 export type ServerEvent = keyof ServerMessages
 
 // Client -> server: CREATE_LOBBY, JOIN_LOBBY, JOIN, TAP_BATCH, SET_TIER, SIPHON, TRACE, CHAT, VOTE, HEARTBEAT
-// Server -> client: LOBBY_UPDATE, LOBBY_DISSOLVED, MATCH_STARTED, RESUME_STATE, BOARD_UPDATE, CHAT_MESSAGE, STAGE_CHANGE, CREDITS, SIPHON_RESULT, TRACE_RESULT, VOTE_RESULT, MATCH_END, ACTION_REJECTED
+// Server -> client: LOBBY_UPDATE, LOBBY_DISSOLVED, STAKE_REQUEST, STAKE_UPDATE, MATCH_STARTED, RESUME_STATE, BOARD_UPDATE, CHAT_MESSAGE, STAGE_CHANGE, CREDITS, SIPHON_RESULT, TRACE_RESULT, VOTE_RESULT, MATCH_END, SETTLEMENT_CONFIRMED, ACTION_REJECTED

@@ -231,7 +231,9 @@ describe('lobby state on the wire', () => {
 
   it('tells the room when escrow refuses the fourth seat', async () => {
     const refusing = {
-      lock: async () => ({ ok: false as const, error: 'ALREADY_LOCKED' as const }),
+      open: async () => ({ ok: false as const, error: 'ALREADY_OPEN' as const }),
+      joinTxFor: async () => ({ ok: false as const, error: 'UNKNOWN_MATCH' as const }),
+      awaitFunded: async () => ({ ok: false as const, error: 'UNKNOWN_MATCH' as const }),
       settle: async () => ({ ok: false as const, error: 'UNKNOWN_MATCH' as const }),
       void: async () => ({ ok: false as const, error: 'UNKNOWN_MATCH' as const }),
     }

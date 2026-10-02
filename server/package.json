@@ -18,6 +18,9 @@
     "test:update-golden": "UPDATE_GOLDEN=1 vitest run test/golden"
   },
   "dependencies": {
+    "@anchor-lang/core": "1.1.2",
+    "@solana/spl-token": "0.4.15",
+    "@solana/web3.js": "1.99.0",
     "socket.io": "^4.8.3",
     "zod": "^4.6.5"
   },
@@ -28,5 +31,11 @@
     "tsx": "^4.23.13",
     "typescript": "~6.0.3",
     "vitest": "^5.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@anchor-lang/borsh": "1.1.2",
+      "@anchor-lang/errors": "1.1.2"
+    }
   }
 }

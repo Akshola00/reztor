@@ -61,7 +61,9 @@ a lobby that is not yet full binds their socket and waits in the room; the ack c
 no "lobby full" message to poll for and no reason to press anything twice.
 
 `ok: false` carries `UNKNOWN_CODE`, `LOBBY_FULL`, `ESCROW_FAILED` or `INVALID_PAYLOAD` for the lobby
-messages; `INVALID_PAYLOAD`, `UNKNOWN_SESSION` or `WRONG_MATCH` for `JOIN`.
+messages; `INVALID_PAYLOAD`, `UNKNOWN_SESSION` or `WRONG_MATCH` for `JOIN`. With on-chain escrow the
+lobby messages require `wallet` and can also return `WALLET_UNFUNDED` or `WALLET_TAKEN` — see
+[CHAIN-PROTOCOL-CHANGES.md](CHAIN-PROTOCOL-CHANGES.md).
 
 ### `LOBBY_UPDATE` — while seated, to the lobby room
 
@@ -92,18 +94,28 @@ seconds. Ticks were not an option: a lobby has no tick counter until its match s
 ### `LOBBY_DISSOLVED` — once, to the lobby room
 
 ```ts
-{ matchId, serverTick: null, code, reason: 'TIMEOUT' | 'ESCROW_FAILED' }
+{ matchId, serverTick: null, code, reason: 'TIMEOUT' | 'ESCROW_FAILED' | 'STAKE_TIMEOUT' }
 ```
 
 Sent before the lobby is discarded. After it, the code is unknown and every session in the lobby is
 gone: `JOIN` with those tokens returns `UNKNOWN_SESSION`. Go back to the entry screen.
 
 - `TIMEOUT` — the lobby did not fill within `lobbyFillTimeoutSec` (60s) of creation.
-- `ESCROW_FAILED` — the fourth player sat down and escrow refused the lock. That player's
+- `ESCROW_FAILED` — the fourth player sat down and escrow could not be opened. That player's
   `JOIN_LOBBY` ack says `ESCROW_FAILED`; the other three learn it here.
+- `STAKE_TIMEOUT` — on-chain escrow only: not every player paid their stake within the funding
+  stage's 90 seconds.
 
-In both cases **no escrow was taken**: nothing locks until all four seats are filled and the lock
-succeeds as a whole, so there is nothing to refund and nothing on chain to undo.
+Nothing is staked until all four seats are filled, so `TIMEOUT` has nothing to refund. When a lobby
+dissolves after the fourth seat, the server voids the match on chain first, refunding anyone who
+paid, and only then sends this.
+
+### `STAKE_REQUEST` and `STAKE_UPDATE` — on-chain escrow only, between the fourth seat and `MATCH_STARTED`
+
+`STAKE_REQUEST` goes privately to each seat that has yet to pay and carries a transaction for the
+player's wallet to sign and send. `STAKE_UPDATE` tells the room which seats have paid. Neither is
+ever sent with the fake escrow. Full contract, including when the app must prompt the wallet:
+[CHAIN-PROTOCOL-CHANGES.md](CHAIN-PROTOCOL-CHANGES.md) §3.
 
 ### Leaving a lobby
 
@@ -222,6 +234,15 @@ Nothing about a vote is sent before this message. There is no partial tally, no 
 
 `reveal` hides nothing: roles, the role seed, every trace, the full vote history, per-player
 contributions. `settlement` reconciles exactly — escrow equals refunds + payouts + rake + dust.
+
+### `SETTLEMENT_CONFIRMED` — on-chain escrow only, to the room, after `MATCH_END`
+
+```ts
+{ ...envelope, signature: string, payouts: string[] }
+```
+
+Sent once the chain has paid out `MATCH_END`'s settlement: the transaction signature and each seat's
+payout in base units. See [CHAIN-PROTOCOL-CHANGES.md](CHAIN-PROTOCOL-CHANGES.md) §4.
 
 ### `ACTION_REJECTED`
 
