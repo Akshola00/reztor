@@ -6,6 +6,7 @@ import { expect } from "chai";
 import { Reztor } from "../target/types/reztor";
 import {
   BUY_IN,
+  advanceClock,
   Player,
   createFundedAta,
   createMatch,
@@ -32,7 +33,6 @@ import {
 } from "./helpers";
 
 const SHORT_TIMEOUT = 2;
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 describe("void_match", () => {
   const provider = anchor.AnchorProvider.env();
@@ -84,7 +84,7 @@ describe("void_match", () => {
     } finally {
       await updateConfig(program, admin, { voidTimeoutSecs: new BN(1800) });
     }
-    await sleep((SHORT_TIMEOUT + 1) * 1000);
+    await advanceClock(connection, SHORT_TIMEOUT + 1);
     return id;
   }
 

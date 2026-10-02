@@ -5,6 +5,7 @@ import {
   LAMPORTS_PER_SOL,
   PublicKey,
   Connection,
+  SYSVAR_CLOCK_PUBKEY,
 } from "@solana/web3.js";
 import {
   TOKEN_PROGRAM_ID,
@@ -488,4 +489,23 @@ export async function matchRent(
     "confirmed"
   );
   return m!.lamports + v!.lamports;
+}
+
+/** The validator's Clock sysvar unix_timestamp (seconds). */
+export async function chainTime(connection: Connection): Promise<number> {
+  const info = await connection.getAccountInfo(SYSVAR_CLOCK_PUBKEY, "confirmed");
+  // Clock: slot u64, epoch_start_timestamp i64, epoch u64, leader_schedule_epoch u64, unix_timestamp i64
+  return Number(info!.data.readBigInt64LE(32));
+}
+
+/**
+ * Moves the local validator's clock forward by `seconds` using Surfpool's surfnet_timeTravel.
+ * Under `anchor test` Surfpool's clock follows slots, not wall time, so sleeping doesn't work.
+ */
+export async function advanceClock(connection: Connection, seconds: number): Promise<void> {
+  const target = (await chainTime(connection)) + seconds;
+  await (connection as any)._rpcRequest("surfnet_timeTravel", [
+    { absoluteTimestamp: target * 1000 },
+  ]);
+  expect(await chainTime(connection)).to.be.at.least(target);
 }
