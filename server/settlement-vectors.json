@@ -1,0 +1,119 @@
+[
+  {
+    "name": "settlement.test: spec §10.3 worked example: full spend, crew win, 5% rake",
+    "buyIn": 12,
+    "creditsPerBuyIn": 1200,
+    "rakeBps": 500,
+    "unspentCredits": [0, 0, 0, 0],
+    "winners": [0, 2, 3],
+    "expected": { "payouts": [1520, 0, 1520, 1520], "rake": 240, "dust": 0, "refunds": [0, 0, 0, 0] }
+  },
+  {
+    "name": "settlement.test: spec §10.3 worked example: full spend, impostor win, 5% rake",
+    "buyIn": 12,
+    "creditsPerBuyIn": 1200,
+    "rakeBps": 500,
+    "unspentCredits": [0, 0, 0, 0],
+    "winners": [1],
+    "expected": { "payouts": [0, 4560, 0, 0], "rake": 240, "dust": 0, "refunds": [0, 0, 0, 0] }
+  },
+  {
+    "name": "settlement.test: sends the indivisible remainder to dustCredits, not to any player",
+    "buyIn": 12,
+    "creditsPerBuyIn": 1200,
+    "rakeBps": 0,
+    "unspentCredits": [1100, 1200, 1200, 1200],
+    "winners": [0, 2, 3],
+    "expected": { "payouts": [33, 0, 33, 33], "rake": 0, "dust": 1, "refunds": [1100, 1200, 1200, 1200] }
+  },
+  {
+    "name": "settlement.test: floors the rake, then splits what remains",
+    "buyIn": 12,
+    "creditsPerBuyIn": 1200,
+    "rakeBps": 500,
+    "unspentCredits": [200, 1200, 1199, 1200],
+    "winners": [0, 2, 3],
+    "expected": { "payouts": [317, 0, 317, 317], "rake": 50, "dust": 0, "refunds": [200, 1200, 1199, 1200] }
+  },
+  {
+    "name": "settlement.test: a pot smaller than the winner count is all dust",
+    "buyIn": 12,
+    "creditsPerBuyIn": 1200,
+    "rakeBps": 0,
+    "unspentCredits": [1198, 1200, 1200, 1200],
+    "winners": [0, 2, 3],
+    "expected": { "payouts": [0, 0, 0, 0], "rake": 0, "dust": 2, "refunds": [1198, 1200, 1200, 1200] }
+  },
+  {
+    "name": "settlement.test: an ejected crew member is still a winner when the crew wins",
+    "buyIn": 12,
+    "creditsPerBuyIn": 1200,
+    "rakeBps": 0,
+    "unspentCredits": [1200, 1200, 1170, 1200],
+    "winners": [0, 2, 3],
+    "expected": { "payouts": [10, 0, 10, 10], "rake": 0, "dust": 0, "refunds": [1200, 1200, 1170, 1200] }
+  },
+  {
+    "name": "settlement.test: a voided match refunds the full escrow whatever was spent",
+    "buyIn": 12,
+    "creditsPerBuyIn": 1200,
+    "rakeBps": 500,
+    "unspentCredits": [1150, 1200, 1180, 1200],
+    "winners": [],
+    "expected": { "payouts": [0, 0, 0, 0], "rake": 0, "dust": 0, "refunds": [1200, 1200, 1200, 1200] }
+  },
+  {
+    "name": "golden: crew-board-win",
+    "buyIn": 12,
+    "creditsPerBuyIn": 1200,
+    "rakeBps": 0,
+    "unspentCredits": [92, 1200, 292, 296],
+    "winners": [0, 2, 3],
+    "expected": { "payouts": [973, 0, 973, 973], "rake": 0, "dust": 1, "refunds": [92, 1200, 292, 296] }
+  },
+  {
+    "name": "golden: crew-ejection-win",
+    "buyIn": 12,
+    "creditsPerBuyIn": 1200,
+    "rakeBps": 0,
+    "unspentCredits": [1170, 1170, 1170, 970],
+    "winners": [0, 2, 3],
+    "expected": { "payouts": [106, 0, 106, 106], "rake": 0, "dust": 2, "refunds": [1170, 1170, 1170, 970] }
+  },
+  {
+    "name": "golden: impostor-timeout-win",
+    "buyIn": 12,
+    "creditsPerBuyIn": 1200,
+    "rakeBps": 0,
+    "unspentCredits": [1140, 1188, 1140, 1140],
+    "winners": [1],
+    "expected": { "payouts": [0, 192, 0, 0], "rake": 0, "dust": 0, "refunds": [1140, 1188, 1140, 1140] }
+  },
+  {
+    "name": "golden: impostor-double-ejection-win",
+    "buyIn": 12,
+    "creditsPerBuyIn": 1200,
+    "rakeBps": 0,
+    "unspentCredits": [1180, 1180, 1160, 1160],
+    "winners": [1],
+    "expected": { "payouts": [0, 120, 0, 0], "rake": 0, "dust": 0, "refunds": [1180, 1180, 1160, 1160] }
+  },
+  {
+    "name": "golden: void-by-abandonment",
+    "buyIn": 12,
+    "creditsPerBuyIn": 1200,
+    "rakeBps": 0,
+    "unspentCredits": [1190, 1180, 1180, 1180],
+    "winners": [],
+    "expected": { "payouts": [0, 0, 0, 0], "rake": 0, "dust": 0, "refunds": [1200, 1200, 1200, 1200] }
+  },
+  {
+    "name": "golden: reconnect-mid-round",
+    "buyIn": 12,
+    "creditsPerBuyIn": 1200,
+    "rakeBps": 0,
+    "unspentCredits": [1180, 1194, 1180, 1180],
+    "winners": [0, 2, 3],
+    "expected": { "payouts": [22, 0, 22, 22], "rake": 0, "dust": 0, "refunds": [1180, 1194, 1180, 1180] }
+  }
+]
