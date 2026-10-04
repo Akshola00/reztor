@@ -91,6 +91,12 @@ function Gathering({ code, you }: { code: string; you: string }) {
   // The roster may have arrived before mount: the JOIN is sent before the route changes.
   const lobby = useSyncExternalStore(session.onLobby, session.lobby)
   const funding = useSyncExternalStore(session.onFunding, session.funding)
+
+  // Dev only, so a harness can fill the lobby with scripted seats: the screen cannot be dumped
+  // while the countdown re-renders. The code is public; it is read aloud.
+  useEffect(() => {
+    if (__DEV__) console.log('[ui] lobby', code)
+  }, [code])
   const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {
@@ -107,11 +113,18 @@ function Gathering({ code, you }: { code: string; you: string }) {
     // It may have started before this screen mounted — the fourth player's own JOIN starts it.
     if (match.snapshot() !== null) toMatch()
     const offStarted = session.onStarted(toMatch)
+    // A rejoin that finds the rite already running gets RESUME_STATE, never MATCH_STARTED: the
+    // usual case with chain escrow, since the wallet takes this app to the background while the
+    // last stake lands. Any view in the match store means the rite has begun.
+    const offView = match.subscribe(() => {
+      if (match.snapshot() !== null) toMatch()
+    })
     const offDissolved = session.onDissolved((reason) => home(DISSOLVED_NOTICE[reason]))
     // A JOIN refused on return: the lobby dissolved or freed this seat while the phone was away.
     const offLost = session.onLost(() => home('seatLost'))
     return () => {
       offStarted()
+      offView()
       offDissolved()
       offLost()
     }

@@ -208,6 +208,8 @@ function getClient(): ReztorClient {
     emit(startedListeners)
   })
   c.on('RESUME_STATE', (message) => {
+    // A running match ends any funding stage this phone still thinks it is in.
+    setFunding(null)
     // Listeners first, so the match screen drops its pending taps before the view lands and the
     // reconcile that follows sees none. Applied wholesale, silently.
     emit(resumeListeners)
