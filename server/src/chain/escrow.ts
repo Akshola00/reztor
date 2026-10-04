@@ -233,6 +233,9 @@ export type Chain = {
   escrow: EscrowProvider
   wallets: WalletPolicy
   recover(): Promise<number>
+  // For the devnet faucet, which pays out in the program's mint and measures in its buy-in.
+  connection: Connection
+  buyIn: bigint
 }
 
 // Fails fast on a config the program would refuse later: a key that is not the program's authority
@@ -263,5 +266,7 @@ export async function connectChain(config: ChainConfig, logger: Logger): Promise
       isFunded: (wallet) => walletFunded(connection, config.mint, onChain.buyIn, new PublicKey(wallet)),
     },
     recover: () => voidOrphanedMatches(program, config.authority, logger),
+    connection,
+    buyIn: onChain.buyIn,
   })
 }

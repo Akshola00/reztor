@@ -31,7 +31,7 @@ const publicKey = (name: string, value: string | undefined, problems: string[]):
 
 // A JSON array of numbers, the shape `solana-keygen` writes, so it pastes straight into a Render
 // secret. The problem messages never echo the value: it is the authority's private key.
-const keypair = (name: string, value: string | undefined, problems: string[]): Keypair | null => {
+export const keypair = (name: string, value: string | undefined, problems: string[]): Keypair | null => {
   if (value === undefined || value === '') {
     problems.push(`${name} is missing`)
     return null

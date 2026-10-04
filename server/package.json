@@ -12,6 +12,7 @@
     "serve": "tsx src/main.ts",
     "protocol:emit": "tsx src/protocol/emit.ts",
     "bots": "tsx src/sim/bot.ts",
+    "seed:faucet": "tsx scripts/seed-faucet.ts",
     "soak": "vitest run --config vitest.soak.config.ts",
     "test": "vitest run",
     "test:watch": "vitest",

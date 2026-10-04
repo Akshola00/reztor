@@ -1,4 +1,6 @@
+import { existsSync, readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
+import { Connection, Keypair, Transaction } from '@solana/web3.js'
 import { io as connect, type Socket } from 'socket.io-client'
 
 // A bot is a real Socket.IO client over a real port. Nothing here reaches into the server: if a
@@ -46,6 +48,12 @@ export type BotOptions = {
   rate: number
   jitter: number
   code?: string
+  // Chain mode: the bot sits down with this wallet and signs its STAKE_REQUEST, sending it through
+  // rpcUrl. Without one it sends no wallet, which only a fake-escrow server accepts.
+  keypair?: Keypair
+  rpcUrl?: string
+  // Ignore the STAKE_REQUEST, to let the funding stage time out.
+  refuseStake?: boolean
   onLog?: (line: string) => void
 }
 
@@ -64,7 +72,10 @@ export type Bot = {
   playerId: string
   isImpostor: boolean
   stats(): BotStats
+  // MATCH_END, LOBBY_DISSOLVED, or { disconnected } if the server went away first.
   ended(): Promise<unknown>
+  // SETTLEMENT_CONFIRMED, chain mode only.
+  settlement(): Promise<unknown>
   stop(): void
 }
 
@@ -77,8 +88,10 @@ async function ackOf<T>(socket: Socket, event: string, payload: unknown): Promis
   return response
 }
 
+const explorer = (signature: string): string => `https://explorer.solana.com/tx/${signature}?cluster=devnet`
+
 export async function createBot(options: BotOptions): Promise<Bot> {
-  const { url, name, strategy, rate, jitter, onLog = () => {} } = options
+  const { url, name, strategy, rate, jitter, keypair, onLog = () => {} } = options
   const stats: BotStats = { taps: 0, siphons: 0, traces: 0, votes: 0, rejections: {} }
 
   // No reconnection: a bot driver pointed at a dead port should say so immediately rather than
@@ -92,9 +105,10 @@ export async function createBot(options: BotOptions): Promise<Bot> {
     })
   })
 
+  const seat = keypair === undefined ? { name } : { name, wallet: keypair.publicKey.toBase58() }
   const ticket = await (options.code === undefined
-    ? ackOf<{ ticket: Ticket }>(socket, 'CREATE_LOBBY', { name })
-    : ackOf<{ ticket: Ticket }>(socket, 'JOIN_LOBBY', { code: options.code, name }))
+    ? ackOf<{ ticket: Ticket }>(socket, 'CREATE_LOBBY', seat)
+    : ackOf<{ ticket: Ticket }>(socket, 'JOIN_LOBBY', { code: options.code, ...seat }))
   const { matchId, playerId, sessionToken, code } = ticket.ticket
 
   let board: Board | null = null
@@ -109,10 +123,30 @@ export async function createBot(options: BotOptions): Promise<Bot> {
   // few credits is the right way to be wrong when the point is to keep rejections at zero.
   let pending = 0
   let running = true
+  let stopping = false
   let resolveEnd: (value: unknown) => void = () => {}
   const ended = new Promise<unknown>((resolve) => {
     resolveEnd = resolve
   })
+  let resolveSettlement: (value: unknown) => void = () => {}
+  const settlement = new Promise<unknown>((resolve) => {
+    resolveSettlement = resolve
+  })
+
+  // Signs exactly what the server built, as the app's wallet would, and sends it. The server
+  // watches the chain for the payment, so nothing goes back over the socket.
+  const stake = async (base64: string): Promise<void> => {
+    if (keypair === undefined) return onLog(`${name} got a STAKE_REQUEST but has no keypair`)
+    try {
+      const tx = Transaction.from(Buffer.from(base64, 'base64'))
+      tx.sign(keypair)
+      const connection = new Connection(options.rpcUrl ?? 'https://api.devnet.solana.com', 'confirmed')
+      const signature = await connection.sendRawTransaction(tx.serialize())
+      onLog(`${name} staked: ${explorer(signature)}`)
+    } catch (error) {
+      onLog(`${name} stake failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
 
   socket.on('MATCH_STARTED', (message: { view: { you: { role: string; credits: number } } }) => {
     // A bot cannot choose to be the impostor — the seed does. Whoever it lands on plays the
@@ -137,6 +171,20 @@ export async function createBot(options: BotOptions): Promise<Bot> {
   socket.on('MATCH_END', (message: unknown) => {
     running = false
     resolveEnd(message)
+  })
+  socket.on('STAKE_REQUEST', (message: { tx: string }) => {
+    if (options.refuseStake === true) return onLog(`${name} ignores its STAKE_REQUEST (--refuse-stake)`)
+    void stake(message.tx)
+  })
+  socket.on('STAKE_UPDATE', (message: { staked: number[] }) => onLog(`${name} sees staked seats [${message.staked.join(', ')}]`))
+  socket.on('SETTLEMENT_CONFIRMED', (message: unknown) => resolveSettlement(message))
+  socket.on('LOBBY_DISSOLVED', (message: unknown) => {
+    running = false
+    resolveEnd(message)
+  })
+  socket.on('disconnect', (reason) => {
+    running = false
+    if (!stopping) resolveEnd({ disconnected: reason })
   })
 
   await ackOf(socket, 'JOIN', { matchId, sessionToken })
@@ -255,16 +303,22 @@ export async function createBot(options: BotOptions): Promise<Bot> {
     stats.votes += 1
   }, 200)
 
-  const stop = (): void => {
+  const stopPlaying = (): void => {
     running = false
     clearTimeout(timer)
     clearInterval(heartbeat)
     clearInterval(sabotageTimer)
     clearInterval(perStage)
+  }
+
+  const stop = (): void => {
+    stopping = true
+    stopPlaying()
     socket.disconnect()
   }
 
-  void ended.then(stop)
+  // The socket stays open after the match so SETTLEMENT_CONFIRMED can still arrive; stop() closes it.
+  void ended.then(stopPlaying)
 
   return {
     name,
@@ -275,15 +329,35 @@ export async function createBot(options: BotOptions): Promise<Bot> {
     },
     stats: () => ({ ...stats }),
     ended: () => ended,
+    settlement: () => settlement,
     stop,
   }
 }
 
 // ---- CLI ----------------------------------------------------------------------------------
 
+// --flag=value or --flag value.
 const arg = (flag: string): string | undefined => {
-  const found = process.argv.slice(2).find((entry) => entry.startsWith(`--${flag}=`))
-  return found?.slice(flag.length + 3)
+  const args = process.argv.slice(2)
+  const index = args.findIndex((entry) => entry === `--${flag}` || entry.startsWith(`--${flag}=`))
+  const found = args[index]
+  if (found === undefined) return undefined
+  return found === `--${flag}` ? args[index + 1] : found.slice(flag.length + 3)
+}
+
+const DEFAULT_KEY = (index: number): string => new URL(`../../../contract/scripts/keys/player-${index}.json`, import.meta.url).pathname
+const SETTLEMENT_WAIT_MS = 120_000
+
+// --keys / BOT_KEYS name the files, comma-separated, one per bot. Without them the contract's test
+// players are used when all of them exist, and otherwise the bots run keyless for a fake server.
+function botKeys(count: number): Keypair[] | undefined {
+  const named = arg('keys') ?? (process.env.BOT_KEYS || undefined)
+  const files = named === undefined ? Array.from({ length: count }, (_, index) => DEFAULT_KEY(index)) : named.split(',')
+  if (named === undefined && !files.every((file) => existsSync(file))) return undefined
+  if (files.length < count) throw new Error(`${count} bots need ${count} key files, got ${files.length}`)
+  return files
+    .slice(0, count)
+    .map((file) => Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync(file, 'utf8')) as number[])))
 }
 
 const STRATEGIES: Strategy[] = ['masher', 'optimal', 'conserver', 'impostor']
@@ -300,8 +374,14 @@ async function main(): Promise<void> {
   const rate = Number(arg('rate') ?? 4)
   const jitter = Number(arg('jitter') ?? 0.25)
   let code = arg('code')
+  const rpcUrl = arg('rpc') ?? process.env.RPC_URL ?? 'https://api.devnet.solana.com'
+  // Bot indices from 0, as the key files are numbered. Comma-separated for more than one.
+  const refusing = (arg('refuse-stake') ?? '').split(',').filter((entry) => entry !== '').map(Number)
+  const keys = botKeys(count)
 
   console.log(`starting ${count} ${strategy} bot(s) at ${rate}/sec against ${url}`)
+  if (keys === undefined) console.log('  no keys: bots send no wallet (fake escrow only)')
+  else keys.forEach((key, index) => console.log(`  bot ${index} wallet ${key.publicKey.toBase58()}${refusing.includes(index) ? ' (refuses to stake)' : ''}`))
   const bots: Bot[] = []
   for (let index = 0; index < count; index++) {
     const bot = await createBot({
@@ -311,6 +391,8 @@ async function main(): Promise<void> {
       rate,
       jitter,
       ...(code === undefined ? {} : { code }),
+      ...(keys?.[index] === undefined ? {} : { keypair: keys[index], rpcUrl }),
+      refuseStake: refusing.includes(index),
       onLog: (line) => console.log(`  ${line}`),
     })
     // Without --code the first bot opens a lobby and the rest fill in behind it.
@@ -322,8 +404,20 @@ async function main(): Promise<void> {
   console.log(`lobby code: ${code}${count < 4 ? `  — ${4 - count} seat(s) left for a human` : ''}`)
 
   const end = await Promise.race(bots.map((bot) => bot.ended()))
-  const summary = end as { reveal?: { resolution: { reason?: string }; impostorId: string } }
-  console.log(`match over: ${summary.reveal?.resolution.reason ?? 'voided'}`)
+  const summary = end as { reveal?: { resolution: { reason?: string }; impostorId: string }; reason?: string; disconnected?: string }
+  if (summary.disconnected !== undefined) console.log(`server went away: ${summary.disconnected}`)
+  else if (summary.reveal === undefined && summary.reason !== undefined) console.log(`lobby dissolved: ${summary.reason}`)
+  else console.log(`match over: ${summary.reveal?.resolution.reason ?? 'voided'}`)
+  const lines = (end as { settlement?: { lines: { playerId: string; refund: number; payout: number }[] } }).settlement?.lines
+  for (const [seat, line] of (lines ?? []).entries()) {
+    console.log(`  seat ${seat + 1} ${line.playerId}: refund ${line.refund} + payout ${line.payout} credits`)
+  }
+  if (keys !== undefined && summary.reveal !== undefined && bots[0] !== undefined) {
+    const timeout = new Promise((resolve) => setTimeout(() => resolve(null), SETTLEMENT_WAIT_MS))
+    const confirmed = (await Promise.race([bots[0].settlement(), timeout])) as { signature: string; payouts: string[] } | null
+    if (confirmed === null) console.log(`no SETTLEMENT_CONFIRMED within ${SETTLEMENT_WAIT_MS / 1000}s`)
+    else console.log(`settlement confirmed: ${explorer(confirmed.signature)}  payouts ${confirmed.payouts.join(' ')}`)
+  }
   for (const bot of bots) {
     const { taps, siphons, traces, votes, rejections } = bot.stats()
     const refused = Object.entries(rejections)

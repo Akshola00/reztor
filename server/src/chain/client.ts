@@ -225,7 +225,7 @@ export async function closingEvent<E extends 'matchSettled' | 'matchVoided'>(
 
 // ---- internals ----
 
-async function tokenProgramOf(connection: Connection, mint: PublicKey): Promise<PublicKey> {
+export async function tokenProgramOf(connection: Connection, mint: PublicKey): Promise<PublicKey> {
   const info = await connection.getAccountInfo(mint)
   if (!info) throw new Error(`mint ${mint.toBase58()} not found`)
   return info.owner

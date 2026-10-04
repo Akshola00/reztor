@@ -126,6 +126,43 @@ pays exactly those numbers. Then:
 If it never arrives, settlement failed after 5 attempts. In that case the server voids instead,
 which refunds every player's full buy-in. There is no message for this case yet.
 
+## 5. Devnet faucet: `POST /faucet`
+
+Plain HTTP on the same host and port as the socket, not a socket message. **Devnet only.** Use it
+to top up a wallet that got `WALLET_UNFUNDED`, so a playtester never has to ask for tokens.
+
+```
+POST /faucet
+content-type: application/json
+
+{ "wallet": "<base58 address>" }
+```
+
+One grant is **0.05 devnet SOL and 240 mock SKR** (20 buy-ins), sent to the wallet's associated
+token account, which the faucet creates if needed. The wallet signs nothing.
+
+The answer is always JSON:
+
+```ts
+{ ok: true, signature: string }    // the grant tx: https://explorer.solana.com/tx/<signature>?cluster=devnet
+{ ok: false, error: FaucetError }
+```
+
+It answers after the grant has **confirmed**, so the wallet can `CREATE_LOBBY` / `JOIN_LOBBY` straight
+away. Allow it a few seconds.
+
+| `error` | HTTP | When | What the app does |
+| :---- | :---- | :---- | :---- |
+| `FAUCET_DISABLED` | 503 | The server has no faucet: it is not on devnet, or it is turned off. Always the answer on a real-token server. | Hide the button. |
+| `INVALID_WALLET` | 400 | Not a valid signing address, or the body is not `{ wallet }`. | Bug in the app. |
+| `ALREADY_FUNDED` | 409 | The wallet already holds at least 2 buy-ins (24 mock SKR). Nothing is sent. | Say "you already have enough". |
+| `RATE_LIMITED` | 429 | This wallet was granted in the last 24 hours, or this network address has had 10 grants in the last 24 hours. | Say "try again tomorrow". |
+| `FAUCET_EMPTY` | 503 | The faucet itself has run dry. | Say "faucet empty, tell the devs". |
+| `CHAIN_ERROR` | 502 | The RPC failed. Nothing is counted against the wallet. | Safe to retry. |
+
+Read `ok` and `error` from the body; the status is only a convenience. Limits are held in memory, so a
+server restart resets them.
+
 ---
 
 ## Summary
@@ -140,3 +177,4 @@ which refunds every player's full buy-in. There is no message for this case yet.
 | `STAKE_UPDATE` | server → room / joining socket | new |
 | `LOBBY_DISSOLVED.reason: 'STAKE_TIMEOUT'` | server → room | new |
 | `SETTLEMENT_CONFIRMED` | server → room | new |
+| `POST /faucet` | HTTP, app → server | new, devnet only |

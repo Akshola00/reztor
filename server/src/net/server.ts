@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { createServer as createHttpServer, type Server as HttpServer } from 'node:http'
 import { Server, type Socket } from 'socket.io'
+import type { Faucet } from '../chain/faucet.js'
 import { MVP_CONFIG, type MatchConfig } from '../engine/config.js'
 import { computeSettlement, type Settlement } from '../engine/settlement.js'
 import { consoleLogger, type Logger } from '../log.js'
@@ -17,6 +18,7 @@ import {
 import { createRegistry, enqueue, type MatchRegistry, type RuntimeMatch } from '../match/registry.js'
 import { createTickLoop, type TickLoop } from '../match/tick.js'
 import { createConnections, type ConnectionRegistry } from './auth.js'
+import { faucetRoute } from './faucet.js'
 import {
   broadcastTick,
   sendMatchStarted,
@@ -52,6 +54,8 @@ export type ServerOptions = {
   escrow?: EscrowProvider
   // Chain mode: lobby messages must carry a funded wallet. Absent, wallets stay optional.
   wallets?: WalletPolicy
+  // Devnet only, and only once its guards have passed (chain/faucet.ts). Absent, /faucet refuses.
+  faucet?: Faucet
   logger?: Logger
   now?: () => number
 }
@@ -63,7 +67,7 @@ const ack = (respond: unknown, response: unknown): void => {
 }
 
 export function createGameServer(options: ServerOptions = {}): GameServer {
-  const { config, wallets, logger = consoleLogger, now = () => Date.now() } = options
+  const { config, wallets, faucet, logger = consoleLogger, now = () => Date.now() } = options
   const escrow = guardEscrow(options.escrow ?? inMemoryEscrow(), logger)
 
   // The throwaway browser client, served as one file with no build step. Socket.IO installs its
@@ -76,6 +80,10 @@ export function createGameServer(options: ServerOptions = {}): GameServer {
       } catch {
         response.writeHead(500, { 'content-type': 'text/plain' }).end('dev/client.html is missing')
       }
+      return
+    }
+    if (request.method === 'POST' && request.url === '/faucet') {
+      void faucetRoute(faucet, request, response)
       return
     }
     response.writeHead(404, { 'content-type': 'text/plain' }).end('not found')
