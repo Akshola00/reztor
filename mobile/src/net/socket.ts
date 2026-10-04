@@ -28,6 +28,8 @@ type ClientToServer = {
 const SERVER_EVENTS = [
   'LOBBY_UPDATE',
   'LOBBY_DISSOLVED',
+  'STAKE_REQUEST',
+  'STAKE_UPDATE',
   'MATCH_STARTED',
   'RESUME_STATE',
   'BOARD_UPDATE',
@@ -38,6 +40,7 @@ const SERVER_EVENTS = [
   'TRACE_RESULT',
   'VOTE_RESULT',
   'MATCH_END',
+  'SETTLEMENT_CONFIRMED',
   'ACTION_REJECTED',
 ] as const satisfies readonly ServerEvent[]
 const everyEventListed: Exclude<ServerEvent, (typeof SERVER_EVENTS)[number]> extends never ? true : false = true

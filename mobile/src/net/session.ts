@@ -8,7 +8,9 @@ import type {
   LobbyUpdateMessage,
   PlayerId,
   PrivateView,
+  SettlementConfirmedMessage,
   Side,
+  StakeRequest,
   Tier,
   VoteTarget,
 } from '../../protocol/generated'
@@ -50,6 +52,20 @@ export type ConnectionStatus = 'idle' | 'connecting' | 'online' | 'offline'
  */
 export type LobbyState = { update: LobbyUpdateMessage; receivedAtMs: number }
 
+/**
+ * The funding stage (CHAIN-PROTOCOL-CHANGES.md §3), from the lobby filling until MATCH_STARTED or
+ * LOBBY_DISSOLVED. `request` is the newest STAKE_REQUEST, which every JOIN rebuilds, and when it
+ * arrived on this phone's clock; null until one arrives, and never sent once this seat has paid.
+ * `staked` is STAKE_UPDATE's seat numbers. Null outside the funding stage.
+ */
+export type FundingState = {
+  request: { stake: StakeRequest; receivedAtMs: number } | null
+  staked: number[]
+}
+
+/** SETTLEMENT_CONFIRMED without its envelope tick: the chain has paid out MATCH_END's numbers. */
+export type SettledState = Pick<SettlementConfirmedMessage, 'matchId' | 'signature' | 'payouts'>
+
 /** PROTOCOL.md §4: chat messages are at most 240 characters. */
 export const CHAT_MAX = 240
 
@@ -85,12 +101,17 @@ let rehearsalRole: Side = 'crew'
 let myVote: { round: number; target: VoteTarget } | null = null
 let lastChatAtMs = 0
 let lobby: LobbyState | null = null
+let funding: FundingState | null = null
+let settled: SettledState | null = null
 let status: ConnectionStatus = 'idle'
 /** When the socket last dropped, and when this phone last sent a heartbeat over a live socket. */
 let lostAtMs = 0
 let lastBeatAtMs = 0
 
 const TICKET_KEY = 'reztor.ticket'
+
+/** The server reads the chain to build a STAKE_REQUEST, so allow it a few round trips. */
+const FRESH_STAKE_TIMEOUT_MS = 10_000
 
 function persistTicket(value: JoinTicket) {
   // Fire and forget: a failed write costs only the rejoin after a restart, never the match.
@@ -123,6 +144,8 @@ const resumeListeners = new Set<() => void>()
 const lostListeners = new Set<() => void>()
 const lobbyListeners = new Set<() => void>()
 const dissolvedListeners = new Set<(reason: DissolveReason) => void>()
+const fundingListeners = new Set<() => void>()
+const settledListeners = new Set<() => void>()
 
 const emit = (listeners: Set<() => void>) => {
   for (const listener of listeners) listener()
@@ -161,10 +184,25 @@ function getClient(): ReztorClient {
   c.on('LOBBY_DISSOLVED', ({ matchId, reason }) => {
     if (matchId !== ticket?.matchId) return
     forgetTicket()
+    setFunding(null)
     for (const listener of dissolvedListeners) listener(reason)
   })
 
+  // The transaction is the player's to sign; nothing is sent back. The server watches the chain.
+  c.on('STAKE_REQUEST', ({ matchId, tx, expiresAt, serverNow }) => {
+    if (matchId !== ticket?.matchId) return
+    setFunding({
+      request: { stake: { tx, expiresAt, serverNow }, receivedAtMs: Date.now() },
+      staked: funding?.staked ?? [],
+    })
+  })
+  c.on('STAKE_UPDATE', ({ matchId, staked }) => {
+    if (matchId !== ticket?.matchId) return
+    setFunding({ request: funding?.request ?? null, staked })
+  })
+
   c.on('MATCH_STARTED', (message) => {
+    setFunding(null)
     markingPending = true
     match.applyView(message.view, message.serverTick)
     emit(startedListeners)
@@ -187,6 +225,12 @@ function getClient(): ReztorClient {
     match.applyEnd(
       'error' in message ? { error: message.error } : { reveal: message.reveal, settlement: message.settlement },
     )
+  })
+  // After MATCH_END, so the ticket is already gone: matched against the match this phone played.
+  c.on('SETTLEMENT_CONFIRMED', ({ matchId, signature, payouts }) => {
+    if (matchId !== match.snapshot()?.matchId) return
+    settled = { matchId, signature, payouts }
+    emit(settledListeners)
   })
   c.on('TRACE_RESULT', ({ target, result }) => {
     // Dev only, so a test can check the card against what the server sent. The reading is this
@@ -235,6 +279,12 @@ async function rejoin(): Promise<void> {
   }
 }
 
+function setFunding(next: FundingState | null) {
+  if (next === null && funding === null) return
+  funding = next
+  emit(fundingListeners)
+}
+
 function startHeartbeat() {
   if (heartbeat !== null) return
   heartbeat = setInterval(() => {
@@ -277,12 +327,13 @@ export const session = {
 
   ticket: (): JoinTicket | null => ticket,
 
-  async createLobby(name: string): Promise<LobbyAck> {
-    return this.seat(ensureConnected().request('CREATE_LOBBY', { name }))
+  /** `wallet` is the connected wallet's base58 address. Chain escrow requires it; fake escrow ignores it. */
+  async createLobby(name: string, wallet: string): Promise<LobbyAck> {
+    return this.seat(ensureConnected().request('CREATE_LOBBY', { name, wallet }))
   },
 
-  async joinLobby(code: string, name: string): Promise<LobbyAck> {
-    return this.seat(ensureConnected().request('JOIN_LOBBY', { code, name }))
+  async joinLobby(code: string, name: string, wallet: string): Promise<LobbyAck> {
+    return this.seat(ensureConnected().request('JOIN_LOBBY', { code, name, wallet }))
   },
 
   /** PROTOCOL.md §2: send JOIN as soon as a ticket arrives, without waiting for the lobby. */
@@ -291,6 +342,8 @@ export const session = {
     if (!ack.ok) return ack
     match.clear()
     lobby = null
+    setFunding(null)
+    settled = null
     ticket = ack.ticket
     persistTicket(ack.ticket)
     startHeartbeat()
@@ -300,6 +353,35 @@ export const session = {
   },
 
   lobby: (): LobbyState | null => lobby,
+
+  funding: (): FundingState | null => funding,
+
+  /**
+   * CHAIN-PROTOCOL-CHANGES.md §3: JOIN for a newly built STAKE_REQUEST and wait for it. The stake
+   * is signed from this, never from the one that arrived when the lobby filled: a blockhash lives
+   * about 150 blocks, which on devnet has measured as little as 38s, so a transaction held while
+   * the player reads the screen can expire inside the wallet. Null if the funding stage ends or no
+   * fresh transaction arrives in time.
+   */
+  freshStake(): Promise<StakeRequest | null> {
+    const before = funding?.request?.stake.tx
+    return new Promise((resolve) => {
+      const done = (stake: StakeRequest | null) => {
+        clearTimeout(timer)
+        fundingListeners.delete(check)
+        resolve(stake)
+      }
+      const check = () => {
+        if (funding === null) done(null)
+        else if (funding.request !== null && funding.request.stake.tx !== before) done(funding.request.stake)
+      }
+      const timer = setTimeout(() => done(null), FRESH_STAKE_TIMEOUT_MS)
+      fundingListeners.add(check)
+      void rejoin()
+    })
+  },
+
+  settled: (): SettledState | null => settled,
 
   /**
    * Once per launch, before home renders: if a ticket survived a restart, JOIN with it. A running
@@ -364,6 +446,8 @@ export const session = {
     forgetTicket()
     ticket = null
     lobby = null
+    setFunding(null)
+    settled = null
     markingPending = false
     stopHeartbeat()
     appState?.remove()
@@ -435,6 +519,18 @@ export const session = {
     lobbyListeners.add(listener)
     return () => {
       lobbyListeners.delete(listener)
+    }
+  },
+  onFunding(listener: () => void) {
+    fundingListeners.add(listener)
+    return () => {
+      fundingListeners.delete(listener)
+    }
+  },
+  onSettled(listener: () => void) {
+    settledListeners.add(listener)
+    return () => {
+      settledListeners.delete(listener)
     }
   },
   /** LOBBY_DISSOLVED for this seat's lobby. The session is already gone on the server. */

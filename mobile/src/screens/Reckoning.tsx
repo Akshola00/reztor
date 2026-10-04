@@ -1,6 +1,6 @@
 import { Redirect, router } from 'expo-router'
-import { useEffect, useState, type ReactNode } from 'react'
-import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { BackHandler, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Svg, { Path } from 'react-native-svg'
 
@@ -10,6 +10,7 @@ import { SEAT_COLOURS, Sigil, type SeatNumber } from '../art/Sigil'
 import { StillBoard } from '../art/StillBoard'
 import { tokens } from '../design/tokens'
 import { match, session } from '../net/session'
+import { explorerTx } from '../solana/chain'
 
 // /reckoning — §7.8's post-mortem. Everything at once: no tabs, no accordions, nothing to open.
 // The argument afterwards is half the entertainment, and it needs the whole record in front of it.
@@ -69,6 +70,8 @@ export function goHome() {
 export function Reckoning() {
   const insets = useSafeAreaInsets()
   const [record] = useState(readRecord)
+  // SETTLEMENT_CONFIRMED lands a few seconds after MATCH_END, usually while this screen is open.
+  const settled = useSyncExternalStore(session.onSettled, session.settled)
 
   // Hardware back returns home, as Kneel again does. There is nothing behind this screen.
   useEffect(() => {
@@ -223,6 +226,19 @@ export function Reckoning() {
               <Text style={styles.gold}>{skr(settlement.dustCredits, perSkr)}</Text>
               {' SKR could not be divided between the victors and is kept.'}
             </Text>
+          )}
+          {settled === null || settled.matchId !== reveal.matchId ? null : (
+            <View style={styles.paid}>
+              <Text style={styles.paidMark}>Paid on-chain.</Text>
+              <Pressable
+                onPress={() => void Linking.openURL(explorerTx(settled.signature))}
+                accessibilityRole="link"
+                accessibilityLabel="View the payout transaction in Solana Explorer"
+                hitSlop={tokens.layout.stackGap}
+              >
+                <Text style={styles.link}>View the transaction</Text>
+              </Pressable>
+            </View>
           )}
         </Section>
 
@@ -424,6 +440,21 @@ const styles = StyleSheet.create({
   },
   bone: {
     color: tokens.palette.bone,
+  },
+  paid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'baseline',
+    gap: tokens.layout.stackGap,
+  },
+  paidMark: {
+    ...tokens.type.body,
+    color: tokens.palette.gold,
+  },
+  link: {
+    ...tokens.type.body,
+    color: tokens.palette.bone,
+    textDecorationLine: 'underline',
   },
   line: {
     flexDirection: 'row',

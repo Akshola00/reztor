@@ -10,6 +10,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler'
 
 import { tokens } from '../design/tokens'
 import { session } from '../net/session'
+import { WalletProvider } from '../solana/wallet'
 
 // Module scope, not inside the component: the splash has to be held before the first render.
 SplashScreen.preventAutoHideAsync()
@@ -54,7 +55,9 @@ export default function RootLayout() {
       <View pointerEvents="none" style={styles.grain}>
         <Image source={require('../../assets/grain.png')} resizeMode="repeat" style={styles.grainTile} />
       </View>
-      <Stack screenOptions={{ headerShown: false, contentStyle: styles.screen }} />
+      <WalletProvider>
+        <Stack screenOptions={{ headerShown: false, contentStyle: styles.screen }} />
+      </WalletProvider>
     </GestureHandlerRootView>
   )
 }

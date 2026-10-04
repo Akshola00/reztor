@@ -1,3 +1,4 @@
+import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
@@ -7,10 +8,13 @@ import type { LobbyAck, Side } from '../../protocol/generated'
 import { Marking } from '../art/Marking'
 import { tokens } from '../design/tokens'
 import { CODE_ALPHABET, CODE_LENGTH, DEV_TOOLS, NAME_MAX, session, type BootTarget } from '../net/session'
+import { BUY_IN_SKR, shortAddress } from '../solana/chain'
+import { requestFaucet, type FaucetResult } from '../solana/faucet'
 import { usePolled } from './Offering'
 
 // / — §7.1's Home: a name, create, and join by code, with the rules below the actions rather than
-// behind a link. No wallet UI of any kind until the contract lands (BUILD-PLAN.md §4).
+// behind a link. The contract has landed (BUILD-PLAN.md §4), so wallet connect stands in front of
+// the entry: nothing can be opened or joined without a wallet to stake from.
 
 type LobbyError = Extract<LobbyAck, { ok: false }>['error']
 
@@ -20,12 +24,26 @@ const ERRORS: Record<LobbyError, string> = {
   LOBBY_FULL: 'That gathering is full. Four already kneel.',
   INVALID_PAYLOAD: 'The name or the code was refused. A name is 1 to 32 characters; a code is four.',
   ESCROW_FAILED: 'The stakes could not be held. Nothing was taken.',
+  WALLET_UNFUNDED: `Your wallet cannot cover the stake. It needs ${BUY_IN_SKR} SKR, and a little SOL for fees.`,
+  WALLET_TAKEN: 'That wallet already kneels in this gathering. Each seat needs its own wallet.',
+}
+
+// CHAIN-PROTOCOL-CHANGES.md §5's table. FAUCET_DISABLED hides the button instead.
+const FAUCET: Record<Exclude<FaucetResult, { ok: true }>['error'], string> = {
+  FAUCET_DISABLED: 'This server has no faucet.',
+  INVALID_WALLET: 'The faucet refused this wallet address.',
+  ALREADY_FUNDED: 'You already have enough test SKR.',
+  RATE_LIMITED: 'This wallet has had its test SKR today. Try again tomorrow.',
+  FAUCET_EMPTY: 'The faucet is empty. Tell the developers.',
+  CHAIN_ERROR: 'The faucet could not reach the chain. Nothing was counted. Try again.',
+  UNREACHABLE: 'The faucet did not answer. Try again.',
 }
 
 const NOTICES: Record<string, string> = {
   // PROTOCOL.md §2: nothing locks until all four seats are filled, so a dissolve takes nothing.
   dissolvedTimeout: 'The gathering dissolved. Four did not kneel in time. Nothing was taken.',
-  dissolvedEscrow: 'The gathering dissolved. The rite could not be paid for. Nothing was taken.',
+  dissolvedEscrow: 'The gathering dissolved. The rite could not be paid for. Anyone who paid has been refunded.',
+  dissolvedStake: 'Not everyone staked — anyone who paid has been refunded.',
   seatLost: 'Your seat in the gathering is gone. Nothing was taken.',
   lost: 'The server no longer knows your seat.',
   // A launch or retry that found the rite already resolved. Its MATCH_END was sent once, to the
@@ -57,6 +75,9 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<Side | null>(null)
+  const [unfunded, setUnfunded] = useState(false)
+  const { account, connect, disconnect } = useMobileWallet()
+  const wallet = account?.address ?? null
 
   const trimmed = name.trim()
   const nameOk = trimmed.length >= 1 && trimmed.length <= NAME_MAX
@@ -67,6 +88,7 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
     setError(null)
     try {
       const ack = await action()
+      setUnfunded(!ack.ok && ack.error === 'WALLET_UNFUNDED')
       if (!ack.ok) {
         setError(ERRORS[ack.error])
         return
@@ -77,6 +99,24 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
     } finally {
       setBusy(false)
     }
+  }
+
+  const connectWallet = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      await connect()
+    } catch {
+      setError('The wallet did not connect. Open a Solana wallet set to devnet, and try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const disconnectWallet = async () => {
+    setUnfunded(false)
+    setError(null)
+    await disconnect().catch(() => undefined)
   }
 
   const retry = async () => {
@@ -110,68 +150,95 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
           Reztor
         </Text>
 
-        <View style={styles.group}>
-          <Text style={styles.label}>Your name</Text>
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            maxLength={NAME_MAX}
-            autoCorrect={false}
-            placeholder="The name the others will see"
-            placeholderTextColor={tokens.palette.boneDim}
-            cursorColor={tokens.palette.bone}
-            selectionColor={tokens.palette.stoneLit}
-            style={styles.input}
-            accessibilityLabel="Your name"
-          />
-        </View>
-
-        {status === 'offline' ? (
+        {wallet === null ? (
           <View style={styles.group}>
-            <Text style={styles.notice} accessibilityLiveRegion="polite">
-              {`The server cannot be reached. It is expected at ${session.serverUrl}.`}
+            <Text style={styles.para}>
+              {`Your stake of ${BUY_IN_SKR} SKR is paid from a Solana wallet on this phone. Connect one set to devnet.`}
             </Text>
-            <View style={styles.row}>
-              <Button label="Try again" disabled={busy} onPress={retry} />
+            <Button label="Connect wallet" disabled={busy} onPress={connectWallet} />
+          </View>
+        ) : (
+          <View style={styles.group}>
+            <Text style={styles.label}>Your wallet</Text>
+            <View style={styles.walletRow}>
+              <Text style={styles.address} accessibilityLabel={`Wallet ${wallet}`}>
+                {shortAddress(wallet)}
+              </Text>
+              <Button label="Disconnect" disabled={busy} onPress={disconnectWallet} />
             </View>
+            <Faucet wallet={wallet} onFunded={() => setError(null)} />
           </View>
-        ) : null}
+        )}
 
-        <Button
-          label="Open a gathering"
-          disabled={!nameOk || busy || !online}
-          onPress={() => run(() => session.createLobby(trimmed))}
-        />
+        {wallet === null ? null : (
+          <>
+            <View style={styles.group}>
+              <Text style={styles.label}>Your name</Text>
+              <TextInput
+                value={name}
+                onChangeText={setName}
+                maxLength={NAME_MAX}
+                autoCorrect={false}
+                placeholder="The name the others will see"
+                placeholderTextColor={tokens.palette.boneDim}
+                cursorColor={tokens.palette.bone}
+                selectionColor={tokens.palette.stoneLit}
+                style={styles.input}
+                accessibilityLabel="Your name"
+              />
+            </View>
 
-        <View style={styles.group}>
-          <Text style={styles.label}>Or join one by its code</Text>
-          <View style={styles.row}>
-            <TextInput
-              value={code}
-              onChangeText={(text) => setCode(cleanCode(text))}
-              maxLength={CODE_LENGTH}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              placeholder="CODE"
-              placeholderTextColor={tokens.palette.boneDim}
-              cursorColor={tokens.palette.bone}
-              selectionColor={tokens.palette.stoneLit}
-              style={[styles.input, styles.codeInput]}
-              accessibilityLabel="Gathering code"
-            />
+            {status === 'offline' ? (
+              <View style={styles.group}>
+                <Text style={styles.notice} accessibilityLiveRegion="polite">
+                  {`The server cannot be reached. It is expected at ${session.serverUrl}.`}
+                </Text>
+                <View style={styles.row}>
+                  <Button label="Try again" disabled={busy} onPress={retry} />
+                </View>
+              </View>
+            ) : null}
+
             <Button
-              label="Join"
-              disabled={!nameOk || !codeOk || busy || !online}
-              onPress={() => run(() => session.joinLobby(code, trimmed))}
+              label="Open a gathering"
+              disabled={!nameOk || busy || !online}
+              onPress={() => run(() => session.createLobby(trimmed, wallet))}
             />
-          </View>
-        </View>
+
+            <View style={styles.group}>
+              <Text style={styles.label}>Or join one by its code</Text>
+              <View style={styles.row}>
+                <TextInput
+                  value={code}
+                  onChangeText={(text) => setCode(cleanCode(text))}
+                  maxLength={CODE_LENGTH}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  placeholder="CODE"
+                  placeholderTextColor={tokens.palette.boneDim}
+                  cursorColor={tokens.palette.bone}
+                  selectionColor={tokens.palette.stoneLit}
+                  style={[styles.input, styles.codeInput]}
+                  accessibilityLabel="Gathering code"
+                />
+                <Button
+                  label="Join"
+                  disabled={!nameOk || !codeOk || busy || !online}
+                  onPress={() => run(() => session.joinLobby(code, trimmed, wallet))}
+                />
+              </View>
+            </View>
+          </>
+        )}
 
         {shownNotice === null ? null : (
           <Text style={styles.notice} accessibilityLiveRegion="polite">
             {shownNotice}
           </Text>
         )}
+
+        {/* WALLET_UNFUNDED: the cure sits directly under the refusal. */}
+        {unfunded && wallet !== null ? <Faucet wallet={wallet} prominent onFunded={() => setError(null)} /> : null}
 
         {DEV_TOOLS ? (
           <View style={styles.group}>
@@ -194,7 +261,56 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
   )
 }
 
-function Button({ label, disabled, onPress }: { label: string; disabled?: boolean; onPress: () => void }) {
+/**
+ * CHAIN-PROTOCOL-CHANGES.md §5: tops up the wallet with test SKR and SOL. Hidden for good once the
+ * server says it has no faucet. `prominent` is the one shown under a WALLET_UNFUNDED refusal.
+ */
+function Faucet({
+  wallet,
+  prominent = false,
+  onFunded,
+}: {
+  wallet: string
+  prominent?: boolean
+  /** A grant answers the refusal it was fetched for, so that refusal is cleared. */
+  onFunded: () => void
+}) {
+  const [busy, setBusy] = useState(false)
+  const [result, setResult] = useState<FaucetResult | null>(null)
+  if (result !== null && !result.ok && result.error === 'FAUCET_DISABLED') return null
+
+  const press = async () => {
+    setBusy(true)
+    setResult(null)
+    const next = await requestFaucet(session.serverUrl, wallet)
+    setResult(next)
+    if (next.ok) onFunded()
+    setBusy(false)
+  }
+
+  return (
+    <View style={styles.group}>
+      <Button label={busy ? 'Sending test SKR' : 'Get test SKR'} disabled={busy} onPress={press} gold={prominent} />
+      {result === null ? null : (
+        <Text style={styles.notice} accessibilityLiveRegion="polite">
+          {result.ok ? '240 test SKR and 0.05 SOL are in your wallet. You can kneel now.' : FAUCET[result.error]}
+        </Text>
+      )}
+    </View>
+  )
+}
+
+function Button({
+  label,
+  disabled,
+  onPress,
+  gold = false,
+}: {
+  label: string
+  disabled?: boolean
+  onPress: () => void
+  gold?: boolean
+}) {
   return (
     <Pressable
       onPress={onPress}
@@ -204,7 +320,9 @@ function Button({ label, disabled, onPress }: { label: string; disabled?: boolea
       accessibilityState={{ disabled: disabled === true }}
       style={styles.button}
     >
-      <Text style={[styles.buttonLabel, disabled ? styles.buttonLabelDisabled : null]}>{label}</Text>
+      <Text style={[styles.buttonLabel, gold ? styles.gold : null, disabled ? styles.buttonLabelDisabled : null]}>
+        {label}
+      </Text>
     </Pressable>
   )
 }
@@ -319,6 +437,21 @@ const styles = StyleSheet.create({
   },
   buttonLabelDisabled: {
     color: tokens.palette.boneFaint,
+  },
+  // §3.1: --gold is for SKR only, and this button fetches SKR.
+  gold: {
+    color: tokens.palette.gold,
+  },
+  walletRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: tokens.layout.stackGap,
+  },
+  address: {
+    ...tokens.type.body,
+    ...tokens.tabularFigures,
+    color: tokens.palette.bone,
   },
   notice: {
     ...tokens.type.body,
