@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     color: tokens.palette.bone,
   },
   // The Hollow's private sin, in toll. The sheet is `stone`, not void, and tollText measures only
-  // 3.69:1 there; tollTextBright measures 4.83:1, so it is the toll that carries text on stone.
+  // 3.28:1 there; tollTextBright measures 4.92:1, so it is the toll that carries text on stone.
   toll: {
     ...tokens.type.body,
     color: tokens.palette.tollTextBright,

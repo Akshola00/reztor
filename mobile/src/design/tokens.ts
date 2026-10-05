@@ -5,38 +5,44 @@ import type { TextStyle } from 'react-native'
 // The design doc defines no spacing scale, so this module has none. Spacing is an open
 // decision — do not invent one here, and do not put a magic margin in a component.
 
-// §3.1. Blue fire is reserved: `flame*` appears only on the conduit fill, the crossed Threshold
+// §3.1, with the home rebuild's "lift" folded in (chosen by the owner, provisional until checked on
+// the S10). Against the doc's original values: void unchanged, and every step of ground above it
+// lightened by a growing factor (char x1.25, stone x1.3, stoneEdge x1.6, stoneLit x1.4 HSL lightness)
+// so panels read as raised; flameDeep x1.3 saturation and x1.1 lightness; gold x1.15 lightness at its
+// own hue; toll and tollSmoke rotated -14 degrees toward crimson, x1.2 saturation, x1.05 lightness.
+// Every text pairing still clears 4.5:1 — bone on stoneLit is the tightest, at 4.51:1.
+//
+// Blue fire is reserved: `flame*` appears only on the conduit fill, the crossed Threshold
 // marks, and the board percentage during the crossing moment. Player identity is a mantle colour
 // plus a sigil, never fire.
 const palette = {
   // Ground — the temple
   void: '#0B0D12',
-  char: '#15181F',
-  stone: '#1E222C',
-  stoneEdge: '#2C3240',
-  stoneLit: '#3D4555',
+  char: '#1A1E27',
+  stone: '#272C39',
+  stoneEdge: '#465066',
+  stoneLit: '#556177',
 
   // Fire — consecrated matter. PROGRESS ONLY.
-  flameDeep: '#1B5C9E',
+  flameDeep: '#0865C3',
   flame: '#3E9BE0',
   flameCold: '#7FE3FF',
   flameWhite: '#E4F8FF',
 
   // The toll — loss, drain, damage
-  toll: '#8E3B2F',
-  tollSmoke: '#4A2A26',
-  // §7.3 — toll for text. `toll` measures 2.61:1 on `void`, below the 4.5:1 text floor, and the
-  // credit counter carries information. This is toll mixed 30% toward `bone`, the smallest step
-  // that clears the floor: 4.51:1 on void. Text only — embers, drains and every other toll mark
-  // keep `toll`.
-  tollText: '#A46B65',
-  // §7.3 — the other half of the counter's slow pulse below 20 credits. Toll mixed 45% toward
-  // `bone`: 5.91:1 on void. The pulse crossfades the two, so every frame of it clears 4.5:1 —
-  // the opacity pulse it replaces dimmed `tollText` back under the floor.
-  tollTextBright: '#AF8380',
+  toll: '#9F2734',
+  tollSmoke: '#51242A',
+  // §7.3 — toll for text. `toll` is below the 4.5:1 text floor on `void`, and the credit counter
+  // carries information. This is toll mixed 34% toward `bone`, the smallest step that clears the
+  // floor: 4.58:1 on void. Text only — embers, drains and every other toll mark keep `toll`.
+  tollText: '#B2646F',
+  // §7.3 — the other half of the counter's slow pulse below 20 credits. Toll mixed 56% toward
+  // `bone`: 6.85:1 on void and 4.92:1 on stone, where the action sheet sets the Hollow's toll line.
+  // The pulse crossfades the two, so every frame of it clears 4.5:1.
+  tollTextBright: '#BF8C95',
 
   // Settlement
-  gold: '#C9A227',
+  gold: '#D9B33B',
 
   // Type
   bone: '#D8DBE2',

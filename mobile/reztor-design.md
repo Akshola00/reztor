@@ -88,26 +88,28 @@ Cold, carved, and lit from within. The world is stone and char; the only warm th
 
 These live in `src/design/tokens.ts` as a typed object. The CSS-variable form below is notation for readability only — there is no stylesheet.
 
+**The home rebuild lifted this palette, at the owner's choice, provisional until he checks it on the S10.** The ground was compressed and panels barely separated from the background, so every step above `--void` was lightened by a growing factor; `--flame-deep` gained saturation and lightness, `--gold` luminance at its own hue, and `--toll` turned from brown toward crimson. The values below are the lifted ones. `--void`, `--flame`, `--flame-cold`, `--flame-white`, the bones and the mantles are unchanged; the frontier is still the brightest element and every text pairing still clears 4.5:1, the tightest being `--bone` on `--stone-lit` at 4.51:1.
+
 ```css
 /* Ground — the temple */
 --void: #0b0d12; /* page background, deepest */
---char: #15181f; /* unconsecrated conduit fill */
---stone: #1e222c; /* architecture, panels, plinth */
---stone-edge: #2c3240; /* carved edges, dividers, borders */
---stone-lit: #3d4555; /* raised faces, pressed states */
+--char: #1a1e27; /* unconsecrated conduit fill */
+--stone: #272c39; /* architecture, panels, plinth */
+--stone-edge: #465066; /* carved edges, dividers, borders */
+--stone-lit: #556177; /* raised faces, pressed states */
 
 /* Fire — consecrated matter. PROGRESS ONLY. */
---flame-deep: #1b5c9e; /* base of the fill */
+--flame-deep: #0865c3; /* base of the fill */
 --flame: #3e9be0; /* body of the fill */
 --flame-cold: #7fe3ff; /* the frontier line */
 --flame-white: #e4f8ff; /* frontier peak, threshold crossing */
 
 /* The toll — loss, drain, damage */
---toll: #8e3b2f; /* dried blood; embers of what was taken */
---toll-smoke: #4a2a26; /* residue at a falling frontier */
+--toll: #9f2734; /* dried blood; embers of what was taken */
+--toll-smoke: #51242a; /* residue at a falling frontier */
 
 /* Settlement */
---gold: #c9a227; /* SKR, payouts, refunds only */
+--gold: #d9b33b; /* SKR, payouts, refunds only */
 
 /* Type */
 --bone: #d8dbe2; /* primary text */
@@ -364,7 +366,7 @@ Per §6. Additional behaviour:
 
 **The action button** is labelled "Augury" and is identical for every role — see §7.4. It never changes size, position, or label based on role.
 
-**The credit counter** sits between the two buttons. It ticks down continuously with tabular figures. Below 100 credits it shifts to toll — as `--toll-text` (`#a46b65`), not `--toll`. `--toll` measures 2.61:1 on `--void`, below the 4.5:1 floor for text that carries information; `--toll-text` is `--toll` mixed 30% toward `--bone`, the smallest step that clears it, at 4.51:1. It is for text only: embers, drains and every other toll mark keep `--toll`. Below 20 it pulses slowly — a crossfade between `--toll-text` and `--toll-text-bright` (`#af8380`, toll mixed 45% toward bone, 5.91:1), never a dimming, so every frame of the pulse stays above 4.5:1. There is no modal warning — the player is mid-tap and a modal would be hostile.
+**The credit counter** sits between the two buttons. It ticks down continuously with tabular figures. Below 100 credits it shifts to toll — as `--toll-text` (`#b2646f`), not `--toll`. `--toll` measures 2.60:1 on `--void`, below the 4.5:1 floor for text that carries information; `--toll-text` is `--toll` mixed 34% toward `--bone`, the smallest step that clears it, at 4.58:1. It is for text only: embers, drains and every other toll mark keep `--toll`. Below 20 it pulses slowly — a crossfade between `--toll-text` and `--toll-text-bright` (`#bf8c95`, toll mixed 56% toward bone, 6.85:1), never a dimming, so every frame of the pulse stays above 4.5:1. There is no modal warning — the player is mid-tap and a modal would be hostile.
 
 **The tap band** is the tap target — a large oval, centred, with the band running from below the controls row to the bottom edge. A clear gap separates it from the controls row so a thumb reaching for the band cannot catch a button. It depresses 2px on touch, releases over 80ms, and emits a small `--flame-cold` spark at the touch point. The band must never trigger text selection, double-tap zoom, or pull-to-refresh.
 
