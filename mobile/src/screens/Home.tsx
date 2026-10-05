@@ -73,6 +73,7 @@ type HomeParams = {
   // Dev only, so captures can be driven by deep link: a candidate look, and a refusal to show.
   primary?: string
   sigils?: string
+  marks?: string
   refusal?: string
 }
 
@@ -111,8 +112,9 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
       next.primary = params.primary
     }
     if (params.sigils !== undefined) next.sigils = params.sigils !== '0'
+    if (params.marks === 'masks' || params.marks === 'geometric') next.marks = params.marks
     looks.set(next)
-  }, [params.primary, params.sigils])
+  }, [params.primary, params.sigils, params.marks])
   // Dev only: a refusal named by the deep link, shown through the same lines a real one uses.
   const refusal = DEV_TOOLS ? params.refusal : undefined
   const devRefusal =
@@ -549,6 +551,11 @@ function DevTools({
         ['litStone', 'A lit stone'],
         ['flame', 'B flame'],
         ['coldEdge', 'C cold edge'],
+      ])}
+      <Text style={styles.label}>Dev: seat marks</Text>
+      {chips('marks', [
+        ['masks', 'Masks'],
+        ['geometric', 'Geometric'],
       ])}
       <Text style={styles.label}>Dev: idle board</Text>
       {chips('sigils', [

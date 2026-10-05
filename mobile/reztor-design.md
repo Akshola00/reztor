@@ -227,16 +227,22 @@ A player's form is their **sigil token**: the seat sigil on a small stone disc, 
 
 The token carries identity by shape first (§5.2), by position second — where it sits on the conduit is that player's standing in the rite, readable at a glance across all four — and by colour only as reinforcement. It must stay distinguishable by shape alone at its on-board size.
 
-### 5.2 Sigils
+### 5.2 Masks
 
-Four marks, distinguishable by shape alone at 16px, each drawn with the same stroke weight so none reads as more important:
+**The owner's call: each seat wears a carved stone mask, replacing the four geometric sigils.** The sigils were icons, not identities — a circle crossed by a bar read as a no-entry sign, the square with a gap as a bracket. The fiction is four celebrants at a rite, one of them wearing a face that is not theirs, and masks say that. The code still calls the component `Sigil`.
 
-1. **Seat 1** — a circle crossed by a single horizontal bar
-2. **Seat 2** — an upward triangle with its apex cut flat
-3. **Seat 3** — a diamond containing a vertical stroke
-4. **Seat 4** — a square rotated 45° with one corner open
+Four masks, drawn as flat strokes in the seat colour, no gradients, one stroke weight across all four so none reads as more important. **They are told apart by outer silhouette alone**, because the riding token draws them at 18dp:
 
-Sigils appear on the plinth, beside names in chat, on vote tokens, and in the Reckoning table. They are the primary identity carrier everywhere.
+1. **Seat 1 — Horned.** Two points flaring out from the top corners. Eyes level.
+2. **Seat 2 — Beaked.** A round face whose chin narrows to one long wedge below it. Eyes downturned. The wedge is narrow: a full-width taper read as a map pin.
+3. **Seat 3 — Crested.** A row of three equal points along the top edge. Eyes upturned. The points are equal and low: a tall middle point read as a flame.
+4. **Seat 4 — Veiled.** A plain dome on straight sides to a flat hem, defined by having no projection. Eyes level and set wide, clear of the sides.
+
+Every mask has the same two eye voids, a short slit; only their angle and spacing vary, because an angle survives small sizes and an eye's shape does not. Seat colour is the stroke, so identity is always shape plus colour, never colour alone.
+
+**Checked on the emulator before wiring**: all four at 16, 18, 22, 30 and 48dp, and again at 18dp as solid filled silhouettes with no eyes. Each could be named from its outline alone at 18dp.
+
+Masks appear on the riding token, beside names in chat, on vote tokens, in the lobby roster, in the Reckoning's tables, vote history and Hollow mark, and in the Marking. They are the primary identity carrier everywhere. The geometric sigils remain behind a dev chip on home for comparison.
 
 ### 5.3 States
 
