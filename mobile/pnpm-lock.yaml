@@ -14,9 +14,6 @@ importers:
       '@expo-google-fonts/grenze-gotisch':
         specifier: ^0.4.2
         version: 0.4.2
-      '@expo-google-fonts/pt-sans':
-        specifier: ^0.4.1
-        version: 0.4.1
       '@expo/metro-runtime':
         specifier: ~57.0.16
         version: 57.0.16(@expo/log-box@57.0.4)(expo@57.0.24)(react-dom@19.2.3(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
@@ -576,9 +573,6 @@ packages:
 
   '@expo-google-fonts/material-symbols@0.4.48':
     resolution: {integrity: sha512-aZztj44PyA/sj3TXSwwpLJwqMlTUJ49okbZJYURzEcuERxMQB0KbX7RrLBi8WJnuWz5HFOLlTRxORrJfNnUPNQ==}
-
-  '@expo-google-fonts/pt-sans@0.4.1':
-    resolution: {integrity: sha512-Es20zwpN948YN2GdrsGIlCuqjeF+RGfGgunvcbSMjow/wQzglyisesyuhf8MU2fMpbMBVfY0modhrytumstycg==}
 
   '@expo/cli@57.0.26':
     resolution: {integrity: sha512-vm769xuEyHMToi3uY66JLzRA2GGK+3WzdH71HNn67FuVhry82dKTvMUoeHYtHiindyeieiWfEvHT8Kr1VyEVPQ==}
@@ -5494,8 +5488,6 @@ snapshots:
   '@expo-google-fonts/grenze-gotisch@0.4.2': {}
 
   '@expo-google-fonts/material-symbols@0.4.48': {}
-
-  '@expo-google-fonts/pt-sans@0.4.1': {}
 
   '@expo/cli@57.0.26(@expo/dom-webview@57.0.1)(@expo/metro-runtime@57.0.16)(expo-constants@57.0.19)(expo-font@57.0.4)(expo-router@57.0.22)(expo@57.0.24)(react-dom@19.2.3(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)':
     dependencies:

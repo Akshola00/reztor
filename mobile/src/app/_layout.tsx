@@ -1,6 +1,5 @@
 import { BarlowSemiCondensed_600SemiBold } from '@expo-google-fonts/barlow-semi-condensed'
 import { GrenzeGotisch_700Bold } from '@expo-google-fonts/grenze-gotisch'
-import { PTSans_400Regular } from '@expo-google-fonts/pt-sans'
 import { useFonts } from 'expo-font'
 import { Stack } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
@@ -10,7 +9,7 @@ import { Image, StyleSheet, View } from 'react-native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 
 import { tokens } from '../design/tokens'
-import { DEV_TOOLS, session } from '../net/session'
+import { session } from '../net/session'
 import { WalletProvider } from '../solana/wallet'
 
 // Module scope, not inside the component: the splash has to be held before the first render.
@@ -23,8 +22,6 @@ export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     GrenzeGotisch_700Bold,
     BarlowSemiCondensed_600SemiBold,
-    // The running-text candidate (tokens.textCandidates), for the dev chip until the owner chooses.
-    ...(DEV_TOOLS ? { PTSans_400Regular } : {}),
   })
 
   // A ticket that survived a restart rejoins before anything renders, so a player the OS or a

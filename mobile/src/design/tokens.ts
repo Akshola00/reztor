@@ -352,10 +352,12 @@ const art = {
   namePlateSigil: 16,
   namePlateGap: 4,
 
-  // Grenze Gotisch has no tabular figures. Measured off the shipped 700Bold TTF, its digits run
-  // 20.78px ("1") to 28.22px ("0") at the 56px t-heart step, so a centred percentage shifts
-  // sideways whenever a digit changes — which during the Offering stage is constantly. Each
-  // digit therefore gets a fixed slot of fontSize x this ratio and is centred inside it.
+  // The percentage's digit slot. Set when Grenze Gotisch's default (old-style, proportional) digits
+  // were in use: they run 20.78px ("1") to 28.22px ("0") at the 56px t-heart step, so a centred
+  // percentage shifted sideways whenever a digit changed. Each digit gets a fixed slot of fontSize
+  // x this ratio and is centred inside it. The percentage now takes tabularFigures — lining
+  // figures, all 28px at 56 — so the slot is belt and braces, and the notes below on narrow
+  // digits describe the old figures.
   //
   // 0.52 gives 29.12px at 56 and 16.64px at 32, just clearing the widest digit ("0" at 28.22px)
   // at either candidate step. It covers digits only, on purpose: "%" measures 50.23px at 56 —
@@ -619,15 +621,6 @@ const home = {
 
 const homeFaces = makeHomeFaces(palette)
 
-// The running-text face, awaiting the owner's choice: Barlow Semi Condensed as it is, or PT Sans.
-// Since the remap the sans sets paragraphs only, so the one test is reading at 15. PT Sans 400 has
-// Barlow's x-height (0.500em against 0.511em) but is about 8% wider and a regular rather than a
-// semibold weight — open counters and natural spacing instead of a condensed, heavy line.
-const textCandidates = {
-  barlow: fontFamily.uiRegular,
-  ptSans: 'PTSans_400Regular',
-} as const
-
 export const tokens = {
   palette,
   material,
@@ -641,5 +634,4 @@ export const tokens = {
   cold,
   homeFaces,
   home,
-  textCandidates,
 } as const

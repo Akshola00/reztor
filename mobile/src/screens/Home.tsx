@@ -73,7 +73,6 @@ type HomeParams = {
   // Dev only, so captures can be driven by deep link: a candidate look, and a refusal to show.
   primary?: string
   sigils?: string
-  text?: string
   refusal?: string
 }
 
@@ -102,7 +101,7 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
 
   const look = useLook()
   const { palette } = tokens
-  const styles = useMemo(() => makeStyles(look.primary, look.text), [look.primary, look.text])
+  const styles = useMemo(() => makeStyles(look.primary), [look.primary])
 
   // Dev only: apply a candidate look from the deep link that opened home.
   useEffect(() => {
@@ -112,9 +111,8 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
       next.primary = params.primary
     }
     if (params.sigils !== undefined) next.sigils = params.sigils !== '0'
-    if (params.text === 'barlow' || params.text === 'ptSans') next.text = params.text
     looks.set(next)
-  }, [params.primary, params.sigils, params.text])
+  }, [params.primary, params.sigils])
   // Dev only: a refusal named by the deep link, shown through the same lines a real one uses.
   const refusal = DEV_TOOLS ? params.refusal : undefined
   const devRefusal =
@@ -552,11 +550,6 @@ function DevTools({
         ['flame', 'B flame'],
         ['coldEdge', 'C cold edge'],
       ])}
-      <Text style={styles.label}>Dev: running text</Text>
-      {chips('text', [
-        ['barlow', 'Barlow'],
-        ['ptSans', 'PT Sans'],
-      ])}
       <Text style={styles.label}>Dev: idle board</Text>
       {chips('sigils', [
         [true, 'Sigils'],
@@ -573,7 +566,7 @@ function DevTools({
   )
 }
 
-function makeStyles(primary: PrimaryStyle, text: Look['text']) {
+function makeStyles(primary: PrimaryStyle) {
   const { layout, home, palette, type, homeFaces: faces } = tokens
   return StyleSheet.create({
     root: {
@@ -622,12 +615,10 @@ function makeStyles(primary: PrimaryStyle, text: Look['text']) {
     },
     para: {
       ...type.body,
-      fontFamily: tokens.textCandidates[text],
       color: palette.boneDim,
     },
     notice: {
       ...type.body,
-      fontFamily: tokens.textCandidates[text],
       color: palette.bone,
     },
     input: {

@@ -24,10 +24,11 @@ import { tokens } from '../design/tokens'
 // art.timerBeatThresholds. Transform and opacity only, on the UI thread (hard rule 3). Under reduce
 // motion it holds still and only the number changes.
 //
-// The percentage is set in Grenze Gotisch, which has no tabular figures: its digits measure
-// 20.78px to 28.22px at the 56px step, so a centred number would shift sideways every time a
-// digit changed — constantly, during the Offering stage. Each digit therefore sits in a fixed
-// slot and is centred inside it, which pins it in place.
+// The percentage is set in Grenze Gotisch with `tabularFigures`, which switches its old-style default
+// digits (20.78px to 28.22px wide at 56, with 3, 4, 5, 7 and 9 dropping below the baseline) to its
+// tabular lining figures: all 28px wide, all on the baseline. The owner's call — old-style digits
+// rising and falling four times a second read as jitter on the number people watch most. Each digit
+// also keeps its fixed slot, which predates the lining figures and still pins it in place.
 //
 // Only the digits are slotted. "%" measures 50.23px at the same step, nearly twice a digit, so
 // forcing it into a digit slot would clip it — and it never changes, so it does not need one.
@@ -199,6 +200,7 @@ const styles = StyleSheet.create({
   },
   percentGlyph: {
     ...percentType,
+    ...tokens.tabularFigures,
     textAlign: 'center',
   },
 })
