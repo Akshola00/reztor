@@ -140,23 +140,15 @@ Each seat also carries a distinct geometric sigil (§5.2). Identity is never car
 
 Two families, both from Google Fonts, both self-hosted and preloaded.
 
-**Display — Grenze Gotisch.** Gothic-inflected without being blackletter, so it carries the rite without becoming illegible. Used for: the board percentage, stage names, role reveal, the Reckoning headline, player names in Judgement. Never below 20px. Its digits are not tabular, so anywhere it sets a changing number the digit slots are fixed by hand.
+**Display — Grenze Gotisch 700.** Gothic-inflected without being blackletter, so it carries the rite without becoming illegible. Used for: the board percentage, stage names, role reveal, the Reckoning headline, player names in Judgement, and the home wordmark. Never below 20px. Its default digits are proportional, so the board percentage keeps its hand-fixed digit slots.
 
-**Interface — IBM Plex Sans, under review.** Slightly technical, excellent tabular figures. Used for everything else. Always `font-variant-numeric: tabular-nums` on anything that counts, so the credit balance doesn't jitter while it drains.
+**Interface — Barlow Semi Condensed 600.** Chosen by the owner in the home rebuild over IBM Plex Sans, which read as an office face, and over Chakra Petch and Rajdhani. Loaded at 600 only, the weight judged on the device. Used for everything else. Its default digits are proportional, but its `tnum` feature sets all ten to one width, so `tokens.tabularFigures` goes on anything that counts and the credit balance does not jitter while it drains.
 
-**The owner reads IBM Plex Sans as an office font, and both faces are being re-chosen.** Three pairings are on a dev-only chip row on home (`tokens.fontCandidates`), and the owner chooses on a device. Until then Grenze Gotisch and IBM Plex Sans stay in place everywhere, and only home and the rules sheet switch.
-
-| Candidate | Display                   | Interface                 | Interface digits (shipped TTF)                    |
-| :-------- | :------------------------ | :------------------------ | :------------------------------------------------ |
-| A         | Cinzel 700 (900 wordmark) | Chakra Petch 500 / 600    | proportional, no `tnum` — needs fixed digit slots |
-| B         | Grenze Gotisch 700        | Rajdhani 500 / 600        | proportional, no `tnum` — needs fixed digit slots |
-| C         | Metamorphous 400          | Barlow Semi Condensed 600 | `tnum` maps all digits to one width               |
-
-Whichever is chosen: Cinzel has no lower case, so A sets every display string in capitals, against the all-caps rule below. Rajdhani and Barlow Semi Condensed lack U+2192, which the tier face sets as text. Cinzel and Metamorphous have no `tnum`, so the percentage keeps its fixed slots. Grenze Gotisch's TTF does carry `tnum` (all digits 0.500em), which the slots predate.
+Neither face carries U+27E1 (SKR) or U+2192 (the tier face's arrow): both are drawn as SVG marks, never set as text.
 
 ```css
 --type-display: 'Grenze Gotisch', Georgia, serif;
---type-ui: 'IBM Plex Sans', system-ui, sans-serif;
+--type-ui: 'Barlow Semi Condensed', system-ui, sans-serif;
 ```
 
 Scale, mobile-first:

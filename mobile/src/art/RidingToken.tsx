@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { StyleSheet, View } from 'react-native'
 import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated'
 
-import { tokens, type Palette } from '../design/tokens'
+import { tokens } from '../design/tokens'
 import { conduitGeometry } from './Conduit'
 import { SEAT_COLOURS, Sigil, type SeatNumber } from './Sigil'
 
@@ -37,22 +37,10 @@ type RidingTokenProps = {
    * anyone else's token.
    */
   badge?: ReactNode
-  /** The home screen's palette candidates. The match never passes one. */
-  palette?: Palette
 }
 
-export function RidingToken({
-  seat,
-  own,
-  dormant,
-  disconnected,
-  units,
-  capacity,
-  height,
-  badge,
-  palette = tokens.palette,
-}: RidingTokenProps) {
-  const { art } = tokens
+export function RidingToken({ seat, own, dormant, disconnected, units, capacity, height, badge }: RidingTokenProps) {
+  const { art, palette } = tokens
 
   const disc = own ? art.tokenDiscOwn : art.tokenDisc
   const sigil = own ? art.tokenSigilOwn : art.tokenSigil
@@ -68,19 +56,7 @@ export function RidingToken({
   const sigilColour = dormant ? palette.boneFaint : SEAT_COLOURS[seat]
 
   const face = (
-    <View
-      style={[
-        styles.disc,
-        { width: disc, height: disc, borderRadius: disc / 2 },
-        palette === tokens.palette
-          ? null
-          : {
-              backgroundColor: palette.stone,
-              borderTopColor: palette.stoneLit,
-              borderBottomColor: palette.bevelShadow,
-            },
-      ]}
-    >
+    <View style={[styles.disc, { width: disc, height: disc, borderRadius: disc / 2 }]}>
       <Sigil seat={seat} colour={sigilColour} size={sigil} />
     </View>
   )

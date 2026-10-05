@@ -8,7 +8,7 @@ import type { LobbyAck, Side } from '../../protocol/generated'
 import { IdleBoard } from '../art/IdleBoard'
 import { Marking } from '../art/Marking'
 import { SkrMark } from '../art/SkrMark'
-import { homeFaces, tokens, typeFor, type Palette, type PrimaryStyle } from '../design/tokens'
+import { tokens, type PrimaryStyle } from '../design/tokens'
 import { CODE_ALPHABET, CODE_LENGTH, DEV_TOOLS, NAME_MAX, session, type BootTarget } from '../net/session'
 import { BUY_IN_SKR, shortAddress } from '../solana/chain'
 import { requestFaucet, type FaucetResult } from '../solana/faucet'
@@ -71,8 +71,6 @@ type Styles = ReturnType<typeof makeStyles>
 type HomeParams = {
   notice?: string
   // Dev only, so captures can be driven by deep link: a candidate look, and a refusal to show.
-  font?: string
-  palette?: string
   primary?: string
   sigils?: string
   refusal?: string
@@ -102,24 +100,17 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
   const wallet = account?.address ?? null
 
   const look = useLook()
-  const palette = tokens.palettes[look.palette]
-  const styles = useMemo(
-    () => makeStyles(typeFor(tokens.fontCandidates[look.font]), palette, look.primary),
-    [look.font, palette, look.primary],
-  )
+  const { palette } = tokens
+  const styles = useMemo(() => makeStyles(look.primary), [look.primary])
 
   // Dev only: apply a candidate look from the deep link that opened home.
   useEffect(() => {
     if (!DEV_TOOLS) return
     const next: Partial<Look> = {}
-    if (params.font !== undefined && params.font in tokens.fontCandidates) next.font = params.font as Look['font']
-    if (params.palette !== undefined && params.palette in tokens.palettes) {
-      next.palette = params.palette as Look['palette']
-    }
     if (params.primary === 'litStone' || params.primary === 'flame') next.primary = params.primary
     if (params.sigils !== undefined) next.sigils = params.sigils !== '0'
     looks.set(next)
-  }, [params.font, params.palette, params.primary, params.sigils])
+  }, [params.primary, params.sigils])
   // Dev only: a refusal named by the deep link, shown through the same lines a real one uses.
   const refusal = DEV_TOOLS ? params.refusal : undefined
   const devRefusal =
@@ -229,7 +220,6 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
                   width={window.width - tokens.layout.screenGutter * 2}
                   height={boardHeight}
                   sigils={look.sigils}
-                  palette={palette}
                 />
               </View>
             )}
@@ -542,18 +532,6 @@ function DevTools({
   )
   return (
     <View style={[styles.dev, { paddingBottom: bottom }]}>
-      <Text style={styles.label}>Dev: fonts</Text>
-      {chips('font', [
-        ['current', 'Plex'],
-        ['a', 'A Cinzel'],
-        ['b', 'B Rajdhani'],
-        ['c', 'C Barlow'],
-      ])}
-      <Text style={styles.label}>Dev: palette</Text>
-      {chips('palette', [
-        ['current', 'Current'],
-        ['lift', 'Lift'],
-      ])}
       <Text style={styles.label}>Dev: primary button</Text>
       {chips('primary', [
         ['litStone', 'A lit stone'],
@@ -575,9 +553,8 @@ function DevTools({
   )
 }
 
-function makeStyles(type: ReturnType<typeof typeFor>, palette: Palette, primary: PrimaryStyle) {
-  const faces = homeFaces(palette)
-  const { layout, home } = tokens
+function makeStyles(primary: PrimaryStyle) {
+  const { layout, home, palette, type, homeFaces: faces } = tokens
   return StyleSheet.create({
     root: {
       flex: 1,

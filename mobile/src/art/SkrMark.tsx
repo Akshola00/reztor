@@ -2,8 +2,8 @@ import Svg, { Path } from 'react-native-svg'
 
 import { tokens } from '../design/tokens'
 
-// §7.3 sets SKR as "⟡" (U+27E1) on the tier face and beside the credit counter. IBM Plex Sans
-// does not contain that codepoint — its cmap returns glyph 0 — so setting it as text hands the
+// §7.3 sets SKR as "⟡" (U+27E1) on the tier face and beside the credit counter. The interface
+// face (Barlow Semi Condensed) does not contain that codepoint — its cmap returns glyph 0 — so setting it as text hands the
 // glyph to whatever face Android substitutes, which is not a decision this product should leave
 // to the platform. It is drawn here instead, in the same square box and at the same stroke
 // weight as the sigils, so the two read as one family of carved marks.

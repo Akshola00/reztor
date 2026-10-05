@@ -12,6 +12,7 @@ import Animated, {
 
 import type { MatchConfig, Tier } from '../../protocol/generated'
 import { BoardHeader } from '../art/BoardHeader'
+import { ArrowMark } from '../art/ArrowMark'
 import { SkrMark } from '../art/SkrMark'
 import { createSparkPool, emitSpark, sparkPoolSize, TapBand } from '../art/TapBand'
 import { motion } from '../design/motion'
@@ -76,7 +77,8 @@ export function Offering({ config, prediction, ownUnits, onPredicted, canTap, on
         <ControlButton accessibilityLabel={`Offering tier: ${cost} SKR for ${units}`} onPress={onTierPress}>
           <Text style={styles.buttonLabel}>{String(cost)}</Text>
           <SkrMark colour={tokens.palette.bone} />
-          <Text style={styles.buttonLabel}>{`→ ${units}`}</Text>
+          <ArrowMark colour={tokens.palette.bone} />
+          <Text style={styles.buttonLabel}>{String(units)}</Text>
         </ControlButton>
 
         <CreditCounter prediction={prediction} />

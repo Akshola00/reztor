@@ -1,10 +1,5 @@
-import { GrenzeGotisch_700Bold } from '@expo-google-fonts/grenze-gotisch'
-import { IBMPlexSans_400Regular, IBMPlexSans_500Medium } from '@expo-google-fonts/ibm-plex-sans'
 import { BarlowSemiCondensed_600SemiBold } from '@expo-google-fonts/barlow-semi-condensed'
-import { ChakraPetch_500Medium, ChakraPetch_600SemiBold } from '@expo-google-fonts/chakra-petch'
-import { Cinzel_700Bold, Cinzel_900Black } from '@expo-google-fonts/cinzel'
-import { Metamorphous_400Regular } from '@expo-google-fonts/metamorphous'
-import { Rajdhani_500Medium, Rajdhani_600SemiBold } from '@expo-google-fonts/rajdhani'
+import { GrenzeGotisch_700Bold } from '@expo-google-fonts/grenze-gotisch'
 import { useFonts } from 'expo-font'
 import { Stack } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
@@ -14,33 +9,19 @@ import { Image, StyleSheet, View } from 'react-native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 
 import { tokens } from '../design/tokens'
-import { DEV_TOOLS, session } from '../net/session'
+import { session } from '../net/session'
 import { WalletProvider } from '../solana/wallet'
-
-const CANDIDATE_FONTS = {
-  Cinzel_700Bold,
-  Cinzel_900Black,
-  ChakraPetch_500Medium,
-  ChakraPetch_600SemiBold,
-  Rajdhani_500Medium,
-  Rajdhani_600SemiBold,
-  Metamorphous_400Regular,
-  BarlowSemiCondensed_600SemiBold,
-}
 
 // Module scope, not inside the component: the splash has to be held before the first render.
 SplashScreen.preventAutoHideAsync()
 
 export default function RootLayout() {
   // One display weight: item 1 judged Grenze Gotisch 400 against 700 at t-heart on device and
-  // 700 ships, so the 400 face is no longer loaded. IBM Plex keeps both — 500 is for chat names.
+  // 700 ships, so the 400 face is no longer loaded. The interface face is Barlow Semi Condensed at
+  // the one weight the owner judged, 600.
   const [fontsLoaded, fontError] = useFonts({
     GrenzeGotisch_700Bold,
-    IBMPlexSans_400Regular,
-    IBMPlexSans_500Medium,
-    // The home rebuild's font candidates (tokens.fontCandidates), for the dev chips only. Dropped
-    // with the losing packages once the owner chooses.
-    ...(DEV_TOOLS ? CANDIDATE_FONTS : {}),
+    BarlowSemiCondensed_600SemiBold,
   })
 
   // A ticket that survived a restart rejoins before anything renders, so a player the OS or a

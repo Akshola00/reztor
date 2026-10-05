@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native'
 import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated'
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg'
 
-import { tokens, type Palette } from '../design/tokens'
+import { tokens } from '../design/tokens'
 
 // §6.2. A recessed aperture cut into the void, with a convex arc for a surface.
 //
@@ -50,8 +50,6 @@ type ConduitProps = {
   /** winTarget / laneCount / laneCapacity — where the Threshold crosses this aperture. */
   thresholdFraction: number
   crossed: boolean
-  /** The home screen's palette candidates. The match never passes one. */
-  palette?: Palette
 }
 
 // Pulled out of `tokens` so the worklet below captures three numbers rather than the whole module.
@@ -115,21 +113,12 @@ export function surfaceArc(width: number) {
   return { arc, capFoot, surfaceHeight: capFoot + surfacePad, surfacePad }
 }
 
-export function Conduit({
-  units,
-  capacity,
-  dormant,
-  width,
-  height,
-  thresholdFraction,
-  crossed,
-  palette = tokens.palette,
-}: ConduitProps) {
+export function Conduit({ units, capacity, dormant, width, height, thresholdFraction, crossed }: ConduitProps) {
   // Unique per instance: duplicate ids across Svg elements render wrong on Android.
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '')
   const fillId = `fill${uid}`
 
-  const { art, cold } = tokens
+  const { art, palette, cold } = tokens
 
   const thresholdY = height * (1 - thresholdFraction)
 

@@ -11,7 +11,7 @@ import Animated, {
 import Svg, { G, Path } from 'react-native-svg'
 
 import { motion } from '../design/motion'
-import { tokens, type Palette } from '../design/tokens'
+import { tokens } from '../design/tokens'
 import { Conduit, conduitGeometry, surfaceArc } from './Conduit'
 import { RidingToken } from './RidingToken'
 import type { SeatNumber } from './Sigil'
@@ -32,11 +32,10 @@ type IdleBoardProps = {
   height: number
   /** With or without the riding sigil tokens — the owner judges both. */
   sigils: boolean
-  palette: Palette
 }
 
-export function IdleBoard({ width, height, sigils, palette }: IdleBoardProps) {
-  const { art, home } = tokens
+export function IdleBoard({ width, height, sigils }: IdleBoardProps) {
+  const { art, home, palette } = tokens
   const [units] = useState(() => makeMutable(CAPACITY * home.idleBoardFill))
   const columnWidth = Math.floor((width - art.conduitGap * (SEATS.length - 1)) / SEATS.length)
 
@@ -73,7 +72,6 @@ export function IdleBoard({ width, height, sigils, palette }: IdleBoardProps) {
             height={height}
             thresholdFraction={home.idleThreshold}
             crossed={false}
-            palette={palette}
           />
           <Animated.View style={[styles.glow, { top: surfaceTop - spill }, pulseStyle]}>
             <Svg width={columnWidth} height={surfaceHeight + spill * 2}>
@@ -101,7 +99,6 @@ export function IdleBoard({ width, height, sigils, palette }: IdleBoardProps) {
               units={units}
               capacity={CAPACITY}
               height={height}
-              palette={palette}
             />
           ) : null}
         </View>
