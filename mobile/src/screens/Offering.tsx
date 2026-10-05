@@ -230,6 +230,7 @@ const styles = StyleSheet.create({
   },
   buttonLabel: {
     ...tokens.type.data,
+    ...tokens.tabularFigures,
     color: tokens.palette.bone,
   },
   credits: {

@@ -342,7 +342,7 @@ function Table({
           {r.cells.map((c, i) => (
             <Text
               key={headings[i]}
-              style={[styles.cell, gold ? (Number(c) === 0 ? styles.dim : styles.gold) : styles.bone]}
+              style={[styles.cell, gold ? (Number(c) === 0 ? styles.dimColour : styles.gold) : styles.bone]}
             >
               {c}
             </Text>
@@ -415,6 +415,7 @@ const styles = StyleSheet.create({
   },
   round: {
     ...tokens.type.data,
+    ...tokens.tabularFigures,
     color: tokens.palette.boneDim,
   },
   body: {
@@ -426,17 +427,20 @@ const styles = StyleSheet.create({
     color: tokens.palette.boneDim,
   },
   dim: {
-    ...tokens.type.body,
+    ...tokens.type.control,
     color: tokens.palette.boneDim,
   },
   // Toll as text: §7.3's `tollText`, which clears 4.5:1 where `toll` does not.
   toll: {
     color: tokens.palette.tollText,
   },
+  // Colour only: inside a sentence it takes the sentence's face, inside a table cell the cell's.
   gold: {
-    ...tokens.type.data,
     ...tokens.tabularFigures,
     color: tokens.palette.gold,
+  },
+  dimColour: {
+    color: tokens.palette.boneDim,
   },
   bone: {
     color: tokens.palette.bone,
@@ -448,11 +452,11 @@ const styles = StyleSheet.create({
     gap: tokens.layout.stackGap,
   },
   paidMark: {
-    ...tokens.type.body,
+    ...tokens.type.label,
     color: tokens.palette.gold,
   },
   link: {
-    ...tokens.type.body,
+    ...tokens.type.control,
     color: tokens.palette.bone,
     textDecorationLine: 'underline',
   },
@@ -469,7 +473,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   name: {
-    ...tokens.type.body,
+    ...tokens.type.control,
     color: tokens.palette.bone,
     flexShrink: 1,
   },
@@ -494,7 +498,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   headCell: {
-    ...tokens.type.fine,
+    ...tokens.type.label,
     color: tokens.palette.boneDim,
   },
   seed: {
@@ -515,7 +519,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   actionLabel: {
-    ...tokens.type.body,
+    ...tokens.type.control,
     color: tokens.palette.bone,
   },
 })

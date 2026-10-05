@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 
 import { tokens } from '../design/tokens'
+import { useLook } from './look'
 import { Sheet } from './Sheet'
 
 // §7.1's rules sheet: the one source for how the rite works, opened from home's About control and,
@@ -88,7 +89,9 @@ function Heading({ children }: { children: ReactNode }) {
 }
 
 function Para({ children }: { children: ReactNode }) {
-  return <Text style={styles.para}>{children}</Text>
+  // The running-text face is still a candidate; home's dev chip switches it.
+  const { text } = useLook()
+  return <Text style={[styles.para, { fontFamily: tokens.textCandidates[text] }]}>{children}</Text>
 }
 
 const styles = StyleSheet.create({
@@ -111,7 +114,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   closeLabel: {
-    ...tokens.type.bodyMedium,
+    ...tokens.type.control,
     color: tokens.palette.bone,
   },
   content: {

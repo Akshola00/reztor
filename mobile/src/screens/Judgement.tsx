@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     minHeight: tokens.layout.minTouchTarget,
   },
   name: {
-    ...tokens.type.fine,
+    ...tokens.type.label,
     color: tokens.palette.bone,
     maxWidth: '90%',
   },
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   withholdLabel: {
-    ...tokens.type.body,
+    ...tokens.type.control,
     color: tokens.palette.bone,
   },
   markSlot: {

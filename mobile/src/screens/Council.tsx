@@ -218,8 +218,9 @@ const styles = StyleSheet.create({
     color: tokens.palette.bone,
     flex: 1,
   },
+  // A player's name, in the display face like every name; the message beside it stays in the sans.
   name: {
-    fontFamily: tokens.fontFamily.uiMedium,
+    fontFamily: tokens.fontFamily.display,
   },
   inputRow: {
     marginTop: tokens.layout.stackGap,
@@ -237,7 +238,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: tokens.layout.screenGutter,
   },
   left: {
-    ...tokens.type.fine,
+    ...tokens.type.label,
     ...tokens.tabularFigures,
     color: tokens.palette.boneDim,
   },
@@ -249,7 +250,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sendLabel: {
-    ...tokens.type.body,
+    ...tokens.type.control,
     color: tokens.palette.bone,
   },
   sendLabelDisabled: {

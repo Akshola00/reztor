@@ -19,7 +19,7 @@ import { tokens } from '../design/tokens'
 // The rules control is the About mark — a square on its point — and opens §7.1's rules sheet. It is
 // the same for every role and every stage, and sits up here, out of thumb reach during Offering.
 //
-// The timer is the interface face at the t-stage step with tabular figures, in bone, and while the
+// The timer is Grenze Gotisch at the t-stage step with tabular lining figures, in bone, and while the
 // stage runs it beats: a swell in scale and a dip in opacity, quickening at each of
 // art.timerBeatThresholds. Transform and opacity only, on the UI thread (hard rule 3). Under reduce
 // motion it holds still and only the number changes.
@@ -180,6 +180,7 @@ const styles = StyleSheet.create({
   },
   meta: {
     ...tokens.type.data,
+    ...tokens.tabularFigures,
     color: tokens.palette.boneDim,
   },
   // Scales about its own right edge, so the beat never pushes the number off the screen's edge.
@@ -189,7 +190,6 @@ const styles = StyleSheet.create({
   },
   timer: {
     ...tokens.type.stage,
-    fontFamily: tokens.fontFamily.uiMedium,
     ...tokens.tabularFigures,
     color: tokens.palette.bone,
   },

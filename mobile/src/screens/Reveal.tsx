@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     gap: tokens.art.namePlateGap,
   },
   name: {
-    ...tokens.type.fine,
+    ...tokens.type.label,
     color: tokens.palette.bone,
     maxWidth: '90%',
   },
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     marginTop: tokens.layout.stackGap,
   },
   withholdLabel: {
-    ...tokens.type.fine,
+    ...tokens.type.label,
     color: tokens.palette.boneDim,
   },
   line: {

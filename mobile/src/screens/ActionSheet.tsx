@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
   },
   rowLabel: {
-    ...tokens.type.fine,
+    ...tokens.type.label,
     color: tokens.palette.boneDim,
   },
   choice: {
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
     opacity: tokens.art.coldTokenOpacity,
   },
   name: {
-    ...tokens.type.fine,
+    ...tokens.type.label,
     color: tokens.palette.bone,
     maxWidth: '90%',
   },
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
     gap: tokens.art.skrGap,
   },
   costText: {
-    ...tokens.type.fine,
+    ...tokens.type.label,
     ...tokens.tabularFigures,
     color: tokens.palette.boneDim,
   },
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cardName: {
-    ...tokens.type.fine,
+    ...tokens.type.label,
     color: tokens.palette.boneDim,
   },
   cardReading: {

@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
     gap: tokens.art.namePlateGap,
   },
   name: {
-    ...tokens.type.fine,
+    ...tokens.type.label,
     color: tokens.palette.bone,
     maxWidth: '100%',
     textAlign: 'center',

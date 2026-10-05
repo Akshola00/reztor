@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   confirmLabel: {
-    ...tokens.type.body,
+    ...tokens.type.control,
     color: tokens.palette.bone,
   },
   graceCount: {
@@ -660,7 +660,7 @@ const styles = StyleSheet.create({
     ...tokens.material.insetStoneFace,
   },
   devLabel: {
-    ...tokens.type.fine,
+    ...tokens.type.label,
     color: tokens.palette.boneDim,
   },
 })

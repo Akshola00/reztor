@@ -111,10 +111,14 @@ const radii = {
 //
 // One display weight only. Item 1 judged Grenze Gotisch 400 against 700 on device and 700
 // ships; the 400 face was dropped rather than left loaded and unused.
+//
+// Since the type-role remap, Grenze Gotisch is the interface: every short string — buttons, labels,
+// names, numbers, headings. The sans (`uiRegular`, `uiMedium`) carries running text only: chat
+// bodies, the rules sheet's paragraphs, and sentence-length notices and errors.
 const fontFamily = {
   display: 'GrenzeGotisch_700Bold',
   // The owner's choice in the home rebuild, replacing IBM Plex Sans, which read as an office face.
-  // Loaded at 600 only — the weight judged on the device — so both interface roles share it.
+  // Loaded at 600 only — the weight judged on the device — so both text roles share it.
   uiRegular: 'BarlowSemiCondensed_600SemiBold',
   uiMedium: 'BarlowSemiCondensed_600SemiBold',
   // §7.8: the Reckoning's role seed is set monospace, the one place §4's ban on monospace does not
@@ -124,9 +128,12 @@ const fontFamily = {
 } as const
 
 // §3.2. `lineHeight` is the doc's ratio multiplied out and left unrounded, because React
-// Native wants an absolute value. Family per §3.2's usage lists: Grenze Gotisch carries the
-// board percentage, stage names, role reveal and the Reckoning headline, and is never set
-// below 20.
+// Native wants an absolute value. Family per §3.2's roles as remapped by the owner: Grenze Gotisch
+// sets every short string, with its floor lowered from 20 to 14; the sans sets running text.
+//
+// Every number in Grenze takes `tabularFigures`. Its default digits are old-style (3, 4, 5, 7 and 9
+// descend about 0.1em); its `tnum` feature substitutes tabular *lining* figures, all 0.500em wide
+// and 0.58em tall, which are what makes a 14px number readable.
 //
 // `heart` keeps its name from when the percentage sat under a drawn vessel. It is now §3.2's
 // board-percentage step and nothing else; renaming it would churn every call site for nothing.
@@ -135,19 +142,25 @@ const type = {
   display: { fontSize: 32, lineHeight: 35.2, fontFamily: fontFamily.display },
   stage: { fontSize: 20, lineHeight: 24, fontFamily: fontFamily.display },
   body: { fontSize: 15, lineHeight: 22.5, fontFamily: fontFamily.uiRegular },
-  data: { fontSize: 14, lineHeight: 16.8, fontFamily: fontFamily.uiRegular },
+  // Credits, counts, timers, the round — numbers and the shortest readouts. Grenze at the floor.
+  data: { fontSize: 14, lineHeight: 16.8, fontFamily: fontFamily.display },
+  // Small running text only — a one-line note such as the Reckoning's "In SKR." Sans, because
+  // Grenze does not go below 14.
   fine: { fontSize: 12, lineHeight: 15.6, fontFamily: fontFamily.uiRegular },
-  // §7.1: the lobby's invite code, "large enough to read aloud across a room". The t-heart step,
-  // but in the interface face rather than Grenze Gotisch: the code is typed by hand from what is read out,
-  // and blackletter capitals are exactly the shapes a reader confuses. Chosen in item 3.
-  code: { fontSize: 56, lineHeight: 56, fontFamily: fontFamily.uiMedium },
-  // The home rebuild's steps, each an existing size in a different role. Buttons take the interface
-  // face's medium role; the wordmark is the t-heart step in the display face; a code cell holds one
-  // character of a gathering code at the t-display step, in the interface face for the same reason
-  // `code` is.
-  bodyMedium: { fontSize: 15, lineHeight: 22.5, fontFamily: fontFamily.uiMedium },
+  // Labels above fields and rows, and names in rows: what `fine` used to carry for short strings,
+  // raised to Grenze's floor of 14.
+  label: { fontSize: 14, lineHeight: 16.8, fontFamily: fontFamily.display },
+  // Button and control labels, and names set at reading size. The body step, in Grenze.
+  control: { fontSize: 15, lineHeight: 22.5, fontFamily: fontFamily.display },
+  // §7.1: the lobby's invite code, "large enough to read aloud across a room". The t-heart step. It
+  // was in the interface face because blackletter capitals are shapes a reader confuses; since the
+  // remap it is Grenze like every other short string, checked against the server's alphabet on the
+  // device.
+  code: { fontSize: 56, lineHeight: 56, fontFamily: fontFamily.display },
+  // The home rebuild's steps. The wordmark is the t-heart step in the display face; a code cell
+  // holds one character of a gathering code at the t-display step.
   wordmark: { fontSize: 56, lineHeight: 56, fontFamily: fontFamily.display },
-  codeCell: { fontSize: 32, lineHeight: 35.2, fontFamily: fontFamily.uiMedium },
+  codeCell: { fontSize: 32, lineHeight: 35.2, fontFamily: fontFamily.display },
 } as const
 
 // §3.2 / §10.1. React Native does not expose font-variant-numeric; this is the closest the
@@ -355,7 +368,7 @@ const art = {
   // taps is worth more than the tracking costs.
   percentDigitSlotRatio: 0.52,
 
-  // §7.3 writes SKR as "⟡" (U+27E1). That codepoint is *not* in the interface face (Barlow Semi
+  // §7.3 writes SKR as "⟡" (U+27E1). That codepoint is *not* in the sans (Barlow Semi
   // Condensed; IBM Plex Sans before it): the shipped TTF's cmap returns glyph 0 for it, so as text
   // Android would silently substitute some other face in a product that otherwise controls both of
   // its faces. It is drawn as SVG instead. Barlow has no "→" (U+2192) either, so the tier face's
@@ -606,6 +619,15 @@ const home = {
 
 const homeFaces = makeHomeFaces(palette)
 
+// The running-text face, awaiting the owner's choice: Barlow Semi Condensed as it is, or PT Sans.
+// Since the remap the sans sets paragraphs only, so the one test is reading at 15. PT Sans 400 has
+// Barlow's x-height (0.500em against 0.511em) but is about 8% wider and a regular rather than a
+// semibold weight — open counters and natural spacing instead of a condensed, heavy line.
+const textCandidates = {
+  barlow: fontFamily.uiRegular,
+  ptSans: 'PTSans_400Regular',
+} as const
+
 export const tokens = {
   palette,
   material,
@@ -619,4 +641,5 @@ export const tokens = {
   cold,
   homeFaces,
   home,
+  textCandidates,
 } as const

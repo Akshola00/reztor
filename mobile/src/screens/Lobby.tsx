@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
     gap: tokens.layout.stackGap,
   },
   label: {
-    ...tokens.type.fine,
+    ...tokens.type.label,
     color: tokens.palette.boneDim,
   },
   code: {
@@ -391,13 +391,13 @@ const styles = StyleSheet.create({
     borderRadius: tokens.art.voteDisc / 2,
   },
   name: {
-    ...tokens.type.body,
+    ...tokens.type.control,
     color: tokens.palette.bone,
     flexShrink: 1,
     flexGrow: 1,
   },
   stakeMark: {
-    ...tokens.type.fine,
+    ...tokens.type.label,
     color: tokens.palette.boneFaintText,
   },
   // §3.1: --gold is for SKR, and a held stake is SKR.
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stakeLabel: {
-    ...tokens.type.body,
+    ...tokens.type.control,
     color: tokens.palette.gold,
   },
   stakeLabelDisabled: {
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
     marginBottom: tokens.layout.sectionGap,
   },
   leaveLabel: {
-    ...tokens.type.body,
+    ...tokens.type.control,
     color: tokens.palette.bone,
   },
 })

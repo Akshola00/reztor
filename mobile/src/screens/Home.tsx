@@ -73,6 +73,7 @@ type HomeParams = {
   // Dev only, so captures can be driven by deep link: a candidate look, and a refusal to show.
   primary?: string
   sigils?: string
+  text?: string
   refusal?: string
 }
 
@@ -101,7 +102,7 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
 
   const look = useLook()
   const { palette } = tokens
-  const styles = useMemo(() => makeStyles(look.primary), [look.primary])
+  const styles = useMemo(() => makeStyles(look.primary, look.text), [look.primary, look.text])
 
   // Dev only: apply a candidate look from the deep link that opened home.
   useEffect(() => {
@@ -111,8 +112,9 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
       next.primary = params.primary
     }
     if (params.sigils !== undefined) next.sigils = params.sigils !== '0'
+    if (params.text === 'barlow' || params.text === 'ptSans') next.text = params.text
     looks.set(next)
-  }, [params.primary, params.sigils])
+  }, [params.primary, params.sigils, params.text])
   // Dev only: a refusal named by the deep link, shown through the same lines a real one uses.
   const refusal = DEV_TOOLS ? params.refusal : undefined
   const devRefusal =
@@ -342,7 +344,7 @@ function WalletStrip({
   return (
     <View style={styles.strip}>
       <View style={styles.stripRow}>
-        <View>
+        <View style={styles.stripId}>
           <Text style={styles.label}>Your wallet, on devnet</Text>
           <Text style={styles.address} accessibilityLabel={`Wallet ${wallet}`}>
             {shortAddress(wallet)}
@@ -441,6 +443,11 @@ function CodeCells({ code, onChange, styles }: { code: string; onChange: (code: 
       <TextInput
         value={code}
         onChangeText={change}
+        // The caret lives at the end of the code whatever cell the tap landed on: the cells show a
+        // code filled left to right, so typing appends and backspace takes the last character.
+        // Without this a tap on the first cell put the caret before the code, and backspace there
+        // deleted nothing.
+        selection={{ start: code.length, end: code.length }}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         caretHidden
@@ -545,6 +552,11 @@ function DevTools({
         ['flame', 'B flame'],
         ['coldEdge', 'C cold edge'],
       ])}
+      <Text style={styles.label}>Dev: running text</Text>
+      {chips('text', [
+        ['barlow', 'Barlow'],
+        ['ptSans', 'PT Sans'],
+      ])}
       <Text style={styles.label}>Dev: idle board</Text>
       {chips('sigils', [
         [true, 'Sigils'],
@@ -561,7 +573,7 @@ function DevTools({
   )
 }
 
-function makeStyles(primary: PrimaryStyle) {
+function makeStyles(primary: PrimaryStyle, text: Look['text']) {
   const { layout, home, palette, type, homeFaces: faces } = tokens
   return StyleSheet.create({
     root: {
@@ -601,7 +613,7 @@ function makeStyles(primary: PrimaryStyle) {
       gap: layout.stackGap,
     },
     label: {
-      ...type.fine,
+      ...type.label,
       color: palette.boneDim,
     },
     // The name: label and text centred over the field, like the code cells beneath.
@@ -610,14 +622,16 @@ function makeStyles(primary: PrimaryStyle) {
     },
     para: {
       ...type.body,
+      fontFamily: tokens.textCandidates[text],
       color: palette.boneDim,
     },
     notice: {
       ...type.body,
+      fontFamily: tokens.textCandidates[text],
       color: palette.bone,
     },
     input: {
-      ...type.body,
+      ...type.control,
       ...faces.field,
       color: palette.bone,
       minHeight: layout.minTouchTarget,
@@ -638,6 +652,7 @@ function makeStyles(primary: PrimaryStyle) {
     },
     cellText: {
       ...type.codeCell,
+      ...tokens.tabularFigures,
       color: palette.bone,
     },
     // Laid over all four cells and invisible: it takes the touches, the keystrokes and the paste
@@ -681,7 +696,7 @@ function makeStyles(primary: PrimaryStyle) {
       gap: tokens.art.skrGap,
     },
     buttonLabel: {
-      ...type.bodyMedium,
+      ...type.control,
       color: palette.bone,
     },
     disabledLabel: {
@@ -707,9 +722,15 @@ function makeStyles(primary: PrimaryStyle) {
       justifyContent: 'space-between',
       gap: layout.stackGap,
     },
+    stripId: {
+      flex: 1,
+    },
+    // The one short string left in the sans: a base58 address mixes cases, and Grenze's blackletter
+    // capitals (T, K) became pen forms that had to be decoded at this size. It is checked character
+    // by character, like the role seed, so it is set for checking.
     address: {
       ...type.stage,
-      fontFamily: type.bodyMedium.fontFamily,
+      fontFamily: tokens.fontFamily.uiMedium,
       ...tokens.tabularFigures,
       color: palette.bone,
     },

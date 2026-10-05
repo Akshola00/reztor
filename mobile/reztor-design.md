@@ -140,29 +140,37 @@ Each seat also carries a distinct geometric sigil (§5.2). Identity is never car
 
 ### 3.2 Typography
 
-Two families, both from Google Fonts, both self-hosted and preloaded.
+Two families, both from Google Fonts, both self-hosted and preloaded. **Since the owner's type-role remap, the display face is the interface**: Grenze Gotisch sets every short string on screen, and the sans is left with running text.
 
-**Display — Grenze Gotisch 700.** Gothic-inflected without being blackletter, so it carries the rite without becoming illegible. Used for: the board percentage, stage names, role reveal, the Reckoning headline, player names in Judgement, and the home wordmark. Never below 20px. Its default digits are proportional, so the board percentage keeps its hand-fixed digit slots.
+**Display — Grenze Gotisch 700. Every short string.** Buttons and controls, labels, player names everywhere, headings and section titles, and every number — the code cells and the lobby's code, the stage timer, the credit counter, the tier face, the board percentage, the Reckoning table. **Floor: 14px**, overriding the old 20px floor. Each step was checked on the emulator: labels at 14, controls and names at 15, the timer at 20 and the code cells at 32 all read cleanly. One string was moved back to the sans, below.
 
-**Interface — Barlow Semi Condensed 600.** Chosen by the owner in the home rebuild over IBM Plex Sans, which read as an office face, and over Chakra Petch and Rajdhani. Loaded at 600 only, the weight judged on the device. Used for everything else. Its default digits are proportional, but its `tnum` feature sets all ten to one width, so `tokens.tabularFigures` goes on anything that counts and the credit balance does not jitter while it drains.
+**Grenze's figures.** Its default digits are old-style — 3, 4, 5, 7 and 9 descend about 0.1em — which muddies a 14px number. Its `tnum` feature substitutes tabular _lining_ figures, all 0.500em wide and 0.58em tall, so `tokens.tabularFigures` goes on every Grenze number: that one declaration makes it both fixed-width and lining, confirmed on the device. The board percentage keeps its hand-fixed digit slots and, for now, the old-style default figures.
+
+**Running text — Barlow Semi Condensed 600 (candidate: PT Sans 400).** Chat message bodies, the rules sheet's paragraphs, and sentence-length notices and errors — anything that reads as a sentence. Also the `--t-fine` step, which sits below Grenze's floor and is kept for one-line notes. The owner chooses between the two faces on a dev chip.
+
+**The one short string in the sans: the wallet address.** Base58 mixes cases, and Grenze's blackletter capitals (T, K) became pen forms that had to be decoded at 20px. It is checked character by character, like the role seed.
+
+**Grenze's capitals in a gathering code.** At 32 they are crisp, but X, T, A, and the N–U minim pair are true blackletter forms, which is why the code was once kept in the sans: a code is read aloud across a room. Watch for misreadings at the playtest.
 
 Neither face carries U+27E1 (SKR) or U+2192 (the tier face's arrow): both are drawn as SVG marks, never set as text.
 
 ```css
---type-display: 'Grenze Gotisch', Georgia, serif;
---type-ui: 'Barlow Semi Condensed', system-ui, sans-serif;
+--type-display: 'Grenze Gotisch', Georgia, serif; /* every short string */
+--type-text: 'Barlow Semi Condensed', system-ui, sans-serif; /* running text */
 ```
 
 Scale, mobile-first:
 
-| Token         | Size / line-height | Use                            |
-| :------------ | :----------------- | :----------------------------- |
-| `--t-heart`   | 56 / 1.0           | Board percentage               |
-| `--t-display` | 32 / 1.1           | Role reveal, Reckoning verdict |
-| `--t-stage`   | 20 / 1.2           | Stage name, player names       |
-| `--t-body`    | 15 / 1.5           | Chat, explanations             |
-| `--t-data`    | 14 / 1.2           | Credits, counts, timers        |
-| `--t-fine`    | 12 / 1.3           | Timestamps, secondary labels   |
+| Token         | Size / line-height | Face    | Use                                                        |
+| :------------ | :----------------- | :------ | :--------------------------------------------------------- |
+| `--t-heart`   | 56 / 1.0           | display | Board percentage, wordmark, the lobby code                 |
+| `--t-display` | 32 / 1.1           | display | Role reveal, Reckoning verdict, code cells                 |
+| `--t-stage`   | 20 / 1.2           | display | Stage names, headings, the primary action, the stage timer |
+| `--t-control` | 15 / 1.5           | display | Buttons and controls, names at reading size                |
+| `--t-body`    | 15 / 1.5           | text    | Chat bodies, paragraphs, notices                           |
+| `--t-data`    | 14 / 1.2           | display | Credits, counts, the round                                 |
+| `--t-label`   | 14 / 1.2           | display | Labels, names in rows, table headings                      |
+| `--t-fine`    | 12 / 1.3           | text    | One-line notes                                             |
 
 Body copy never exceeds 65 characters per line. No text is set in all caps — stage names use Grenze Gotisch in sentence case and get their weight from the typeface, not from letter-spacing.
 
@@ -253,7 +261,7 @@ There is no "Hollow" token state. The Hollow's conduit and token look exactly li
 
 Four conduits fill the width of the screen between small outer margins, separated by narrow gaps of background. They fill upward from their bases. Each one's surface is a gentle convex arc rather than a flat line, and the owner's sigil token rides that surface. A short carved Threshold mark crosses each conduit at 60% of its height. A thin header sits above them — the rules control and the round, the percentage, the stage timer — and a controls row and the tap band sit below.
 
-**The header's two additions, from the home rebuild's refinements.** The rules control is the About mark (a square on its point) beside the round; it opens the rules sheet in every stage and sits at the top, out of thumb reach during Offering. The stage timer is set at `--t-stage` in the interface face with tabular figures, in `--bone`, and while the stage runs it beats — a swell in scale and a dip in opacity, transform and opacity only — quickening at 20, 10 and 5 seconds left. Under reduce motion it holds still.
+**The header's two additions, from the home rebuild's refinements.** The rules control is the About mark (a square on its point) beside the round; it opens the rules sheet in every stage and sits at the top, out of thumb reach during Offering. The stage timer is set at `--t-stage` in Grenze Gotisch with tabular lining figures, in `--bone`, and while the stage runs it beats — a swell in scale and a dip in opacity, transform and opacity only — quickening at 20, 10 and 5 seconds left. Under reduce motion it holds still.
 
 This is the hero image of the product: four columns of cold fire in the dark, and the darkness between them is the background itself. Spend the boldness here and keep everything else quiet.
 
