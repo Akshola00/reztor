@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { LobbyAck, Side } from '../../protocol/generated'
 import { IdleBoard } from '../art/IdleBoard'
 import { Marking } from '../art/Marking'
-import { SkrMark } from '../art/SkrMark'
+import { CoinMark } from '../art/CoinMark'
 import { tokens, type PrimaryStyle } from '../design/tokens'
 import { CODE_ALPHABET, CODE_LENGTH, DEV_TOOLS, NAME_MAX, session, type BootTarget } from '../net/session'
 import { BUY_IN_SKR, shortAddress } from '../solana/chain'
@@ -107,7 +107,9 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
   useEffect(() => {
     if (!DEV_TOOLS) return
     const next: Partial<Look> = {}
-    if (params.primary === 'litStone' || params.primary === 'flame') next.primary = params.primary
+    if (params.primary === 'litStone' || params.primary === 'flame' || params.primary === 'coldEdge') {
+      next.primary = params.primary
+    }
     if (params.sigils !== undefined) next.sigils = params.sigils !== '0'
     looks.set(next)
   }, [params.primary, params.sigils])
@@ -244,7 +246,7 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
           ) : (
             <>
               <View style={styles.group}>
-                <Text style={styles.label}>Your name</Text>
+                <Text style={[styles.label, styles.labelCentred]}>Your name</Text>
                 <TextInput
                   value={name}
                   onChangeText={setName}
@@ -267,16 +269,14 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
               />
 
               <View style={styles.group}>
-                <Text style={styles.label}>Or join one by its code</Text>
-                <View style={styles.codeRow}>
-                  <CodeCells code={code} onChange={setCode} styles={styles} />
-                  <Button
-                    label="Join"
-                    disabled={!nameOk || !codeOk || busy || !online}
-                    onPress={() => run(() => session.joinLobby(code, trimmed, wallet))}
-                    styles={styles}
-                  />
-                </View>
+                <Text style={[styles.label, styles.labelCentred]}>Or join one by its code</Text>
+                <CodeCells code={code} onChange={setCode} styles={styles} />
+                <Button
+                  label="Join"
+                  disabled={!nameOk || !codeOk || busy || !online}
+                  onPress={() => run(() => session.joinLobby(code, trimmed, wallet))}
+                  styles={styles}
+                />
               </View>
             </>
           )}
@@ -393,7 +393,7 @@ function Faucet({
         accessibilityState={{ disabled: busy }}
         style={[styles.button, styles.faucet]}
       >
-        <SkrMark colour={busy ? styles.disabledLabel.color : styles.gold.color} />
+        <CoinMark colour={busy ? styles.disabledLabel.color : styles.gold.color} />
         <Text style={[styles.buttonLabel, busy ? styles.disabledLabel : styles.gold]}>{label}</Text>
       </Pressable>
       {result === null ? null : (
@@ -422,12 +422,19 @@ function CodeCells({ code, onChange, styles }: { code: string; onChange: (code: 
     else if (typed.length - code.length >= CODE_LENGTH) onChange(typed.slice(-CODE_LENGTH))
   }
 
-  // The cell the next character lands in, or the last one once the code is whole.
-  const active = Math.min(code.length, CODE_LENGTH - 1)
+  // Empty, awaiting the next character (only while the input has focus), filled, or — at four —
+  // complete, when every cell takes the sealed rim.
+  const complete = code.length === CODE_LENGTH
+  const cellStyle = (i: number) => [
+    styles.cell,
+    i < code.length ? styles.cellFilled : null,
+    complete ? styles.cellComplete : null,
+    focused && !complete && i === code.length ? styles.cellAwaiting : null,
+  ]
   return (
     <View style={styles.cells}>
       {Array.from({ length: CODE_LENGTH }, (_, i) => (
-        <View key={i} style={[styles.cell, focused && i === active ? styles.cellFocused : null]}>
+        <View key={i} style={cellStyle(i)}>
           <Text style={styles.cellText}>{code[i] ?? ''}</Text>
         </View>
       ))}
@@ -496,7 +503,7 @@ function Button({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: disabled === true, selected }}
-      style={[styles.button, selected ? styles.chipSelected : null]}
+      style={[styles.button, selected ? styles.chipSelected : null, disabled ? styles.buttonDisabled : null]}
     >
       <Text style={[styles.buttonLabel, disabled ? styles.disabledLabel : null]}>{label}</Text>
     </Pressable>
@@ -536,6 +543,7 @@ function DevTools({
       {chips('primary', [
         ['litStone', 'A lit stone'],
         ['flame', 'B flame'],
+        ['coldEdge', 'C cold edge'],
       ])}
       <Text style={styles.label}>Dev: idle board</Text>
       {chips('sigils', [
@@ -596,6 +604,10 @@ function makeStyles(primary: PrimaryStyle) {
       ...type.fine,
       color: palette.boneDim,
     },
+    // The name: label and text centred over the field, like the code cells beneath.
+    labelCentred: {
+      textAlign: 'center',
+    },
     para: {
       ...type.body,
       color: palette.boneDim,
@@ -610,14 +622,11 @@ function makeStyles(primary: PrimaryStyle) {
       color: palette.bone,
       minHeight: layout.minTouchTarget,
       paddingHorizontal: layout.screenGutter,
-    },
-    codeRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: layout.stackGap,
+      textAlign: 'center',
     },
     cells: {
       flexDirection: 'row',
+      alignSelf: 'center',
       gap: layout.stackGap / 2,
     },
     cell: {
@@ -642,7 +651,9 @@ function makeStyles(primary: PrimaryStyle) {
       bottom: 0,
       opacity: 0,
     },
-    cellFocused: faces.fieldFocused,
+    cellAwaiting: faces.cellAwaiting,
+    cellFilled: faces.cellFilled,
+    cellComplete: faces.cellComplete,
     primary: {
       ...faces.primary[primary],
       minHeight: home.primaryHeight,
@@ -650,7 +661,8 @@ function makeStyles(primary: PrimaryStyle) {
       justifyContent: 'center',
     },
     primaryDisabled: {
-      ...faces.secondary,
+      ...faces.disabled,
+      borderRadius: tokens.radii.chip,
       minHeight: home.primaryHeight,
       alignItems: 'center',
       justifyContent: 'center',
@@ -675,6 +687,7 @@ function makeStyles(primary: PrimaryStyle) {
     disabledLabel: {
       color: palette.boneFaint,
     },
+    buttonDisabled: faces.disabled,
     chipSelected: { ...faces.field, ...faces.fieldFocused },
     // §3.1: gold is for SKR only, and this button fetches SKR.
     gold: {

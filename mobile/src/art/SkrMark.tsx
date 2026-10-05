@@ -27,7 +27,8 @@ const POINTS: [number, number][] = [
 
 // One quadratic per side. Each control point is the straight chord's midpoint pulled toward the
 // centre, which is what bows the side inward instead of leaving it flat.
-const PATH = `${POINTS.map((point, i) => {
+/** The mark's outline in a `sigilBox` square, shared with the faucet's coin. */
+export const SKR_PATH = `${POINTS.map((point, i) => {
   const next = POINTS[(i + 1) % POINTS.length]
   const chordX = (point[0] + next[0]) / 2
   const chordY = (point[1] + next[1]) / 2
@@ -40,7 +41,7 @@ const PATH = `${POINTS.map((point, i) => {
 export function SkrMark({ colour, size = tokens.art.skrMarkSize }: SkrMarkProps) {
   return (
     <Svg width={size} height={size} viewBox={`0 0 ${BOX} ${BOX}`}>
-      <Path d={PATH} fill="none" stroke={colour} strokeWidth={tokens.art.sigilStroke} strokeLinejoin="miter" />
+      <Path d={SKR_PATH} fill="none" stroke={colour} strokeWidth={tokens.art.sigilStroke} strokeLinejoin="miter" />
     </Svg>
   )
 }

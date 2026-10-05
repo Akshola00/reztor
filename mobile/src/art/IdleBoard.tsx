@@ -16,8 +16,9 @@ import { Conduit, conduitGeometry, surfaceArc } from './Conduit'
 import { RidingToken } from './RidingToken'
 import type { SeatNumber } from './Sigil'
 
-// The home screen's art: four conduits at one low fixed level, the board before any rite. It is
-// decoration, never state — every lane holds `home.idleBoardFill` and nothing writes to it.
+// The home screen's art: four conduits at fixed, staggered low levels, the board before any rite.
+// It is decoration, never state — each lane holds its value from `home.idleBoardFills` and nothing
+// writes to it.
 //
 // One motion only: a glow that swells on all four frontiers together and settles, laid over the
 // Conduit's own surface along the same arc. The four rise and fall as one, so nothing implies a
@@ -36,7 +37,7 @@ type IdleBoardProps = {
 
 export function IdleBoard({ width, height, sigils }: IdleBoardProps) {
   const { art, home, palette } = tokens
-  const [units] = useState(() => makeMutable(CAPACITY * home.idleBoardFill))
+  const [units] = useState(() => home.idleBoardFills.map((fill) => makeMutable(CAPACITY * fill)))
   const columnWidth = Math.floor((width - art.conduitGap * (SEATS.length - 1)) / SEATS.length)
 
   const reduceMotion = useReducedMotion()
@@ -49,8 +50,8 @@ export function IdleBoard({ width, height, sigils }: IdleBoardProps) {
 
   // The glow sits exactly where the Conduit's surface layer does.
   const { arc, surfaceHeight, surfacePad } = surfaceArc(columnWidth)
-  const surfaceTop =
-    conduitGeometry(CAPACITY * home.idleBoardFill, CAPACITY, height, art.tokenDisc).surfaceTranslateY - surfacePad
+  const surfaceTop = (fill: number) =>
+    conduitGeometry(CAPACITY * fill, CAPACITY, height, art.tokenDisc).surfaceTranslateY - surfacePad
   // The pulse strokes wider than the surface layer's own padding allows, so its box grows by the
   // extra half-width each way.
   const spill = art.frontierGlowHeight * home.idlePulseWidthScale
@@ -62,10 +63,10 @@ export function IdleBoard({ width, height, sigils }: IdleBoardProps) {
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      {SEATS.map((seat) => (
+      {SEATS.map((seat, i) => (
         <View key={seat} style={{ width: columnWidth, height }}>
           <Conduit
-            units={units}
+            units={units[i]}
             capacity={CAPACITY}
             dormant={false}
             width={columnWidth}
@@ -73,7 +74,7 @@ export function IdleBoard({ width, height, sigils }: IdleBoardProps) {
             thresholdFraction={home.idleThreshold}
             crossed={false}
           />
-          <Animated.View style={[styles.glow, { top: surfaceTop - spill }, pulseStyle]}>
+          <Animated.View style={[styles.glow, { top: surfaceTop(home.idleBoardFills[i]) - spill }, pulseStyle]}>
             <Svg width={columnWidth} height={surfaceHeight + spill * 2}>
               <G y={spill}>
                 {art.frontierGlowLayers.map((layer) => (
@@ -96,7 +97,7 @@ export function IdleBoard({ width, height, sigils }: IdleBoardProps) {
               own={false}
               dormant={false}
               disconnected={false}
-              units={units}
+              units={units[i]}
               capacity={CAPACITY}
               height={height}
             />

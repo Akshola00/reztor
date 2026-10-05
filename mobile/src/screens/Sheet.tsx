@@ -18,7 +18,8 @@ type SheetProps = {
    */
   closeOnBack?: boolean
   style?: StyleProp<ViewStyle>
-  children: ReactNode
+  /** Content, or a function given the sheet's own animated close, for a close control inside it. */
+  children: ReactNode | ((close: () => void) => ReactNode)
 }
 
 export function Sheet({ onClose, closeOnBack = false, style, children }: SheetProps) {
@@ -56,7 +57,7 @@ export function Sheet({ onClose, closeOnBack = false, style, children }: SheetPr
       <Animated.View
         style={[styles.sheet, { paddingBottom: tokens.layout.sectionGap + insets.bottom }, style, sheetStyle]}
       >
-        {children}
+        {typeof children === 'function' ? children(close) : children}
       </Animated.View>
     </View>
   )

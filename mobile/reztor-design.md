@@ -251,7 +251,9 @@ There is no "Hollow" token state. The Hollow's conduit and token look exactly li
 
 ### 6.1 Composition
 
-Four conduits fill the width of the screen between small outer margins, separated by narrow gaps of background. They fill upward from their bases. Each one's surface is a gentle convex arc rather than a flat line, and the owner's sigil token rides that surface. A short carved Threshold mark crosses each conduit at 60% of its height. A thin header sits above them; a controls row and the tap band sit below.
+Four conduits fill the width of the screen between small outer margins, separated by narrow gaps of background. They fill upward from their bases. Each one's surface is a gentle convex arc rather than a flat line, and the owner's sigil token rides that surface. A short carved Threshold mark crosses each conduit at 60% of its height. A thin header sits above them — the rules control and the round, the percentage, the stage timer — and a controls row and the tap band sit below.
+
+**The header's two additions, from the home rebuild's refinements.** The rules control is the About mark (a square on its point) beside the round; it opens the rules sheet in every stage and sits at the top, out of thumb reach during Offering. The stage timer is set at `--t-stage` in the interface face with tabular figures, in `--bone`, and while the stage runs it beats — a swell in scale and a dip in opacity, transform and opacity only — quickening at 20, 10 and 5 seconds left. Under reduce motion it holds still.
 
 This is the hero image of the product: four columns of cold fire in the dark, and the darkness between them is the background itself. Spend the boldness here and keep everything else quiet.
 
@@ -329,10 +331,12 @@ The crossing is the one orchestrated moment:
 Six places, not twelve screens. Everything inside a match is one screen driven by the server's stage — see BUILD-PLAN.md §3 for the routes.
 
 1. **Splash** — native, held until the fonts resolve. No content of its own.
-2. **Home** — two states, both over an idle board: four conduits at one low fixed level, decoration and never state, whose only motion is one slow pulse of glow on the frontiers.
+2. **Home** — two states, both over an idle board: four conduits at fixed, staggered low levels, decoration and never state, whose only motion is one slow pulse of glow on the frontiers.
    - **No wallet**: the wordmark, the idle board, one primary action (connect a wallet), and the About control.
-   - **A wallet**: a wallet strip shown off rather than tucked away (the shortened address, the faucet in `--gold`, a way out), then a name, the primary action (open a gathering), join by code in four character cells, and the About control.
-   - **About is behind a control, not inline.** It is labelled _"How the rite works"_, sits as tall as the primary action so a new player finds it unprompted, and opens the rules sheet — one source for home and the match, though the match has no control for it yet. It scrolls, and closes on a tap outside or on hardware back.
+   - **A wallet**: a wallet strip shown off rather than tucked away (the shortened address, the faucet in `--gold` behind two struck stone coins bearing the SKR mark, a way out), then a name (label and text centred), the primary action (open a gathering), join by code in four character cells with Join on its own full-width line beneath them, and the About control.
+   - **The primary action is unmistakable when it can be pressed, and visibly not when it cannot**: enabled it takes its full face; disabled it becomes an empty slot cut into the stone, darker than any face, with a faint label. Every disabled control on home takes that slot.
+   - **The code cells have four states**: empty; awaiting the next character (a full-bone rim, only while typing); filled (a lit stone face); and complete, when all four take the bone rim and the row reads as sealed.
+   - **About is behind a control, not inline.** It is labelled _"How the rite works"_, sits as tall as the primary action so a new player finds it unprompted, and opens the rules sheet — one source for home and the match, where the header's rules control opens it. It scrolls, and closes on its Close control, on a tap outside, or on hardware back.
 3. **Lobby** — the invite code set large enough to read aloud across a room, seats filling as players arrive, and a leave control.
 4. **Match — one screen.** It never remounts; a remount loses the conduit animation state and reads as a flicker.
    - **The Marking** plays as a full-screen overlay at match start and lifts to reveal the board beneath it. It is not a route.

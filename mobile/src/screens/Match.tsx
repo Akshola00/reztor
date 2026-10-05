@@ -25,6 +25,7 @@ import { Council } from './Council'
 import { Judgement } from './Judgement'
 import { LiveHeader, Offering, usePolled } from './Offering'
 import { ActionSheet } from './ActionSheet'
+import { RulesSheet } from './RulesSheet'
 import { Reveal } from './Reveal'
 
 // /match — one screen for the whole rite, driven by the server's stage. The board is mounted once
@@ -282,6 +283,9 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
   // stake is forfeit; a second press, or Leave, leaves. With the sheet open, back closes the sheet
   // first — it is the thing on top.
   const [confirmLeave, setConfirmLeave] = useState(false)
+  // §7.1: the rules sheet can be opened at any time, from the header's rules control.
+  const [rulesOpen, setRulesOpen] = useState(false)
+  const openRules = useCallback(() => setRulesOpen(true), [])
   const leaveMatch = useCallback(() => {
     // There is no leave message: closing the socket is the leave, and the server's grace clock
     // does the rest. The seat is forfeit either way.
@@ -296,16 +300,20 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
   useEffect(() => {
     if (__DEV__) console.log('[ui] sheet', sheetOpen ? 'open' : 'closed')
   }, [sheetOpen])
+  useEffect(() => {
+    if (__DEV__) console.log('[ui] rules', rulesOpen ? 'open' : 'closed')
+  }, [rulesOpen])
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (sheetOpen) setSheetOpen(false)
+      if (rulesOpen) setRulesOpen(false)
+      else if (sheetOpen) setSheetOpen(false)
       else if (confirmLeave) leaveMatch()
       else setConfirmLeave(true)
       return true
     })
     return () => sub.remove()
-  }, [sheetOpen, setSheetOpen, confirmLeave, leaveMatch])
+  }, [rulesOpen, sheetOpen, setSheetOpen, confirmLeave, leaveMatch])
 
   // Until the vote resolves on screen, the board must not announce it: BOARD_UPDATE marks the
   // ejected lane dormant on the same tick as VOTE_RESULT, so its conduit is held warm until the
@@ -411,6 +419,7 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
             readRound={readRound}
             readSecondsLeft={readSecondsLeft}
             readTotal={readTotal}
+            onRules={openRules}
           />
         }
       >
@@ -431,6 +440,9 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
           onClose={() => setSheetOpen(false)}
         />
       ) : null}
+
+      {/* The match's own back handler closes it, so the sheet does not register a second one. */}
+      {rulesOpen ? <RulesSheet onClose={() => setRulesOpen(false)} closeOnBack={false} /> : null}
 
       {marking ? <Marking role={initial.you.role} seat={seat} onDone={() => setMarking(false)} /> : null}
 

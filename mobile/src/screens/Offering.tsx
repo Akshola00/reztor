@@ -124,11 +124,13 @@ export function LiveHeader({
   readRound,
   readSecondsLeft,
   readTotal,
+  onRules,
 }: {
   winTarget: number
   readRound: () => number
   readSecondsLeft: () => number
   readTotal: () => number
+  onRules: () => void
 }) {
   // The spec names no formula for the percentage; this is the only reading that gives §6.1's own
   // 58% for its example board. Capped at 100 so a crossed board never reads 104%.
@@ -143,7 +145,9 @@ export function LiveHeader({
   const round = usePolled(readRound)
   const secondsLeft = usePolled(readSecondsLeft)
   // floor(total x 100 / winTarget) reaches 100 exactly when total reaches winTarget.
-  return <BoardHeader round={round} percent={percent} secondsLeft={secondsLeft} crossed={percent >= 100} />
+  return (
+    <BoardHeader round={round} percent={percent} secondsLeft={secondsLeft} crossed={percent >= 100} onRules={onRules} />
+  )
 }
 
 // §7.3: ticks down with tabular figures, shifts to toll below `creditsLow`, and pulses slowly

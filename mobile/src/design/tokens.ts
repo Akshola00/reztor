@@ -394,6 +394,15 @@ const art = {
   // Chosen in item 6.
   hollowMarkSize: 88,
 
+  // The stage timer's heartbeat, chosen in the home rebuild's refinements: at each beat the clock
+  // swells to this scale and its opacity falls to this, then settles. Bone at 0.6 over void still
+  // measures above 4.5:1, so no frame of the beat drops the number under the text floor.
+  timerBeatScale: 1.12,
+  timerBeatOpacity: 0.6,
+  // Seconds left at which the heartbeat quickens: above the first it is calm; at or under each it
+  // takes the next, faster period in motion.timerBeat.
+  timerBeatThresholds: [20, 10, 5],
+
   // §7.3's credit thresholds. Below the first the counter shifts to toll; below the second it
   // also pulses. The doc names both numbers.
   creditsLow: 100,
@@ -482,6 +491,9 @@ const cold = {
 // - flame: §3.1's proposed fifth use of fire, the single primary action on the entry screen and
 //   nowhere else. flameDeep face, flame rim, flameWhite label — bone measures only 4.14:1 on
 //   flameDeep, flameWhite 5.24:1.
+// - coldEdge: a stone face whose lit top edge is flameCold, with a flameWhite label (12.73:1 on
+//   stone). Fire only as a line and a label, so the button does not share the idle board's blue
+//   fill as a face.
 function makeHomeFaces(p: typeof palette) {
   const raised = {
     backgroundColor: p.stone,
@@ -503,6 +515,26 @@ function makeHomeFaces(p: typeof palette) {
     },
     // The cell or field being typed into. boneDim, never fire: §3.1 bans flame on focus rings.
     fieldFocused: { borderColor: p.boneDim, borderTopColor: p.boneDim, borderBottomColor: p.boneDim },
+    // A control that cannot be pressed yet: an empty slot cut into the stone, darker than any face
+    // and lit only on its lower lip, so it can never be mistaken for a raised button.
+    disabled: {
+      backgroundColor: p.char,
+      borderWidth: 1,
+      borderColor: p.stoneEdge,
+      borderTopColor: p.bevelShadow,
+      borderBottomColor: p.stone,
+    },
+    // The code cells. Awaiting: the cell the next character lands in, its rim at full bone. Filled:
+    // a lit face (bone on stoneLit is 4.51:1). Complete: all four filled, every rim bone — the row
+    // reads as sealed.
+    cellAwaiting: { borderColor: p.bone, borderTopColor: p.bone, borderBottomColor: p.bone },
+    cellFilled: {
+      backgroundColor: p.stoneLit,
+      borderColor: p.stoneEdge,
+      borderTopColor: mix(p.stoneLit, p.bone, 0.35),
+      borderBottomColor: p.bevelShadow,
+    },
+    cellComplete: { borderColor: p.bone, borderTopColor: p.bone, borderBottomColor: p.bone },
     primary: {
       litStone: {
         backgroundColor: p.stoneLit,
@@ -520,23 +552,34 @@ function makeHomeFaces(p: typeof palette) {
         borderBottomColor: p.bevelShadow,
         borderRadius: radii.chip,
       },
+      coldEdge: {
+        backgroundColor: p.stone,
+        borderWidth: 1,
+        borderColor: p.stoneEdge,
+        borderTopWidth: home.primaryEdge,
+        borderTopColor: p.flameCold,
+        borderBottomColor: p.bevelShadow,
+        borderRadius: radii.chip,
+      },
     },
-    primaryLabel: { litStone: p.bone, flame: p.flameWhite },
+    primaryLabel: { litStone: p.bone, flame: p.flameWhite, coldEdge: p.flameWhite },
   } as const
 }
 
-const homeFaces = makeHomeFaces(palette)
-
-export type PrimaryStyle = 'litStone' | 'flame'
+export type PrimaryStyle = 'litStone' | 'flame' | 'coldEdge'
 
 // Values the home rebuild chose. The design doc names none of them.
 const home = {
   // The primary action outranks every other control by height as well as by face.
   primaryHeight: 56,
+  // The coldEdge primary's lit top edge: thick enough to read as a line of fire, not a hairline.
+  primaryEdge: 2,
   // One character of the code per cell, square.
   codeCell: 56,
-  // The idle board: four conduits at one low fixed level, decorative and never state.
-  idleBoardFill: 0.18,
+  // The idle board: four conduits at fixed, staggered low levels, decorative and never state. Four
+  // different values over a narrow range, so the board reads as a rite not yet begun rather than as
+  // a chart — no two equal, none near the Threshold.
+  idleBoardFills: [0.22, 0.13, 0.3, 0.17],
   // Below this the board is dropped rather than squashed into a strip.
   idleBoardMin: 120,
   // Peak opacity of the idle board's one pulse: a glow on each frontier, swelling and settling.
@@ -546,11 +589,22 @@ const home = {
   idlePulseWidthScale: 2,
   // §6.1: the carved Threshold crosses each conduit at 60% of its height.
   idleThreshold: 0.6,
-  // The About control's drawn mark: a square set on its point, the Marking's shape.
+  // The About control's drawn mark: a square set on its point, the Marking's shape. The match
+  // header's rules control draws the same mark.
   aboutMark: 8,
+  // The faucet's coin: a struck stone disc, gold-rimmed, the SKR mark on its face. Two, overlapping,
+  // because one at button-label size read as a ring rather than as money.
+  coinSize: 22,
+  coinStack: 2,
+  coinOffset: 9,
+  // The struck inner ring, as a fraction of the coin's radius, and the SKR mark's share of the face.
+  coinInnerRing: 0.74,
+  coinMarkShare: 0.62,
   // Max share of the window the About sheet may take, so there is always void above it to tap.
   sheetMaxShare: 0.8,
 } as const
+
+const homeFaces = makeHomeFaces(palette)
 
 export const tokens = {
   palette,

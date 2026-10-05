@@ -79,6 +79,10 @@ const creditPulsePeriod = 2000
 // Chosen in the home rebuild. Slow enough to read as the dead god breathing, not as a loader.
 const idlePulsePeriod = 4800
 
+// The stage timer's heartbeat, one period per band of tokens.art.timerBeatThresholds: calm above
+// 20s, then quickening at 20, 10 and 5 seconds left. Chosen in the home rebuild's refinements.
+const timerBeat = [2400, 1400, 800, 500] as const
+
 // §7.3 — px the tap band sinks while touched.
 const plinthPressDepth = 2
 
@@ -130,6 +134,7 @@ export const motion = {
   plinthPressDepth,
   creditPulsePeriod,
   idlePulsePeriod,
+  timerBeat,
   readoutInterval,
   overlayScaleFrom,
 } as const

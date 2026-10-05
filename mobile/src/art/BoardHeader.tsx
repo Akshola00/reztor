@@ -1,9 +1,28 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { useEffect } from 'react'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
+import Animated, {
+  cancelAnimation,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated'
 
+import { motion } from '../design/motion'
 import { tokens } from '../design/tokens'
 
-// §6.1's header band: round on the left, the board percentage centred, the stage timer on the
-// right. No vessel, no settings control, nothing else.
+// §6.1's header band: the rules control and the round on the left, the board percentage centred,
+// the stage timer on the right. No vessel and no settings control.
+//
+// The rules control is the About mark — a square on its point — and opens §7.1's rules sheet. It is
+// the same for every role and every stage, and sits up here, out of thumb reach during Offering.
+//
+// The timer is the interface face at the t-stage step with tabular figures, in bone, and while the
+// stage runs it beats: a swell in scale and a dip in opacity, quickening at each of
+// art.timerBeatThresholds. Transform and opacity only, on the UI thread (hard rule 3). Under reduce
+// motion it holds still and only the number changes.
 //
 // The percentage is set in Grenze Gotisch, which has no tabular figures: its digits measure
 // 20.78px to 28.22px at the 56px step, so a centred number would shift sideways every time a
@@ -25,6 +44,7 @@ type BoardHeaderProps = {
   percent: number
   secondsLeft: number
   crossed: boolean
+  onRules: () => void
 }
 
 // The step for the percentage, judged on the phone in item 1b by capturing both candidates.
@@ -38,19 +58,65 @@ function clock(totalSeconds: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }
 
-export function BoardHeader({ round, percent, secondsLeft, crossed }: BoardHeaderProps) {
+export function BoardHeader({ round, percent, secondsLeft, crossed, onRules }: BoardHeaderProps) {
   return (
     <View style={styles.row}>
-      <View style={styles.side}>
+      <View style={[styles.side, styles.left]}>
+        <Pressable
+          onPress={onRules}
+          accessibilityRole="button"
+          accessibilityLabel="How the rite works"
+          hitSlop={(tokens.layout.minTouchTarget - tokens.home.aboutMark) / 2}
+          style={styles.rules}
+        >
+          <View style={styles.rulesMark} />
+        </Pressable>
         <Text style={styles.meta}>{`Round ${round}`}</Text>
       </View>
 
       <Percent percent={percent} colour={crossed ? tokens.palette.flameWhite : tokens.palette.bone} />
 
       <View style={styles.side}>
-        <Text style={[styles.meta, styles.timer]}>{clock(secondsLeft)}</Text>
+        <Timer secondsLeft={secondsLeft} />
       </View>
     </View>
+  )
+}
+
+/** The band of art.timerBeatThresholds the clock is in: 0 is calm, each step quicker. */
+function beatBand(secondsLeft: number): number {
+  return tokens.art.timerBeatThresholds.filter((threshold) => secondsLeft <= threshold).length
+}
+
+function Timer({ secondsLeft }: { secondsLeft: number }) {
+  const reduceMotion = useReducedMotion()
+  const running = secondsLeft > 0
+  const band = beatBand(secondsLeft)
+  const beat = useSharedValue(0)
+
+  // Restarted only when the band changes or the stage stops, never per second.
+  useEffect(() => {
+    if (reduceMotion || !running) {
+      cancelAnimation(beat)
+      beat.set(0)
+      return
+    }
+    const half = { duration: motion.timerBeat[band] / 2, easing: motion.easing.easeInOut }
+    beat.set(withRepeat(withSequence(withTiming(1, half), withTiming(0, half)), -1))
+  }, [beat, band, running, reduceMotion])
+
+  const { timerBeatScale, timerBeatOpacity } = tokens.art
+  const beatStyle = useAnimatedStyle(() => ({
+    opacity: 1 - beat.get() * (1 - timerBeatOpacity),
+    transform: [{ scale: 1 + beat.get() * (timerBeatScale - 1) }],
+  }))
+
+  return (
+    <Animated.View style={[styles.timerWrap, beatStyle]}>
+      <Text style={styles.timer} accessibilityLabel={`${Math.max(0, Math.floor(secondsLeft))} seconds left`}>
+        {clock(secondsLeft)}
+      </Text>
+    </Animated.View>
   )
 }
 
@@ -94,13 +160,38 @@ const styles = StyleSheet.create({
   side: {
     flex: 1,
   },
+  left: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.layout.stackGap,
+  },
+  rules: {
+    width: tokens.home.aboutMark,
+    height: tokens.home.aboutMark,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rulesMark: {
+    width: tokens.home.aboutMark,
+    height: tokens.home.aboutMark,
+    borderWidth: tokens.art.sigilStroke,
+    borderColor: tokens.palette.boneDim,
+    transform: [{ rotate: '45deg' }],
+  },
   meta: {
     ...tokens.type.data,
     color: tokens.palette.boneDim,
   },
+  // Scales about its own right edge, so the beat never pushes the number off the screen's edge.
+  timerWrap: {
+    alignSelf: 'flex-end',
+    transformOrigin: 'right',
+  },
   timer: {
+    ...tokens.type.stage,
+    fontFamily: tokens.fontFamily.uiMedium,
     ...tokens.tabularFigures,
-    textAlign: 'right',
+    color: tokens.palette.bone,
   },
   percent: {
     flexDirection: 'row',
