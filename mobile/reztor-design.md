@@ -142,7 +142,17 @@ Two families, both from Google Fonts, both self-hosted and preloaded.
 
 **Display — Grenze Gotisch.** Gothic-inflected without being blackletter, so it carries the rite without becoming illegible. Used for: the board percentage, stage names, role reveal, the Reckoning headline, player names in Judgement. Never below 20px. Its digits are not tabular, so anywhere it sets a changing number the digit slots are fixed by hand.
 
-**Interface — IBM Plex Sans.** Slightly technical, excellent tabular figures, not the default humanist sans every generated interface reaches for. Used for everything else. Always `font-variant-numeric: tabular-nums` on anything that counts, so the credit balance doesn't jitter while it drains.
+**Interface — IBM Plex Sans, under review.** Slightly technical, excellent tabular figures. Used for everything else. Always `font-variant-numeric: tabular-nums` on anything that counts, so the credit balance doesn't jitter while it drains.
+
+**The owner reads IBM Plex Sans as an office font, and both faces are being re-chosen.** Three pairings are on a dev-only chip row on home (`tokens.fontCandidates`), and the owner chooses on a device. Until then Grenze Gotisch and IBM Plex Sans stay in place everywhere, and only home and the rules sheet switch.
+
+| Candidate | Display                   | Interface                 | Interface digits (shipped TTF)                    |
+| :-------- | :------------------------ | :------------------------ | :------------------------------------------------ |
+| A         | Cinzel 700 (900 wordmark) | Chakra Petch 500 / 600    | proportional, no `tnum` — needs fixed digit slots |
+| B         | Grenze Gotisch 700        | Rajdhani 500 / 600        | proportional, no `tnum` — needs fixed digit slots |
+| C         | Metamorphous 400          | Barlow Semi Condensed 600 | `tnum` maps all digits to one width               |
+
+Whichever is chosen: Cinzel has no lower case, so A sets every display string in capitals, against the all-caps rule below. Rajdhani and Barlow Semi Condensed lack U+2192, which the tier face sets as text. Cinzel and Metamorphous have no `tnum`, so the percentage keeps its fixed slots. Grenze Gotisch's TTF does carry `tnum` (all digits 0.500em), which the slots predate.
 
 ```css
 --type-display: 'Grenze Gotisch', Georgia, serif;
@@ -325,7 +335,10 @@ The crossing is the one orchestrated moment:
 Six places, not twelve screens. Everything inside a match is one screen driven by the server's stage — see BUILD-PLAN.md §3 for the routes.
 
 1. **Splash** — native, held until the fonts resolve. No content of its own.
-2. **Home** — name, create, and join by code. An About/rules scroll sits below the actions rather than behind a link. **No wallet UI of any kind is shown until the contract lands on day 6**; when it does, wallet connect appears here and nothing else changes.
+2. **Home** — two states, both over an idle board: four conduits at one low fixed level, decoration and never state, whose only motion is one slow pulse of glow on the frontiers.
+   - **No wallet**: the wordmark, the idle board, one primary action (connect a wallet), and the About control.
+   - **A wallet**: a wallet strip shown off rather than tucked away (the shortened address, the faucet in `--gold`, a way out), then a name, the primary action (open a gathering), join by code in four character cells, and the About control.
+   - **About is behind a control, not inline.** It is labelled _"How the rite works"_, sits as tall as the primary action so a new player finds it unprompted, and opens the rules sheet — one source for home and the match, though the match has no control for it yet. It scrolls, and closes on a tap outside or on hardware back.
 3. **Lobby** — the invite code set large enough to read aloud across a room, seats filling as players arrive, and a leave control.
 4. **Match — one screen.** It never remounts; a remount loses the conduit animation state and reads as a flicker.
    - **The Marking** plays as a full-screen overlay at match start and lifts to reveal the board beneath it. It is not a route.

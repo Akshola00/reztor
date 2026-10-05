@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native'
 import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated'
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg'
 
-import { tokens } from '../design/tokens'
+import { tokens, type Palette } from '../design/tokens'
 
 // §6.2. A recessed aperture cut into the void, with a convex arc for a surface.
 //
@@ -50,6 +50,8 @@ type ConduitProps = {
   /** winTarget / laneCount / laneCapacity — where the Threshold crosses this aperture. */
   thresholdFraction: number
   crossed: boolean
+  /** The home screen's palette candidates. The match never passes one. */
+  palette?: Palette
 }
 
 // Pulled out of `tokens` so the worklet below captures three numbers rather than the whole module.
@@ -99,12 +101,35 @@ export function conduitGeometry(units: number, capacity: number, height: number,
 // aperture still clips whatever spills past it, which is what §6.2's cap behaviour asks for.
 const surfacePad = tokens.art.frontierGlowHeight
 
-export function Conduit({ units, capacity, dormant, width, height, thresholdFraction, crossed }: ConduitProps) {
+/**
+ * The surface arc in the surface layer's own space: apex at `surfacePad`, ends `surfaceArcHeight`
+ * below it. A quadratic whose control point sits an arc height above the apex puts the apex
+ * exactly there, so the layer's height and the clamps in `conduitGeometry` can rely on it.
+ * Exported so anything laid over a frontier draws exactly the frontier's curve.
+ */
+export function surfaceArc(width: number) {
+  const { art } = tokens
+  const arcEnds = surfacePad + art.surfaceArcHeight
+  const arc = `M 0 ${arcEnds} Q ${width / 2} ${surfacePad - art.surfaceArcHeight} ${width} ${arcEnds}`
+  const capFoot = arcEnds + art.surfaceCapOverlap
+  return { arc, capFoot, surfaceHeight: capFoot + surfacePad, surfacePad }
+}
+
+export function Conduit({
+  units,
+  capacity,
+  dormant,
+  width,
+  height,
+  thresholdFraction,
+  crossed,
+  palette = tokens.palette,
+}: ConduitProps) {
   // Unique per instance: duplicate ids across Svg elements render wrong on Android.
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '')
   const fillId = `fill${uid}`
 
-  const { art, palette, cold } = tokens
+  const { art, cold } = tokens
 
   const thresholdY = height * (1 - thresholdFraction)
 
@@ -126,14 +151,8 @@ export function Conduit({ units, capacity, dormant, width, height, thresholdFrac
   const unfilled = dormant ? cold.char : palette.char
   const frontierColour = dormant ? palette.boneFaint : palette.flameCold
 
-  // The arc, in the surface layer's own space: apex at `surfacePad`, ends `surfaceArcHeight`
-  // below it. A quadratic whose control point sits an arc height above the apex puts the apex
-  // exactly there, so the layer's height and the clamps in `conduitGeometry` can rely on it.
-  const arcEnds = surfacePad + art.surfaceArcHeight
-  const arc = `M 0 ${arcEnds} Q ${width / 2} ${surfacePad - art.surfaceArcHeight} ${width} ${arcEnds}`
-  const capFoot = arcEnds + art.surfaceCapOverlap
+  const { arc, capFoot, surfaceHeight } = surfaceArc(width)
   const cap = `${arc} L ${width} ${capFoot} L 0 ${capFoot} Z`
-  const surfaceHeight = capFoot + surfacePad
 
   const grainOffsets: number[] = []
   for (let x = art.conduitGrainPitch; x < width; x += art.conduitGrainPitch) {

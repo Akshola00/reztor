@@ -403,16 +403,31 @@ function rgbToHex(r: number, g: number, b: number): string {
 
 /** Scales a colour's HSL saturation and lightness, leaving hue untouched. */
 export function cool(hex: string, saturation: number, lightness: number): string {
+  return adjust(hex, 0, saturation, lightness)
+}
+
+/** `a` mixed `t` of the way toward `b`, per sRGB channel — how tollText and its kin were derived. */
+export function mix(a: string, b: string, t: number): string {
+  const [ar, ag, ab] = hexToRgb(a)
+  const [br, bg, bb] = hexToRgb(b)
+  return rgbToHex(ar + (br - ar) * t, ag + (bg - ag) * t, ab + (bb - ab) * t)
+}
+
+/**
+ * Rotates a colour's HSL hue by `hueShift` degrees and scales its saturation and lightness. Both
+ * scaled values are clamped to 1, so a lift never wraps a colour round to white.
+ */
+export function adjust(hex: string, hueShift: number, saturation: number, lightness: number): string {
   const [r, g, b] = hexToRgb(hex).map((v) => v / 255) as [number, number, number]
   const max = Math.max(r, g, b)
   const min = Math.min(r, g, b)
   const l0 = (max + min) / 2
-  const l = l0 * lightness
+  const l = Math.min(1, l0 * lightness)
   if (max === min) {
     return rgbToHex(l * 255, l * 255, l * 255)
   }
   const d = max - min
-  const s = (l0 > 0.5 ? d / (2 - max - min) : d / (max + min)) * saturation
+  const s = Math.min(1, (l0 > 0.5 ? d / (2 - max - min) : d / (max + min)) * saturation)
   let h = 0
   if (max === r) {
     h = ((g - b) / d + (g < b ? 6 : 0)) / 6
@@ -421,6 +436,7 @@ export function cool(hex: string, saturation: number, lightness: number): string
   } else {
     h = ((r - g) / d + 4) / 6
   }
+  h = (((h + hueShift / 360) % 1) + 1) % 1
   const q = l < 0.5 ? l * (1 + s) : l + s - l * s
   const p = 2 * l - q
   const channel = (t: number) => {
@@ -443,6 +459,186 @@ const cold = {
   flame: cool(palette.flame, art.coldSaturation, art.coldLightness),
 } as const
 
+// ---------------------------------------------------------------------------------------------
+// Palette candidates — the home screen rebuild, awaiting the owner's choice
+// ---------------------------------------------------------------------------------------------
+//
+// `current` is §3.1 unchanged. `lift` answers the owner's note that the ground range is compressed
+// and panels barely separate from the background. Every value is derived from `current`, so the
+// relationships hold: void stays the deepest ground, stoneLit the brightest stone, the frontier
+// (flameCold, untouched) the brightest element on screen, and gold unmistakably gold.
+//
+// - The ground widens upward from an unchanged void: each step above it is lightened by a larger
+//   factor than the one below, so the gaps between steps grow and panels read as raised.
+// - flameDeep gains saturation and lightness, so the base of the fill reads as fire, not navy.
+// - gold gains luminance at its own hue.
+// - toll turns from brown toward crimson (hue rotated back past red) and gains saturation.
+//
+// The toll text pair is re-derived the way §7.3 derived the originals — toll mixed toward bone —
+// at the smallest step that clears 4.5:1 on void (text) and on stone (the sheet's toll line).
+//
+// Provisional: chosen on the emulator, which lifts colours on a Mac display. Confirm on the S10.
+const liftToll = adjust(palette.toll, -14, 1.2, 1.05)
+const lift = {
+  ...palette,
+  char: adjust(palette.char, 0, 1, 1.25),
+  stone: adjust(palette.stone, 0, 1, 1.3),
+  stoneEdge: adjust(palette.stoneEdge, 0, 1, 1.6),
+  stoneLit: adjust(palette.stoneLit, 0, 1, 1.4),
+  flameDeep: adjust(palette.flameDeep, 0, 1.3, 1.1),
+  toll: liftToll,
+  tollSmoke: adjust(palette.tollSmoke, -14, 1.2, 1.05),
+  tollText: mix(liftToll, palette.bone, 0.34),
+  tollTextBright: mix(liftToll, palette.bone, 0.56),
+  gold: adjust(palette.gold, 0, 1, 1.15),
+} as const
+
+const palettes = { current: palette, lift } as const
+
+export type Palette = { readonly [K in keyof typeof palette]: string }
+
+// ---------------------------------------------------------------------------------------------
+// Font candidates — the home screen rebuild, awaiting the owner's choice
+// ---------------------------------------------------------------------------------------------
+//
+// The owner reads IBM Plex Sans as an office font. Three pairings from his brief, plus `current`
+// for reference. `wordmark` is the display face's heaviest loaded weight, for "Reztor" alone.
+//
+// Measured off each shipped TTF (hmtx advances for 0-9, GSUB feature list):
+// - Chakra Petch 500/600: proportional digits (0.366-0.636em), no tnum. Needs fixed digit slots.
+// - Rajdhani 500/600: proportional digits (0.322-0.526em), no tnum. Needs fixed digit slots.
+//   Also has no U+2192, which the tier face sets as text.
+// - Barlow Semi Condensed 600: proportional by default, but tnum maps every digit to 0.507em, so
+//   `tabularFigures` works. Also has no U+2192.
+// - Cinzel, Metamorphous: proportional, no tnum — the percentage keeps its fixed slots.
+// - Grenze Gotisch 700: proportional by default, but tnum maps every digit to 0.500em.
+const fontCandidates = {
+  current: {
+    display: fontFamily.display,
+    wordmark: fontFamily.display,
+    uiRegular: fontFamily.uiRegular,
+    uiMedium: fontFamily.uiMedium,
+  },
+  a: {
+    display: 'Cinzel_700Bold',
+    wordmark: 'Cinzel_900Black',
+    uiRegular: 'ChakraPetch_500Medium',
+    uiMedium: 'ChakraPetch_600SemiBold',
+  },
+  b: {
+    display: 'GrenzeGotisch_700Bold',
+    wordmark: 'GrenzeGotisch_700Bold',
+    uiRegular: 'Rajdhani_500Medium',
+    uiMedium: 'Rajdhani_600SemiBold',
+  },
+  // Barlow Semi Condensed is loaded at 600 only, so both interface weights are 600.
+  c: {
+    display: 'Metamorphous_400Regular',
+    wordmark: 'Metamorphous_400Regular',
+    uiRegular: 'BarlowSemiCondensed_600SemiBold',
+    uiMedium: 'BarlowSemiCondensed_600SemiBold',
+  },
+} as const
+
+export type FontSet = { readonly display: string; wordmark: string; uiRegular: string; uiMedium: string }
+
+/** §3.2's scale in a candidate pairing's faces. Sizes and line heights never change. */
+export function typeFor(f: FontSet) {
+  return {
+    heart: { ...type.heart, fontFamily: f.display },
+    display: { ...type.display, fontFamily: f.display },
+    stage: { ...type.stage, fontFamily: f.display },
+    body: { ...type.body, fontFamily: f.uiRegular },
+    bodyMedium: { ...type.body, fontFamily: f.uiMedium },
+    data: { ...type.data, fontFamily: f.uiRegular },
+    fine: { ...type.fine, fontFamily: f.uiRegular },
+    // The home's wordmark: the t-heart step in the display face's heaviest weight.
+    wordmark: { ...type.heart, fontFamily: f.wordmark },
+    // One character of a gathering code per cell: the t-display step, in the interface face for
+    // the same reason the lobby's code is — it is typed from what is read out.
+    codeCell: { fontSize: type.display.fontSize, lineHeight: type.display.lineHeight, fontFamily: f.uiMedium },
+  } as const
+}
+
+// ---------------------------------------------------------------------------------------------
+// The home screen's carved faces, per palette
+// ---------------------------------------------------------------------------------------------
+//
+// §3.3's bevel, applied so the home's controls sit clearly above the void: every face is at least
+// `stone` with `stoneEdge` sides, raised faces lit above and shadowed below, fields cut in (the
+// same edges inverted). Two primary candidates, awaiting the owner's choice:
+// - litStone: the brightest stone face, a rim lighter than any stone above it, bone label.
+// - flame: §3.1's proposed fifth use of fire, the single primary action on the entry screen and
+//   nowhere else. flameDeep face, flame rim, flameWhite label — bone measures only 4.14:1 on the
+//   lifted flameDeep, flameWhite 5.24:1 (6.24:1 on the current one).
+export function homeFaces(p: Palette) {
+  const raised = {
+    backgroundColor: p.stone,
+    borderWidth: 1,
+    borderColor: p.stoneEdge,
+    borderTopColor: p.stoneLit,
+    borderBottomColor: p.bevelShadow,
+  }
+  return {
+    panel: { ...raised, borderRadius: radii.panel },
+    secondary: { ...raised, borderRadius: radii.chip },
+    field: {
+      backgroundColor: p.stone,
+      borderWidth: 1,
+      borderColor: p.stoneEdge,
+      borderTopColor: p.bevelShadow,
+      borderBottomColor: p.stoneLit,
+      borderRadius: radii.chip,
+    },
+    // The cell or field being typed into. boneDim, never fire: §3.1 bans flame on focus rings.
+    fieldFocused: { borderColor: p.boneDim, borderTopColor: p.boneDim, borderBottomColor: p.boneDim },
+    primary: {
+      litStone: {
+        backgroundColor: p.stoneLit,
+        borderWidth: 1,
+        borderColor: p.stoneEdge,
+        borderTopColor: mix(p.stoneLit, p.bone, 0.35),
+        borderBottomColor: p.bevelShadow,
+        borderRadius: radii.chip,
+      },
+      flame: {
+        backgroundColor: p.flameDeep,
+        borderWidth: 1,
+        borderColor: p.flameDeep,
+        borderTopColor: p.flame,
+        borderBottomColor: p.bevelShadow,
+        borderRadius: radii.chip,
+      },
+    },
+    primaryLabel: { litStone: p.bone, flame: p.flameWhite },
+  } as const
+}
+
+export type PrimaryStyle = 'litStone' | 'flame'
+
+// Values the home rebuild chose. The design doc names none of them.
+const home = {
+  // The primary action outranks every other control by height as well as by face.
+  primaryHeight: 56,
+  // One character of the code per cell, square.
+  codeCell: 56,
+  // The idle board: four conduits at one low fixed level, decorative and never state.
+  idleBoardFill: 0.18,
+  // Below this the board is dropped rather than squashed into a strip.
+  idleBoardMin: 120,
+  // Peak opacity of the idle board's one pulse: a glow on each frontier, swelling and settling.
+  idlePulsePeak: 0.8,
+  // The pulse's glow is the frontier glow stroked this much wider, so it reads beyond the glow
+  // the Conduit already draws.
+  idlePulseWidthScale: 2,
+  // §6.1: the carved Threshold crosses each conduit at 60% of its height.
+  idleThreshold: 0.6,
+  // The About control's drawn mark: a square set on its point, the Marking's shape.
+  aboutMark: 8,
+  // Max share of the window the About sheet may take, so there is always void above it to tap.
+  sheetMaxShare: 0.8,
+} as const
+
 export const tokens = {
   palette,
   material,
@@ -454,4 +650,7 @@ export const tokens = {
   grainOpacity,
   art,
   cold,
+  palettes,
+  fontCandidates,
+  home,
 } as const

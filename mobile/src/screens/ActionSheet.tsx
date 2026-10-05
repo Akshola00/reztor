@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics'
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useRef, useState, type ReactNode } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import Animated, {
   useAnimatedStyle,
@@ -12,7 +12,6 @@ import Animated, {
 import type { MatchConfig, PlayerId, TraceResult } from '../../protocol/generated'
 import { SeatToken } from '../art/SeatToken'
 import type { SeatNumber } from '../art/Sigil'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { SkrMark } from '../art/SkrMark'
 import { motion } from '../design/motion'
@@ -20,6 +19,7 @@ import { tokens } from '../design/tokens'
 import { match, session } from '../net/session'
 import type { OptimisticStore } from '../state/optimistic'
 import { usePolled } from './Offering'
+import { Sheet } from './Sheet'
 
 // §7.4's sheet, as BUILD-PLAN.md §2 amends it: one bottom sheet, opened from the board's single
 // action button, holding Augury for everyone and the Draw for the Hollow. The closed board is the
@@ -61,25 +61,10 @@ const readShape = () => {
 }
 
 export function ActionSheet({ config, youId, seats, laneUnits, prediction, onClose }: ActionSheetProps) {
-  const insets = useSafeAreaInsets()
   usePolled(readShape)
   const readCredits = useCallback(() => prediction.snapshot().credits, [prediction])
   const credits = usePolled(readCredits)
   const snapshot = match.snapshot()
-
-  const open = useSharedValue(0)
-  useEffect(() => {
-    open.set(withTiming(1, motion.transition.overlay))
-  }, [open])
-  const close = useCallback(() => {
-    open.set(withTiming(0, motion.transition.overlay))
-    setTimeout(onClose, motion.duration.overlay)
-  }, [open, onClose])
-  const backdropStyle = useAnimatedStyle(() => ({ opacity: open.get() * tokens.art.sheetBackdropOpacity }))
-  const sheetStyle = useAnimatedStyle(() => ({
-    opacity: open.get(),
-    transform: [{ scale: motion.overlayScaleFrom + (1 - motion.overlayScaleFrom) * open.get() }],
-  }))
 
   if (snapshot === null) return null
   const hollow = snapshot.you.role === 'impostor'
@@ -87,26 +72,20 @@ export function ActionSheet({ config, youId, seats, laneUnits, prediction, onClo
   const names = new Map(snapshot.players.map((p) => [p.id, p.name]))
 
   return (
-    <View style={StyleSheet.absoluteFill}>
-      <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityRole="button" accessibilityLabel="Close">
-        <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdropStyle]} />
-      </Pressable>
-
-      <Animated.View style={[styles.sheet, { paddingBottom: tokens.layout.sectionGap + insets.bottom }, sheetStyle]}>
-        <Augury config={config} owners={owners} seats={seats} names={names} credits={credits} />
-        {hollow ? (
-          <Draw
-            config={config}
-            youId={youId}
-            owners={owners}
-            seats={seats}
-            names={names}
-            laneUnits={laneUnits}
-            credits={credits}
-          />
-        ) : null}
-      </Animated.View>
-    </View>
+    <Sheet onClose={onClose}>
+      <Augury config={config} owners={owners} seats={seats} names={names} credits={credits} />
+      {hollow ? (
+        <Draw
+          config={config}
+          youId={youId}
+          owners={owners}
+          seats={seats}
+          names={names}
+          laneUnits={laneUnits}
+          credits={credits}
+        />
+      ) : null}
+    </Sheet>
   )
 }
 
@@ -349,22 +328,6 @@ function Section({ title, cost, children }: { title: string; cost?: number; chil
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    backgroundColor: tokens.palette.void,
-  },
-  sheet: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    ...tokens.material.raisedStoneFace,
-    borderTopLeftRadius: tokens.radii.panel,
-    borderTopRightRadius: tokens.radii.panel,
-    paddingHorizontal: tokens.layout.screenGutter,
-    paddingTop: tokens.layout.stackGap,
-    paddingBottom: tokens.layout.sectionGap,
-    gap: tokens.layout.stackGap,
-  },
   section: {
     gap: tokens.art.namePlateGap * 2,
   },

@@ -19,8 +19,13 @@
   "main": "./index.js",
   "version": "1.0.0",
   "dependencies": {
+    "@expo-google-fonts/barlow-semi-condensed": "^0.4.1",
+    "@expo-google-fonts/chakra-petch": "^0.4.1",
+    "@expo-google-fonts/cinzel": "^0.4.2",
     "@expo-google-fonts/grenze-gotisch": "^0.4.2",
     "@expo-google-fonts/ibm-plex-sans": "^0.4.1",
+    "@expo-google-fonts/metamorphous": "^0.4.1",
+    "@expo-google-fonts/rajdhani": "^0.4.1",
     "@expo/metro-runtime": "~57.0.16",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@solana/kit": "^7.0.0",

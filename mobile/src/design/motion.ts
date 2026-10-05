@@ -75,6 +75,10 @@ const duration = {
 // is chosen: slow enough to read as unease rather than as an alarm.
 const creditPulsePeriod = 2000
 
+// The home screen's idle board: its one motion, a glow that swells on each frontier and settles.
+// Chosen in the home rebuild. Slow enough to read as the dead god breathing, not as a loader.
+const idlePulsePeriod = 4800
+
 // §7.3 — px the tap band sinks while touched.
 const plinthPressDepth = 2
 
@@ -112,6 +116,8 @@ const transition = {
   markTurn: { duration: duration.markTurn, easing: easing.easeInOut },
   markLine: { duration: duration.markLine, easing: easing.easeOut },
   markLift: { duration: duration.markLift, easing: easing.easeOut },
+  // Half a period each way, ease-in-out, like the credit pulse: it breathes rather than blinks.
+  idlePulse: { duration: idlePulsePeriod / 2, easing: easing.easeInOut },
   // §7.7, chosen in item 4: the ejected token settles into cold rather than blinking out.
   castOutCold: { duration: duration.castOutCold, easing: easing.easeInOut },
 } as const
@@ -123,6 +129,7 @@ export const motion = {
   transition,
   plinthPressDepth,
   creditPulsePeriod,
+  idlePulsePeriod,
   readoutInterval,
   overlayScaleFrom,
 } as const

@@ -1,20 +1,28 @@
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { router, useLocalSearchParams } from 'expo-router'
-import { useEffect, useState, type ReactNode } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { useEffect, useMemo, useState } from 'react'
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import type { LobbyAck, Side } from '../../protocol/generated'
+import { IdleBoard } from '../art/IdleBoard'
 import { Marking } from '../art/Marking'
-import { tokens } from '../design/tokens'
+import { SkrMark } from '../art/SkrMark'
+import { homeFaces, tokens, typeFor, type Palette, type PrimaryStyle } from '../design/tokens'
 import { CODE_ALPHABET, CODE_LENGTH, DEV_TOOLS, NAME_MAX, session, type BootTarget } from '../net/session'
 import { BUY_IN_SKR, shortAddress } from '../solana/chain'
 import { requestFaucet, type FaucetResult } from '../solana/faucet'
+import { looks, useLook, type Look } from './look'
 import { usePolled } from './Offering'
+import { RulesSheet } from './RulesSheet'
 
-// / — §7.1's Home: a name, create, and join by code, with the rules below the actions rather than
-// behind a link. The contract has landed (BUILD-PLAN.md §4), so wallet connect stands in front of
-// the entry: nothing can be opened or joined without a wallet to stake from.
+// / — §7.1's Home. Two states. Without a wallet: the wordmark, the idle board, one action (connect
+// a wallet) and the About control. With one: the wallet strip, then a name, open a gathering, join
+// one by its code, and the About control. The rules live in the rules sheet behind that control —
+// the owner moved them out from under the actions.
+//
+// The contract has landed (BUILD-PLAN.md §4), so wallet connect stands in front of the entry:
+// nothing can be opened or joined without a wallet to stake from.
 
 type LobbyError = Extract<LobbyAck, { ok: false }>['error']
 
@@ -27,6 +35,8 @@ const ERRORS: Record<LobbyError, string> = {
   WALLET_UNFUNDED: `Your wallet cannot cover the stake. It needs ${BUY_IN_SKR} SKR, and a little SOL for fees.`,
   WALLET_TAKEN: 'That wallet already kneels in this gathering. Each seat needs its own wallet.',
 }
+
+const WALLET_REFUSED = 'The wallet did not connect. Open a Solana wallet set to devnet, and try again.'
 
 // CHAIN-PROTOCOL-CHANGES.md §5's table. FAUCET_DISABLED hides the button instead.
 const FAUCET: Record<Exclude<FaucetResult, { ok: true }>['error'], string> = {
@@ -53,15 +63,25 @@ const NOTICES: Record<string, string> = {
 
 /** Upper-cases, and keeps only the server's alphabet: no I, O, 0 or 1. */
 function cleanCode(text: string): string {
-  return [...text.toUpperCase()]
-    .filter((c) => CODE_ALPHABET.includes(c))
-    .join('')
-    .slice(0, CODE_LENGTH)
+  return [...text.toUpperCase()].filter((c) => CODE_ALPHABET.includes(c)).join('')
+}
+
+type Styles = ReturnType<typeof makeStyles>
+
+type HomeParams = {
+  notice?: string
+  // Dev only, so captures can be driven by deep link: a candidate look, and a refusal to show.
+  font?: string
+  palette?: string
+  primary?: string
+  sigils?: string
+  refusal?: string
 }
 
 export function Home({ initialNotice }: { initialNotice?: string }) {
   const insets = useSafeAreaInsets()
-  const params = useLocalSearchParams<{ notice?: string }>()
+  const window = useWindowDimensions()
+  const params = useLocalSearchParams<HomeParams>()
   const notice = params.notice ?? initialNotice
   // §7.9: home says plainly when the server cannot be reached, rather than waiting for a press.
   const status = usePolled(session.status)
@@ -76,8 +96,40 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<Side | null>(null)
   const [unfunded, setUnfunded] = useState(false)
+  const [rulesOpen, setRulesOpen] = useState(false)
+  const [boardHeight, setBoardHeight] = useState(0)
   const { account, connect, disconnect } = useMobileWallet()
   const wallet = account?.address ?? null
+
+  const look = useLook()
+  const palette = tokens.palettes[look.palette]
+  const styles = useMemo(
+    () => makeStyles(typeFor(tokens.fontCandidates[look.font]), palette, look.primary),
+    [look.font, palette, look.primary],
+  )
+
+  // Dev only: apply a candidate look from the deep link that opened home.
+  useEffect(() => {
+    if (!DEV_TOOLS) return
+    const next: Partial<Look> = {}
+    if (params.font !== undefined && params.font in tokens.fontCandidates) next.font = params.font as Look['font']
+    if (params.palette !== undefined && params.palette in tokens.palettes) {
+      next.palette = params.palette as Look['palette']
+    }
+    if (params.primary === 'litStone' || params.primary === 'flame') next.primary = params.primary
+    if (params.sigils !== undefined) next.sigils = params.sigils !== '0'
+    looks.set(next)
+  }, [params.font, params.palette, params.primary, params.sigils])
+  // Dev only: a refusal named by the deep link, shown through the same lines a real one uses.
+  const refusal = DEV_TOOLS ? params.refusal : undefined
+  const devRefusal =
+    refusal === undefined
+      ? null
+      : refusal in ERRORS
+        ? ERRORS[refusal as LobbyError]
+        : refusal === 'WALLET_REFUSED'
+          ? WALLET_REFUSED
+          : null
 
   const trimmed = name.trim()
   const nameOk = trimmed.length >= 1 && trimmed.length <= NAME_MAX
@@ -107,7 +159,7 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
     try {
       await connect()
     } catch {
-      setError('The wallet did not connect. Open a Solana wallet set to devnet, and try again.')
+      setError(WALLET_REFUSED)
     } finally {
       setBusy(false)
     }
@@ -138,122 +190,141 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
     else setError('A rehearsal cannot run while connected to the server.')
   }
 
-  const shownNotice = error ?? (notice === undefined ? null : (NOTICES[notice] ?? null))
+  const shownNotice = error ?? devRefusal ?? (notice === undefined ? null : (NOTICES[notice] ?? null))
+  const showUnfunded = unfunded || (error === null && refusal === 'WALLET_UNFUNDED')
 
   return (
     <View style={styles.root}>
-      <ScrollView
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + tokens.layout.sectionGap }]}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text style={styles.title} accessibilityRole="header">
-          Reztor
-        </Text>
+      <ScrollView keyboardShouldPersistTaps="handled">
+        {/* One screen tall, so the idle board takes whatever the controls leave. Dev tools sit
+            below it, out of every capture. */}
+        <View
+          style={[
+            styles.screen,
+            {
+              minHeight: window.height,
+              paddingTop: insets.top + tokens.layout.stackGap,
+              paddingBottom: insets.bottom + tokens.layout.sectionGap,
+            },
+          ]}
+        >
+          <Text style={styles.wordmark} accessibilityRole="header">
+            Reztor
+          </Text>
 
-        {wallet === null ? (
-          <View style={styles.group}>
-            <Text style={styles.para}>
-              {`Your stake of ${BUY_IN_SKR} SKR is paid from a Solana wallet on this phone. Connect one set to devnet.`}
-            </Text>
-            <Button label="Connect wallet" disabled={busy} onPress={connectWallet} />
+          {wallet === null ? null : (
+            <WalletStrip
+              wallet={wallet}
+              busy={busy}
+              onDisconnect={disconnectWallet}
+              onFunded={() => setError(null)}
+              styles={styles}
+            />
+          )}
+
+          <View style={styles.boardSlot} onLayout={(e) => setBoardHeight(Math.floor(e.nativeEvent.layout.height))}>
+            {boardHeight < tokens.home.idleBoardMin ? null : (
+              <View style={styles.board}>
+                <IdleBoard
+                  width={window.width - tokens.layout.screenGutter * 2}
+                  height={boardHeight}
+                  sigils={look.sigils}
+                  palette={palette}
+                />
+              </View>
+            )}
           </View>
-        ) : (
-          <View style={styles.group}>
-            <Text style={styles.label}>Your wallet</Text>
-            <View style={styles.walletRow}>
-              <Text style={styles.address} accessibilityLabel={`Wallet ${wallet}`}>
-                {shortAddress(wallet)}
+
+          {status === 'offline' ? (
+            <View style={styles.offline}>
+              <Text style={styles.notice} accessibilityLiveRegion="polite">
+                {`The server cannot be reached. It is expected at ${session.serverUrl}.`}
               </Text>
-              <Button label="Disconnect" disabled={busy} onPress={disconnectWallet} />
+              <Button label="Try again" disabled={busy} onPress={retry} styles={styles} />
             </View>
-            <Faucet wallet={wallet} onFunded={() => setError(null)} />
-          </View>
-        )}
+          ) : null}
 
-        {wallet === null ? null : (
-          <>
+          {wallet === null ? (
             <View style={styles.group}>
-              <Text style={styles.label}>Your name</Text>
-              <TextInput
-                value={name}
-                onChangeText={setName}
-                maxLength={NAME_MAX}
-                autoCorrect={false}
-                placeholder="The name the others will see"
-                placeholderTextColor={tokens.palette.boneDim}
-                cursorColor={tokens.palette.bone}
-                selectionColor={tokens.palette.stoneLit}
-                style={styles.input}
-                accessibilityLabel="Your name"
-              />
+              <Primary label="Connect wallet" disabled={busy} onPress={connectWallet} styles={styles} />
+              <Text style={styles.para}>
+                {`Your stake of ${BUY_IN_SKR} SKR is paid from a Solana wallet on this phone. Connect one set to devnet.`}
+              </Text>
             </View>
-
-            {status === 'offline' ? (
+          ) : (
+            <>
               <View style={styles.group}>
-                <Text style={styles.notice} accessibilityLiveRegion="polite">
-                  {`The server cannot be reached. It is expected at ${session.serverUrl}.`}
-                </Text>
-                <View style={styles.row}>
-                  <Button label="Try again" disabled={busy} onPress={retry} />
+                <Text style={styles.label}>Your name</Text>
+                <TextInput
+                  value={name}
+                  onChangeText={setName}
+                  maxLength={NAME_MAX}
+                  autoCorrect={false}
+                  placeholder="The name the others will see"
+                  placeholderTextColor={palette.boneDim}
+                  cursorColor={palette.bone}
+                  selectionColor={palette.stoneLit}
+                  style={styles.input}
+                  accessibilityLabel="Your name"
+                />
+              </View>
+
+              <Primary
+                label="Open a gathering"
+                disabled={!nameOk || busy || !online}
+                onPress={() => run(() => session.createLobby(trimmed, wallet))}
+                styles={styles}
+              />
+
+              <View style={styles.group}>
+                <Text style={styles.label}>Or join one by its code</Text>
+                <View style={styles.codeRow}>
+                  <CodeCells code={code} onChange={setCode} styles={styles} />
+                  <Button
+                    label="Join"
+                    disabled={!nameOk || !codeOk || busy || !online}
+                    onPress={() => run(() => session.joinLobby(code, trimmed, wallet))}
+                    styles={styles}
+                  />
                 </View>
               </View>
-            ) : null}
+            </>
+          )}
 
-            <Button
-              label="Open a gathering"
-              disabled={!nameOk || busy || !online}
-              onPress={() => run(() => session.createLobby(trimmed, wallet))}
-            />
+          {shownNotice === null ? null : (
+            <Text style={styles.notice} accessibilityLiveRegion="polite">
+              {shownNotice}
+            </Text>
+          )}
 
-            <View style={styles.group}>
-              <Text style={styles.label}>Or join one by its code</Text>
-              <View style={styles.row}>
-                <TextInput
-                  value={code}
-                  onChangeText={(text) => setCode(cleanCode(text))}
-                  maxLength={CODE_LENGTH}
-                  autoCapitalize="characters"
-                  autoCorrect={false}
-                  placeholder="CODE"
-                  placeholderTextColor={tokens.palette.boneDim}
-                  cursorColor={tokens.palette.bone}
-                  selectionColor={tokens.palette.stoneLit}
-                  style={[styles.input, styles.codeInput]}
-                  accessibilityLabel="Gathering code"
-                />
-                <Button
-                  label="Join"
-                  disabled={!nameOk || !codeOk || busy || !online}
-                  onPress={() => run(() => session.joinLobby(code, trimmed, wallet))}
-                />
-              </View>
-            </View>
-          </>
-        )}
+          {/* WALLET_UNFUNDED: the cure sits directly under the refusal. */}
+          {showUnfunded && wallet !== null ? (
+            <Faucet wallet={wallet} onFunded={() => setError(null)} styles={styles} />
+          ) : null}
 
-        {shownNotice === null ? null : (
-          <Text style={styles.notice} accessibilityLiveRegion="polite">
-            {shownNotice}
-          </Text>
-        )}
-
-        {/* WALLET_UNFUNDED: the cure sits directly under the refusal. */}
-        {unfunded && wallet !== null ? <Faucet wallet={wallet} prominent onFunded={() => setError(null)} /> : null}
+          <Pressable
+            onPress={() => setRulesOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="How the rite works"
+            style={styles.about}
+          >
+            <View style={styles.aboutMark} />
+            <Text style={styles.aboutLabel}>How the rite works</Text>
+          </Pressable>
+        </View>
 
         {DEV_TOOLS ? (
-          <View style={styles.group}>
-            <Text style={styles.label}>Dev</Text>
-            <View style={styles.row}>
-              <Button label="Rehearse alone" onPress={() => rehearse('crew')} />
-              <Button label="Rehearse as Hollow" onPress={() => rehearse('impostor')} />
-              <Button label="Faithful" onPress={() => setPreview('crew')} />
-              <Button label="Hollow" onPress={() => setPreview('impostor')} />
-            </View>
-          </View>
+          <DevTools
+            look={look}
+            styles={styles}
+            onRehearse={rehearse}
+            onPreview={setPreview}
+            bottom={insets.bottom + tokens.layout.sectionGap}
+          />
         ) : null}
-
-        <About />
       </ScrollView>
+
+      {rulesOpen ? <RulesSheet onClose={() => setRulesOpen(false)} /> : null}
 
       {/* Dev only: the Marking for a chosen role, so both variants can be captured and compared. */}
       {preview === null ? null : <Marking role={preview} seat={1} onDone={() => setPreview(null)} />}
@@ -262,18 +333,51 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
 }
 
 /**
+ * The connected wallet, shown off rather than tucked away: the address, the faucet in gold, and a
+ * way out. Its SKR balance is not shown — nothing on the client reads it yet.
+ */
+function WalletStrip({
+  wallet,
+  busy,
+  onDisconnect,
+  onFunded,
+  styles,
+}: {
+  wallet: string
+  busy: boolean
+  onDisconnect: () => void
+  onFunded: () => void
+  styles: Styles
+}) {
+  return (
+    <View style={styles.strip}>
+      <View style={styles.stripRow}>
+        <View>
+          <Text style={styles.label}>Your wallet, on devnet</Text>
+          <Text style={styles.address} accessibilityLabel={`Wallet ${wallet}`}>
+            {shortAddress(wallet)}
+          </Text>
+        </View>
+        <Button label="Disconnect" disabled={busy} onPress={onDisconnect} styles={styles} />
+      </View>
+      <Faucet wallet={wallet} onFunded={onFunded} styles={styles} />
+    </View>
+  )
+}
+
+/**
  * CHAIN-PROTOCOL-CHANGES.md §5: tops up the wallet with test SKR and SOL. Hidden for good once the
- * server says it has no faucet. `prominent` is the one shown under a WALLET_UNFUNDED refusal.
+ * server says it has no faucet. Gold, because it fetches SKR (§3.1).
  */
 function Faucet({
   wallet,
-  prominent = false,
   onFunded,
+  styles,
 }: {
   wallet: string
-  prominent?: boolean
   /** A grant answers the refusal it was fetched for, so that refusal is cleared. */
   onFunded: () => void
+  styles: Styles
 }) {
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<FaucetResult | null>(null)
@@ -288,9 +392,20 @@ function Faucet({
     setBusy(false)
   }
 
+  const label = busy ? 'Sending test SKR' : 'Get test SKR'
   return (
     <View style={styles.group}>
-      <Button label={busy ? 'Sending test SKR' : 'Get test SKR'} disabled={busy} onPress={press} gold={prominent} />
+      <Pressable
+        onPress={press}
+        disabled={busy}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ disabled: busy }}
+        style={[styles.button, styles.faucet]}
+      >
+        <SkrMark colour={busy ? styles.disabledLabel.color : styles.gold.color} />
+        <Text style={[styles.buttonLabel, busy ? styles.disabledLabel : styles.gold]}>{label}</Text>
+      </Pressable>
       {result === null ? null : (
         <Text style={styles.notice} accessibilityLiveRegion="polite">
           {result.ok ? '240 test SKR and 0.05 SOL are in your wallet. You can kneel now.' : FAUCET[result.error]}
@@ -300,16 +415,61 @@ function Faucet({
   )
 }
 
-function Button({
+/**
+ * The gathering code as four cells. One transparent input lies over all four and holds the whole
+ * code, so typing fills the cells in order at any speed and backspace steps back — per-cell inputs
+ * dropped characters typed faster than focus could move between them. A whole code pasted over a
+ * part one replaces it. Lower case is raised and anything outside the server's alphabet is
+ * dropped, so the cells only ever hold a code the server could issue.
+ */
+function CodeCells({ code, onChange, styles }: { code: string; onChange: (code: string) => void; styles: Styles }) {
+  const [focused, setFocused] = useState(false)
+
+  const change = (text: string) => {
+    const typed = cleanCode(text)
+    if (typed.length <= CODE_LENGTH) onChange(typed)
+    // Past four characters: a paste replaces the code, a fifth keystroke is ignored.
+    else if (typed.length - code.length >= CODE_LENGTH) onChange(typed.slice(-CODE_LENGTH))
+  }
+
+  // The cell the next character lands in, or the last one once the code is whole.
+  const active = Math.min(code.length, CODE_LENGTH - 1)
+  return (
+    <View style={styles.cells}>
+      {Array.from({ length: CODE_LENGTH }, (_, i) => (
+        <View key={i} style={[styles.cell, focused && i === active ? styles.cellFocused : null]}>
+          <Text style={styles.cellText}>{code[i] ?? ''}</Text>
+        </View>
+      ))}
+      <TextInput
+        value={code}
+        onChangeText={change}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        caretHidden
+        // Android's suggestion-free keyboard, with the digit row up: a code is not a word.
+        keyboardType="visible-password"
+        autoCapitalize="characters"
+        autoCorrect={false}
+        autoComplete="off"
+        importantForAutofill="no"
+        style={styles.cellInput}
+        accessibilityLabel={`Gathering code, ${CODE_LENGTH} characters`}
+      />
+    </View>
+  )
+}
+
+function Primary({
   label,
   disabled,
   onPress,
-  gold = false,
+  styles,
 }: {
   label: string
   disabled?: boolean
   onPress: () => void
-  gold?: boolean
+  styles: Styles
 }) {
   return (
     <Pressable
@@ -318,155 +478,275 @@ function Button({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: disabled === true }}
-      style={styles.button}
+      style={disabled ? styles.primaryDisabled : styles.primary}
     >
-      <Text style={[styles.buttonLabel, gold ? styles.gold : null, disabled ? styles.buttonLabelDisabled : null]}>
-        {label}
-      </Text>
+      <Text style={disabled ? [styles.primaryLabel, styles.disabledLabel] : styles.primaryLabel}>{label}</Text>
     </Pressable>
   )
 }
 
-// §1's fiction in §1.2's voice: second person, present tense, no exclamation marks. Interface
-// vocabulary only (§1.1). No rule numbers — those arrive with the match's config and are never
-// hardcoded.
-function About() {
+function Button({
+  label,
+  disabled,
+  onPress,
+  selected = false,
+  styles,
+}: {
+  label: string
+  disabled?: boolean
+  onPress: () => void
+  /** Dev chips only: the candidate in use. */
+  selected?: boolean
+  styles: Styles
+}) {
   return (
-    <View style={styles.about}>
-      <Heading>The Rite</Heading>
-      <Para>
-        Reztor is a dead god. You are one of four celebrants kneeling at four conduits beneath what is left of it, and
-        the rite must bring it back before the night ends.
-      </Para>
-      <Para>
-        Each offering you make is consecrated and rises through your conduit into the Heart. When the four conduits
-        together reach the Threshold, the Heart breathes on its own and the rite is complete.
-      </Para>
-      <Para>
-        Offerings cost you something real. A lesser offering is cheap and gives a little. A greater offering costs more
-        and gives more, at a worse rate.
-      </Para>
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: disabled === true, selected }}
+      style={[styles.button, selected ? styles.chipSelected : null]}
+    >
+      <Text style={[styles.buttonLabel, disabled ? styles.disabledLabel : null]}>{label}</Text>
+    </Pressable>
+  )
+}
 
-      <Heading>The Hollow</Heading>
-      <Para>
-        One of the four is Hollow. It wears a celebrant&apos;s robe and cannot refuse the rite where the others would
-        see. So it draws consecrated matter out of one conduit and forces it into another. Four parts in every ten are
-        the toll, taken in transit. They are gone.
-      </Para>
-      <Para>
-        A conduit that falls while another rises tells you something true and not enough. The two celebrants it touched
-        are both Faithful.
-      </Para>
-
-      <Heading>A round</Heading>
-      <Para>Each round has three stages, and the rite lasts three rounds.</Para>
-      <Para>In the Offering, you make offerings. In the Council, you speak. In Judgement, you may cast one out.</Para>
-      <Para>
-        Augury reads one conduit&apos;s last round and gives one answer: fed by its own hand, filled from elsewhere, or
-        something was taken. You may read once.
-      </Para>
-      <Para>
-        A celebrant who is cast out stays to watch, and their conduit goes cold. The Faithful win when the Heart wakes,
-        or when the Hollow is cast out. The Hollow wins if the third round ends with the Heart still dead, or when two
-        of the Faithful have been cast out and it can no longer be outvoted.
-      </Para>
+/** Dev builds only: the candidate chips, the rehearsals and the Marking previews. */
+function DevTools({
+  look,
+  styles,
+  onRehearse,
+  onPreview,
+  bottom,
+}: {
+  look: Look
+  styles: Styles
+  onRehearse: (role: Side) => void
+  onPreview: (role: Side) => void
+  bottom: number
+}) {
+  const chips = <K extends keyof Look>(key: K, options: [Look[K], string][]) => (
+    <View style={styles.row}>
+      {options.map(([value, label]) => (
+        <Button
+          key={label}
+          label={label}
+          selected={look[key] === value}
+          onPress={() => looks.set({ [key]: value } as Partial<Look>)}
+          styles={styles}
+        />
+      ))}
+    </View>
+  )
+  return (
+    <View style={[styles.dev, { paddingBottom: bottom }]}>
+      <Text style={styles.label}>Dev: fonts</Text>
+      {chips('font', [
+        ['current', 'Plex'],
+        ['a', 'A Cinzel'],
+        ['b', 'B Rajdhani'],
+        ['c', 'C Barlow'],
+      ])}
+      <Text style={styles.label}>Dev: palette</Text>
+      {chips('palette', [
+        ['current', 'Current'],
+        ['lift', 'Lift'],
+      ])}
+      <Text style={styles.label}>Dev: primary button</Text>
+      {chips('primary', [
+        ['litStone', 'A lit stone'],
+        ['flame', 'B flame'],
+      ])}
+      <Text style={styles.label}>Dev: idle board</Text>
+      {chips('sigils', [
+        [true, 'Sigils'],
+        [false, 'Bare'],
+      ])}
+      <Text style={styles.label}>Dev</Text>
+      <View style={styles.row}>
+        <Button label="Rehearse alone" onPress={() => onRehearse('crew')} styles={styles} />
+        <Button label="Rehearse as Hollow" onPress={() => onRehearse('impostor')} styles={styles} />
+        <Button label="Faithful" onPress={() => onPreview('crew')} styles={styles} />
+        <Button label="Hollow" onPress={() => onPreview('impostor')} styles={styles} />
+      </View>
     </View>
   )
 }
 
-function Heading({ children }: { children: ReactNode }) {
-  return (
-    <Text style={styles.heading} accessibilityRole="header">
-      {children}
-    </Text>
-  )
+function makeStyles(type: ReturnType<typeof typeFor>, palette: Palette, primary: PrimaryStyle) {
+  const faces = homeFaces(palette)
+  const { layout, home } = tokens
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+    },
+    screen: {
+      paddingHorizontal: layout.screenGutter,
+      gap: layout.sectionGap,
+    },
+    wordmark: {
+      ...type.wordmark,
+      color: palette.bone,
+      textAlign: 'center',
+    },
+    // The board is laid over its slot rather than sized by it, so the slot can shrink when a
+    // notice takes room and the board follows it down.
+    boardSlot: {
+      flexGrow: 1,
+      minHeight: 0,
+    },
+    board: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+    },
+    group: {
+      gap: layout.stackGap,
+    },
+    offline: {
+      gap: layout.stackGap,
+      alignItems: 'flex-start',
+    },
+    row: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: layout.stackGap,
+    },
+    label: {
+      ...type.fine,
+      color: palette.boneDim,
+    },
+    para: {
+      ...type.body,
+      color: palette.boneDim,
+    },
+    notice: {
+      ...type.body,
+      color: palette.bone,
+    },
+    input: {
+      ...type.body,
+      ...faces.field,
+      color: palette.bone,
+      minHeight: layout.minTouchTarget,
+      paddingHorizontal: layout.screenGutter,
+    },
+    codeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: layout.stackGap,
+    },
+    cells: {
+      flexDirection: 'row',
+      gap: layout.stackGap / 2,
+    },
+    cell: {
+      ...faces.field,
+      width: home.codeCell,
+      height: home.codeCell,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    cellText: {
+      ...type.codeCell,
+      color: palette.bone,
+    },
+    // Laid over all four cells and invisible: it takes the touches, the keystrokes and the paste
+    // menu, and the cells draw what it holds. Opacity, not a transparent text colour — Android
+    // draws a TextInput's transparent text black.
+    cellInput: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      opacity: 0,
+    },
+    cellFocused: faces.fieldFocused,
+    primary: {
+      ...faces.primary[primary],
+      minHeight: home.primaryHeight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    primaryDisabled: {
+      ...faces.secondary,
+      minHeight: home.primaryHeight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    primaryLabel: {
+      ...type.stage,
+      color: faces.primaryLabel[primary],
+    },
+    button: {
+      ...faces.secondary,
+      flexDirection: 'row',
+      minHeight: layout.minTouchTarget,
+      paddingHorizontal: layout.screenGutter,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: tokens.art.skrGap,
+    },
+    buttonLabel: {
+      ...type.bodyMedium,
+      color: palette.bone,
+    },
+    disabledLabel: {
+      color: palette.boneFaint,
+    },
+    chipSelected: { ...faces.field, ...faces.fieldFocused },
+    // §3.1: gold is for SKR only, and this button fetches SKR.
+    gold: {
+      color: palette.gold,
+    },
+    faucet: {
+      alignSelf: 'stretch',
+    },
+    strip: {
+      ...faces.panel,
+      padding: layout.stackGap,
+      gap: layout.stackGap,
+    },
+    stripRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: layout.stackGap,
+    },
+    address: {
+      ...type.stage,
+      fontFamily: type.bodyMedium.fontFamily,
+      ...tokens.tabularFigures,
+      color: palette.bone,
+    },
+    // The About control: as tall as the primary, so a new player finds it unprompted, but a stone
+    // face, so it never competes with the action.
+    about: {
+      ...faces.secondary,
+      flexDirection: 'row',
+      minHeight: home.primaryHeight,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: layout.stackGap,
+    },
+    aboutMark: {
+      width: home.aboutMark,
+      height: home.aboutMark,
+      borderWidth: tokens.art.sigilStroke,
+      borderColor: palette.boneDim,
+      transform: [{ rotate: '45deg' }],
+    },
+    aboutLabel: {
+      ...type.stage,
+      color: palette.bone,
+    },
+    dev: {
+      paddingHorizontal: layout.screenGutter,
+      gap: layout.stackGap,
+    },
+  })
 }
-
-function Para({ children }: { children: ReactNode }) {
-  return <Text style={styles.para}>{children}</Text>
-}
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: tokens.layout.screenGutter,
-    paddingBottom: tokens.layout.sectionGap,
-    gap: tokens.layout.sectionGap,
-  },
-  title: {
-    ...tokens.type.display,
-    color: tokens.palette.bone,
-  },
-  group: {
-    gap: tokens.layout.stackGap,
-  },
-  row: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: tokens.layout.stackGap,
-  },
-  label: {
-    ...tokens.type.fine,
-    color: tokens.palette.boneDim,
-  },
-  input: {
-    ...tokens.type.body,
-    ...tokens.material.insetStoneFace,
-    color: tokens.palette.bone,
-    borderRadius: tokens.radii.chip,
-    minHeight: tokens.layout.minTouchTarget,
-    paddingHorizontal: tokens.layout.screenGutter,
-  },
-  codeInput: {
-    flex: 1,
-    letterSpacing: tokens.layout.stackGap / 2,
-  },
-  button: {
-    ...tokens.material.raisedStoneFace,
-    borderRadius: tokens.radii.chip,
-    minHeight: tokens.layout.minTouchTarget,
-    paddingHorizontal: tokens.layout.screenGutter,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonLabel: {
-    ...tokens.type.body,
-    color: tokens.palette.bone,
-  },
-  buttonLabelDisabled: {
-    color: tokens.palette.boneFaint,
-  },
-  // §3.1: --gold is for SKR only, and this button fetches SKR.
-  gold: {
-    color: tokens.palette.gold,
-  },
-  walletRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: tokens.layout.stackGap,
-  },
-  address: {
-    ...tokens.type.body,
-    ...tokens.tabularFigures,
-    color: tokens.palette.bone,
-  },
-  notice: {
-    ...tokens.type.body,
-    color: tokens.palette.bone,
-  },
-  about: {
-    gap: tokens.layout.stackGap,
-  },
-  heading: {
-    ...tokens.type.stage,
-    color: tokens.palette.bone,
-    marginTop: tokens.layout.stackGap,
-  },
-  para: {
-    ...tokens.type.body,
-    color: tokens.palette.boneDim,
-  },
-})
