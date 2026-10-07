@@ -73,6 +73,13 @@ const duration = {
   // The owner's UI pass: the energy readout's tick when the number changes. A short drop and
   // settle, so spending reads as something leaving.
   energyTick: 160,
+
+  // Part 3 of the owner's UI pass: the results screen's entrance, once on arrival and never on
+  // scroll. Four beats — outcome, verdict, board, the sections — each rising and fading in over
+  // `resultsEnter`, each starting `resultsStagger` after the last: 3 x 150 + 400 = 850ms in all,
+  // under the owner's 1000ms.
+  resultsEnter: 400,
+  resultsStagger: 150,
 } as const
 
 // §7.3 — below `art.creditsCritical` the counter "pulses slowly". §7.3 names no period, so this
@@ -132,6 +139,7 @@ const transition = {
   // §7.7, chosen in item 4: the ejected token settles into cold rather than blinking out.
   castOutCold: { duration: duration.castOutCold, easing: easing.easeInOut },
   energyTick: { duration: duration.energyTick, easing: easing.easeOut },
+  resultsEnter: { duration: duration.resultsEnter, easing: easing.easeOut },
 } as const
 
 export const motion = {

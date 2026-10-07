@@ -8,7 +8,7 @@ import type { SeatNumber } from '../art/Sigil'
 import { StillBoard } from '../art/StillBoard'
 import { tokens } from '../design/tokens'
 import { match } from '../net/session'
-import { Action, goHome, skr } from './Reckoning'
+import { Action, Enter, goHome, skr } from './Reckoning'
 
 // /broken — §7.9's void. The moment a player worries about their money, so it is its own screen
 // and never a toast: the percentage and the conduits go dark, and the copy says what happened and
@@ -83,35 +83,43 @@ export function Broken() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingTop: tokens.layout.sectionGap, paddingBottom: insets.bottom + tokens.layout.sectionGap },
+          { paddingTop: tokens.space.xl, paddingBottom: insets.bottom + tokens.space.xl },
         ]}
       >
-        <StillBoard
-          lanes={state.lanes}
-          seatOf={(id) => state.seats.get(id) ?? 1}
-          youId={state.youId}
-          capacity={state.capacity}
-          winTarget={state.winTarget}
-          dark
-        />
+        {/* The results screen's layout and entrance (part 3 of the owner's UI pass): what happened to
+            this player's money first, then the dark board, then the way out. */}
+        <Enter beat={0}>
+          <View style={styles.group} accessibilityLiveRegion="polite">
+            <Text style={styles.title} accessibilityRole="header">
+              The rite is broken.
+            </Text>
+            <Text style={styles.body}>{state.cause}</Text>
+            {/* §7.9's line, with the refund in gold. */}
+            <Text style={styles.body}>
+              {'Nothing was spent. '}
+              <Text style={styles.gold}>{`${state.refund} SKR`}</Text>
+              {' returned to your wallet.'}
+            </Text>
+          </View>
+        </Enter>
 
-        <View style={styles.group} accessibilityLiveRegion="polite">
-          <Text style={styles.title} accessibilityRole="header">
-            The rite is broken.
-          </Text>
-          <Text style={styles.body}>{state.cause}</Text>
-          {/* §7.9's line, with the refund in gold. */}
-          <Text style={styles.body}>
-            {'Nothing was spent. '}
-            <Text style={styles.gold}>{`${state.refund} SKR`}</Text>
-            {' returned to your wallet.'}
-          </Text>
-        </View>
+        <Enter beat={1}>
+          <StillBoard
+            lanes={state.lanes}
+            seatOf={(id) => state.seats.get(id) ?? 1}
+            youId={state.youId}
+            capacity={state.capacity}
+            winTarget={state.winTarget}
+            dark
+          />
+        </Enter>
 
-        <View style={styles.actions}>
-          <Action label="Play again" onPress={goHome} />
-          <Action label="Leave" onPress={goHome} />
-        </View>
+        <Enter beat={2}>
+          <View style={styles.actions}>
+            <Action label="Play again" onPress={goHome} primary />
+            <Action label="Leave" onPress={goHome} />
+          </View>
+        </Enter>
       </ScrollView>
     </View>
   )
@@ -123,11 +131,11 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    paddingHorizontal: tokens.layout.screenGutter,
-    gap: tokens.layout.sectionGap,
+    paddingHorizontal: tokens.space.lg,
+    gap: tokens.space.xxl,
   },
   group: {
-    gap: tokens.layout.stackGap,
+    gap: tokens.space.md,
   },
   title: {
     ...tokens.type.display,
@@ -143,6 +151,6 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: 'row',
-    gap: tokens.layout.stackGap,
+    gap: tokens.space.md,
   },
 })

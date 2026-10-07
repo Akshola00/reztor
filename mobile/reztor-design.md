@@ -210,7 +210,7 @@ Everything is carved, not stacked. Depth comes from a light edge on top and a da
 
 No `elevation` and no `shadowColor` anywhere. Android's elevation shadow is the single fastest way to make this look like a stock Material app.
 
-Corner radius encodes hierarchy rather than being applied uniformly: major panels are `2` (cut stone), interactive chips and buttons are `4`, and the conduits have no radius at all because they are apertures, not objects. The single exception is the tap band, whose top corners round at 28pt — §7.3. Nothing else in the interface is a rounded card with a soft grey shadow.
+Corner radius encodes hierarchy rather than being applied uniformly: major panels are `2` (cut stone), interactive chips and buttons are `4`, and the conduits have no radius at all because they are apertures, not objects. There are two named exceptions. The tap band's top corners round at 28pt (§7.3). And Discuss is a modern messenger, at the owner's call: its bubbles round at 16 with the speaker's side cut to 4 where they stack, its input field is a pill (22) and its Send button is round (§7.5). Nothing else in the interface is a rounded card with a soft grey shadow.
 
 A single grain texture sits above the background and below content — a small tiled PNG in an absolutely positioned `Image` with `resizeMode="repeat"` at 3% opacity and `pointerEvents="none"`. It does not animate.
 
@@ -456,21 +456,34 @@ Their conduit's fill desaturates to cold but does not empty — their contributi
 
 **No role reveal on ejection.** This is the single most tempting thing to add and it would end the match. The spec is explicit that the impostor's identity stays hidden until `MATCH_END`, and an ejection that revealed the role would make rounds 2 and 3 pointless.
 
-### 7.8 The Reckoning
+### 7.8 Results (the Reckoning)
 
-Everything, immediately, with no progressive disclosure. The mechanics spec is right that the post-mortem argument is half the entertainment, and hiding anything behind a tab or an accordion kills it.
+**Rebuilt in part 3 of the owner's UI pass**: "this is not a school PDF, it's supposed to be a game". It is the last thing a judge sees and the screen where the chain shows a number, so it leads with the player's own outcome and puts the money fourth:
 
-Order: verdict in Grenze Gotisch → the Hollow revealed, their sigil token marked in `--toll` → final board and percentage → a per-player table (credits spent, units contributed, final conduit) → the Hollow's line (total toll, Draw count, self-sinks) → Augury purchases and results → full vote history by round → payouts and refunds in `--gold` → the role seed, monospace, selectable, with a one-line note that it can be checked against the assignment.
+1. **The outcome.** Did _this_ player win or lose, stated plainly — _You won_ in `--gold` or _You lost_ in toll, at `--t-display` — with one line under it, and their own amount at `--t-heart` in Oswald, legible at arm's length. A win shows what was paid to their wallet, in gold; a loss shows what the match cost them, in toll, and what came back. The four lines:
+   - Faithful, won: _"You were Faithful, and the Faithful prevailed."_
+   - Faithful, lost: _"You were Faithful. The Hollow got away with it."_
+   - Hollow, won: _"You were the Hollow, and they never caught you."_
+   - Hollow, lost: _"You were the Hollow, and the Faithful prevailed."_
+2. **The verdict and the Hollow**: the fiction's headline at `--t-stage` with a plain line under it, and the Hollow's token in its `--toll` diamond.
+3. **The final board** and its percentage, with the match board's carved seam.
+4. **The money**: what each player was returned and won, in SKR — winners' names and the Won column in gold — the house fee and leftover dust, and the on-chain transaction. Here rather than last, because a judge watching a chain demo wants to see real numbers paid out.
+5. **The taps**: a real table with tabular figures and aligned columns, not cards — spent, tapped, final lane — with a thin gold bar under each tapped figure, scaled to the largest, so it reads as a chart at a glance. The player's own row carries the board's own-lane mark, a `--bone-dim` ring round their mask.
+6. **Drain and Inspect** as compact stat blocks: figures large, labels small.
+7. **The vote history**, behind _See full vote history_, collapsed by default and opening in place — the longest and least-read block.
+8. **The seed**: one line cut in the middle, opening to the full value in place, a Copy control, and one line of why it matters.
 
-The table is real tabular data with tabular figures and aligned columns, not four rounded cards.
+Gold marks value and nothing else here: the payout, the Won column, the winners, the bars, the outcome on a win. Headings stay bone.
 
-Two actions at the bottom: **Kneel again** and **Leave**.
+**An entrance, once on arrival and never on scroll**: outcome, verdict, board, then the sections, each rising and fading in over 400ms, 150ms apart — 850ms in all. Transform and opacity only.
+
+Two actions at the bottom: **Play again**, the primary (home's primary face), and **Leave**, a stone secondary.
 
 ### 7.9 Broken states
 
 The mechanics spec's void-and-refund path needs first-class design, because it is the moment a player worries about their money.
 
-A voided rite gets its own screen, not a toast: the percentage and the conduits go dark, and the copy says exactly what happened and what it cost. _"The rite is broken. Nothing was spent. 12 SKR returned to your wallet."_ Refund amount in `--gold`, transaction link available. No apology, no filler.
+A voided rite gets its own screen, not a toast, sharing the results screen's layout, entrance and buttons: what happened to the player's money first, then the dark board, then the way out. The percentage and the conduits go dark, and the copy says exactly what happened and what it cost. _"The rite is broken. Nothing was spent. 12 SKR returned to your wallet."_ Refund amount in `--gold`, transaction link available. No apology, no filler.
 
 Disconnection during the 30s grace shows a countdown beside the player's own sigil token. Reconnecting resumes without ceremony.
 

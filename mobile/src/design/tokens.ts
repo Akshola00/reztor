@@ -237,8 +237,8 @@ const art = {
   // in the palette, and each aperture keeps its own walls, so a falling surface beside a rising one
   // stays two separate surfaces. 2pt is 7px on this phone and 4-6px on a 360dp phone at 2-3x.
   laneSeam: 2,
-  // The idle board on home and the still board in the Reckoning still stand apart by background,
-  // until parts 2 and 3 of the UI pass reach them.
+  // The idle board on home still stands its lanes apart by background; the results and broken
+  // boards took the seam in part 3 of the UI pass.
   conduitGap: 10,
 
   // §6.2 names both of these.
@@ -432,6 +432,11 @@ const art = {
   // conduits standing still at their last level. Short enough that the verdict and the Hollow stay
   // above the fold on an 832pt screen. Chosen in item 6.
   stillBoardHeight: 160,
+  // Part 3 of the owner's UI pass: the results screen. A thin gold bar under each player's tapped
+  // figure, scaled to the largest, so the table reads as a chart at a glance; and the seed's one
+  // line, cut to this many characters each side of an ellipsis until it is opened.
+  resultsBarHeight: 3,
+  seedPreviewChars: 10,
   // §7.8's Hollow "marked in toll": the Marking's mark — a square on its point — drawn in toll
   // around the Hollow's token, at this size. The token itself is the vote row's (voteDisc).
   // Chosen in item 6.

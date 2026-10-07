@@ -44,16 +44,16 @@ export function StillBoard({ lanes, seatOf, youId, capacity, winTarget, dark = f
   const percent = Math.min(100, Math.floor((total * 100) / winTarget))
   const crossed = !dark && total >= winTarget
   const thresholdFraction = winTarget / laneCount / capacity
-  // §6.1's derivation, inside the screen gutter that holds the rest of the page.
-  const columnWidth = Math.floor(
-    (screenWidth - tokens.layout.screenGutter * 2 - art.conduitGap * (laneCount - 1)) / laneCount,
-  )
+  // §6.1's derivation, inside the screen gutter that holds the rest of the page, with the match
+  // board's carved seam between the lanes (part 3 of the owner's UI pass). Fractional, so the
+  // lanes fill the width exactly and the seam behind them takes up any rounding.
+  const columnWidth = (screenWidth - tokens.layout.screenGutter * 2 - art.laneSeam * (laneCount - 1)) / laneCount
   const height = art.stillBoardHeight
 
   return (
     <View style={styles.root}>
       <Percent percent={percent} colour={dark ? tokens.palette.boneFaintText : tokens.palette.bone} />
-      <View style={[styles.columns, { gap: art.conduitGap, height }]}>
+      <View style={[styles.columns, { gap: art.laneSeam, height }]}>
         {lanes.map((lane) => {
           const value = units[lane.owner]
           if (value === undefined) return null
@@ -89,10 +89,11 @@ export function StillBoard({ lanes, seatOf, youId, capacity, winTarget, dark = f
 const styles = StyleSheet.create({
   root: {
     alignItems: 'center',
-    gap: tokens.layout.stackGap,
+    gap: tokens.space.md,
   },
+  // The seam: the row's own background, showing between the lanes. Hard rule 1: they never touch.
   columns: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    backgroundColor: tokens.palette.bevelShadow,
   },
 })

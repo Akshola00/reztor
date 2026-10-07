@@ -37,12 +37,12 @@ type LobbyError = Extract<LobbyAck, { ok: false }>['error']
 
 // §1.2: errors do not apologise and are never vague.
 const ERRORS: Record<LobbyError, string> = {
-  UNKNOWN_CODE: 'No gathering answers to that code.',
+  UNKNOWN_CODE: 'No match has that code.',
   LOBBY_FULL: 'That match is full.',
   INVALID_PAYLOAD: 'The name or the code was refused. A name is 1 to 32 characters; a code is four.',
-  ESCROW_FAILED: 'The stakes could not be held. Nothing was taken.',
+  ESCROW_FAILED: "The stakes couldn't be held. You weren't charged.",
   WALLET_UNFUNDED: `Your wallet cannot cover the stake. It needs ${BUY_IN_SKR} SKR, and a little SOL for fees.`,
-  WALLET_TAKEN: 'That wallet already kneels in this gathering. Each seat needs its own wallet.',
+  WALLET_TAKEN: 'That wallet is already in this match. Each player needs their own wallet.',
 }
 
 const WALLET_REFUSED = 'The wallet did not connect. Open a Solana wallet set to devnet, and try again.'
@@ -60,14 +60,14 @@ const FAUCET: Record<Exclude<FaucetResult, { ok: true }>['error'], string> = {
 
 const NOTICES: Record<string, string> = {
   // PROTOCOL.md §2: nothing locks until all four seats are filled, so a dissolve takes nothing.
-  dissolvedTimeout: 'The gathering dissolved. Four did not kneel in time. Nothing was taken.',
-  dissolvedEscrow: 'The gathering dissolved. The rite could not be paid for. Anyone who paid has been refunded.',
+  dissolvedTimeout: "The lobby closed before 4 players joined. You weren't charged.",
+  dissolvedEscrow: "The lobby closed because the match couldn't be paid for. Anyone who paid has been refunded.",
   dissolvedStake: 'Not everyone staked — anyone who paid has been refunded.',
-  seatLost: 'Your seat in the gathering is gone. Nothing was taken.',
-  lost: 'The server no longer knows your seat.',
+  seatLost: "Your place in the lobby is gone. You weren't charged.",
+  lost: 'The server no longer knows your place in the match.',
   // A launch or retry that found the rite already resolved. Its MATCH_END was sent once, to the
   // room, while this phone was away, so there is no Reckoning to show.
-  ended: 'The rite you knelt in has ended.',
+  ended: 'The match you were in has ended.',
 }
 
 /** Upper-cases, and keeps only the server's alphabet: no I, O, 0 or 1. */
@@ -414,7 +414,7 @@ function Faucet({
       </Pressable>
       {result === null ? null : (
         <Text style={styles.notice} accessibilityLiveRegion="polite">
-          {result.ok ? '240 test SKR and 0.05 SOL are in your wallet. You can kneel now.' : FAUCET[result.error]}
+          {result.ok ? '240 test SKR and 0.05 SOL are in your wallet. You can play now.' : FAUCET[result.error]}
         </Text>
       )}
     </View>

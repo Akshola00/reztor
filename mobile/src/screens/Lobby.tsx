@@ -51,16 +51,16 @@ const STAKE_LANDING_MS = 20_000
 // Solflare reports an expired blockhash to the app as a cancel, so `declined` cannot promise the
 // player declined; it says only what is certain.
 const STAKE_FAILED: Record<StakeFailure | 'unavailable', string> = {
-  declined: 'Your wallet did not send the stake. Nothing was taken. Stake again, and approve it promptly.',
+  declined: "Your wallet did not send the stake. You weren't charged. Stake again, and approve it promptly.",
   stale:
-    'The stake expired in your wallet before it was sent. Nothing was taken. Stake again, and approve it promptly.',
-  other: 'Your wallet could not send the stake. Nothing was taken. Stake again.',
+    "The stake expired in your wallet before it was sent. You weren't charged. Stake again, and approve it promptly.",
+  other: "Your wallet could not send the stake. You weren't charged. Stake again.",
   unavailable: 'The server did not prepare your stake. Stake again.',
 }
 
 // §1.2: waiting states are instructions, not mood.
 const KNEELING = [
-  'Taking your seat.',
+  'Joining the match.',
   '1 of 4 players here.',
   '2 of 4 players here.',
   '3 of 4 players here.',
@@ -179,17 +179,12 @@ function Gathering({ code, you }: { code: string; you: string }) {
         )}
         {remaining === null ? null : (
           <Text style={[styles.line, styles.timer]}>
-            {remaining > 0 ? `Lobby closes in ${clock(remaining)}.` : 'The time to gather has run out.'}
+            {remaining > 0 ? `Lobby closes in ${clock(remaining)}.` : 'The lobby has closed.'}
           </Text>
         )}
       </View>
 
-      <Pressable
-        onPress={leave}
-        accessibilityRole="button"
-        accessibilityLabel="Leave the gathering"
-        style={styles.leave}
-      >
+      <Pressable onPress={leave} accessibilityRole="button" accessibilityLabel="Leave the lobby" style={styles.leave}>
         <Text style={styles.leaveLabel}>Leave</Text>
       </Pressable>
     </View>
@@ -241,7 +236,7 @@ function Funding({ funding, ownSeat, now }: { funding: FundingState; ownSeat: nu
   let line: string
   let action: { label: string; enabled: boolean } | null = null
   if (paid) {
-    line = everyone ? 'Every stake is held. The rite begins.' : 'Your stake is held. Waiting for the others.'
+    line = everyone ? 'Every stake is held. The match begins.' : 'Your stake is held. Waiting for the others.'
   } else if (phase.kind === 'signing') {
     line = 'Approve the stake in your wallet. It expires in about half a minute.'
   } else if (phase.kind === 'sent') {
