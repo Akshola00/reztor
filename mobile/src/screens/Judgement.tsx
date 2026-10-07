@@ -48,8 +48,8 @@ export function Judgement({ seats, round, canVote }: JudgementProps) {
   if (!canVote) {
     return (
       <View style={styles.root}>
-        <Text style={styles.title}>Judgement</Text>
-        <Text style={styles.line}>You are cast out. The others judge.</Text>
+        <Text style={styles.title}>Vote</Text>
+        <Text style={styles.line}>You are voted out. The others vote.</Text>
       </View>
     )
   }
@@ -63,8 +63,8 @@ export function Judgement({ seats, round, canVote }: JudgementProps) {
 
   return (
     <View style={styles.root}>
-      <Text style={styles.title}>Judgement</Text>
-      <Text style={styles.line}>Place your mark. You may move it until the Judgement closes.</Text>
+      <Text style={styles.title}>Vote</Text>
+      <Text style={styles.line}>Place your mark. You may move it until the vote closes.</Text>
 
       <View style={styles.row}>
         {shown.map((p) => {

@@ -115,11 +115,12 @@ export function Marking({ role, seat, onDone }: MarkingProps) {
         <Text style={styles.line}>
           {hollow ? 'You are Hollow. The Heart must not wake.' : 'You are Faithful. Feed the Heart.'}
         </Text>
-        {hollow ? (
-          <Text style={styles.quiet}>
-            You may take from one conduit and give to another. Four parts in ten are the toll.
-          </Text>
-        ) : null}
+        {/* §1.1: the role reveal keeps the fiction, and glosses Hollow and Faithful once. */}
+        <Text style={styles.quiet}>
+          {hollow
+            ? 'The impostor. Drain one lane into another to keep the board short of the target. Four parts in ten are destroyed.'
+            : 'One of the three honest players. Fill the board to the target, and vote out the Hollow.'}
+        </Text>
       </Animated.View>
     </Animated.View>
   )

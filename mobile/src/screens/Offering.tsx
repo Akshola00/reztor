@@ -74,7 +74,7 @@ export function Offering({ config, prediction, ownUnits, onPredicted, canTap, on
     <>
       {/* §7.3's controls row. */}
       <View style={styles.controls}>
-        <ControlButton accessibilityLabel={`Offering tier: ${cost} SKR for ${units}`} onPress={onTierPress}>
+        <ControlButton accessibilityLabel={`Tap size ×${units}, ${cost} energy a tap`} onPress={onTierPress}>
           <Text style={styles.buttonLabel}>{String(cost)}</Text>
           <SkrMark colour={tokens.palette.bone} />
           <ArrowMark colour={tokens.palette.bone} />
@@ -85,8 +85,8 @@ export function Offering({ config, prediction, ownUnits, onPredicted, canTap, on
 
         {/* Identical for every role, in the same place, at the same size, with the same label and
             handler. Hard rule 4: role reaches only the sheet it opens, never this button. */}
-        <ControlButton accessibilityLabel="Augury" onPress={onAction}>
-          <Text style={styles.buttonLabel}>Augury</Text>
+        <ControlButton accessibilityLabel="Inspect" onPress={onAction}>
+          <Text style={styles.buttonLabel}>Inspect</Text>
         </ControlButton>
       </View>
 
@@ -176,7 +176,7 @@ function CreditCounter({ prediction }: { prediction: OptimisticStore }) {
 
   const label = String(credits)
   return (
-    <View style={styles.credits} accessible accessibilityLabel={`${credits} SKR`}>
+    <View style={styles.credits} accessible accessibilityLabel={`${credits} energy`}>
       <View>
         <Text style={[styles.creditsValue, { color: colour }]}>{label}</Text>
         {critical ? (

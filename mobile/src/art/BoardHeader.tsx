@@ -137,7 +137,7 @@ export function Percent({ percent, colour }: { percent: number; colour: string }
       style={styles.percent}
       accessible
       accessibilityRole="text"
-      accessibilityLabel={`The Heart is ${percent} percent full`}
+      accessibilityLabel={`The board is ${percent} percent full`}
     >
       {digits.map((digit, i) => (
         // Index keys: these are glyph slots at fixed positions, not a reorderable list.

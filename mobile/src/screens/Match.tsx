@@ -368,7 +368,7 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
         line={
           ownStatus === 'ejected'
             ? 'Trying again.'
-            : 'Trying again. Return before the count beside your conduit ends, or you are cast out.'
+            : 'Trying again. Return before the count beside your lane ends, or you lose your seat.'
         }
       />
     )
@@ -382,9 +382,7 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
   } else if (!alive) {
     lowerKey = 'cast-out'
     // Cast-out players stay as spectators, with their inputs removed rather than disabled.
-    lower = (
-      <Placeholder height={lowerHeight} title="You are cast out." line="Your conduit is cold. The rite goes on." />
-    )
+    lower = <Placeholder height={lowerHeight} title="You are voted out." line="Your lane is cold. The rite goes on." />
   } else {
     lowerKey = 'tap'
     lower = (

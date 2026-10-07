@@ -29,18 +29,18 @@ const TICKS_PER_SEC = 4
 
 // §1.2's voice: conditions, stated. The first line is the verdict in Grenze Gotisch.
 const VERDICT: Record<WinReason, [string, string]> = {
-  BOARD_TARGET: ['The Heart wakes.', 'The Faithful reached the Threshold. The Faithful prevail.'],
-  IMPOSTOR_EJECTED: ['The Hollow is cast out.', 'The Faithful prevail.'],
+  BOARD_TARGET: ['The Heart wakes.', 'The Faithful reached the target. The Faithful prevail.'],
+  IMPOSTOR_EJECTED: ['The Hollow is voted out.', 'The Faithful prevail.'],
   IMPOSTOR_TIMED_OUT: ['The Hollow is gone.', 'It left the rite and did not return. The Faithful prevail.'],
-  CREW_EJECTED: ['The Heart stays dead.', 'Two of the Faithful are cast out. The Hollow prevails.'],
-  ROUNDS_EXHAUSTED: ['The Heart stays dead.', 'The night ends short of the Threshold. The Hollow prevails.'],
+  CREW_EJECTED: ['The Heart stays dead.', 'Two of the Faithful are voted out. The Hollow prevails.'],
+  ROUNDS_EXHAUSTED: ['The Heart stays dead.', 'The night ends short of the target. The Hollow prevails.'],
 }
 
-// §1.1's exact Augury wording.
+// §1.1's exact Inspect wording.
 const READING = {
-  natural: 'fed by its own hand',
-  received: 'filled from elsewhere',
-  drained: 'something was taken',
+  natural: 'Filled by their own taps',
+  received: 'Received from another lane',
+  drained: 'Drained by someone',
 } as const
 
 type Reckoned = { reveal: MatchEndView; settlement: Settlement; seats: Map<PlayerId, SeatNumber>; youId: PlayerId }
@@ -142,9 +142,9 @@ export function Reckoning() {
           winTarget={reveal.board.winTarget}
         />
 
-        <Section title="Offerings">
+        <Section title="Taps">
           <Table
-            headings={['Spent', 'Offered', 'Conduit']}
+            headings={['Spent', 'Tapped', 'Lane']}
             rows={reveal.players.map((p) => ({
               key: p.id,
               who: who(p.id),
@@ -153,33 +153,33 @@ export function Reckoning() {
           />
         </Section>
 
-        <Section title="The Draw">
+        <Section title="Drain">
           <Text style={styles.body}>
             {impostor.siphons === 0 ? (
-              `${nameOf(hollow)} never drew. Nothing was taken from the Heart.`
+              `${nameOf(hollow)} never drained. Nothing was destroyed.`
             ) : (
               <>
-                {`${nameOf(hollow)} drew ${impostor.siphons} ${impostor.siphons === 1 ? 'time' : 'times'} and took `}
+                {`${nameOf(hollow)} drained ${impostor.siphons} ${impostor.siphons === 1 ? 'time' : 'times'} and destroyed `}
                 <Text style={styles.toll}>{impostor.unitsDestroyed}</Text>
-                {' from the Heart. '}
+                {' energy. '}
                 {impostor.selfSinks === 0
-                  ? 'None of those Draws fed their own conduit.'
-                  : `Of those, ${impostor.selfSinks} fed their own conduit.`}
+                  ? 'None of those drains fed their own lane.'
+                  : `Of those, ${impostor.selfSinks} fed their own lane.`}
               </>
             )}
           </Text>
         </Section>
 
         {auguryApplies ? (
-          <Section title="Augury">
+          <Section title="Inspect">
             {reveal.traces.length === 0 ? (
-              <Text style={styles.body}>No one sought an Augury.</Text>
+              <Text style={styles.body}>No one inspected a lane.</Text>
             ) : (
               reveal.traces.map((t) => (
                 <View key={`${t.purchaser}-${t.tick}`} style={styles.line}>
                   {who(t.purchaser)}
                   <Text style={styles.body}>
-                    {`read ${nameOf(t.target)}'s round ${t.round - 1} in round ${t.round}: ${READING[t.result]}.`}
+                    {`inspected ${nameOf(t.target)}'s round ${t.round - 1} in round ${t.round}: ${READING[t.result]}.`}
                   </Text>
                 </View>
               ))
@@ -188,7 +188,7 @@ export function Reckoning() {
         ) : null}
 
         {judgementApplies ? (
-          <Section title="Judgement">
+          <Section title="Votes">
             {reveal.voteHistory.map((r) => (
               <View key={r.round} style={styles.group}>
                 <Text style={styles.round}>{`Round ${r.round}`}</Text>
@@ -197,7 +197,7 @@ export function Reckoning() {
                   <Vote key={voter} voter={who(voter)} target={r.votes[voter] ?? 'skip'} whoOf={who} />
                 ))}
                 <Text style={styles.body}>
-                  {r.ejected === null ? 'No one is cast out.' : `${nameOf(r.ejected)} is cast out.`}
+                  {r.ejected === null ? 'No one is voted out.' : `${nameOf(r.ejected)} is voted out.`}
                 </Text>
               </View>
             ))}

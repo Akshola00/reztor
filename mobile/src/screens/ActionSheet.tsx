@@ -34,11 +34,11 @@ import { Sheet } from './Sheet'
 // connects them — no line, no arrow, no paired flash. After a Draw the sheet shows one thing: the
 // running toll, a single number. SIPHON_RESULT's source and sink are never kept (net/session.ts).
 
-// §1.1's exact Augury wording.
+// §1.1's exact Inspect wording.
 const READING: Record<TraceResult, string> = {
-  natural: 'fed by its own hand',
-  received: 'filled from elsewhere',
-  drained: 'something was taken',
+  natural: 'Filled by their own taps',
+  received: 'Received from another lane',
+  drained: 'Drained by someone',
 }
 
 type ActionSheetProps = {
@@ -117,11 +117,11 @@ function Augury({
   if (reading !== undefined) {
     const seat = seats[reading.target]
     return (
-      <Section title="Augury">
+      <Section title="Inspect">
         <View
           style={styles.card}
           accessible
-          accessibilityLabel={`Augury of ${names.get(reading.target) ?? ''}: ${READING[reading.result]}`}
+          accessibilityLabel={`Inspected ${names.get(reading.target) ?? ''}: ${READING[reading.result]}`}
         >
           {seat === undefined ? null : (
             <SeatToken seat={seat} disc={tokens.art.tokenDisc} sigil={tokens.art.tokenSigil} />
@@ -137,13 +137,13 @@ function Augury({
 
   // §1.2: a disabled Augury says why, plainly.
   let reason: string | null = null
-  if (s.traceUsed || sent) reason = 'The Augury is being read.'
-  else if (s.round === 1) reason = 'Augury reads the last round. There is none yet.'
-  else if (credits < cost) reason = `Augury costs ${cost}. You have ${credits}.`
+  if (s.traceUsed || sent) reason = 'The lane is being inspected.'
+  else if (s.round === 1) reason = 'Inspect reads the last round. There is none yet.'
+  else if (credits < cost) reason = `Inspect costs ${cost} energy. You have ${credits}.`
 
   return (
-    <Section title="Augury" cost={cost}>
-      <Text style={styles.note}>{reason ?? 'Choose a conduit. Its last round is read once, for good.'}</Text>
+    <Section title="Inspect" cost={cost}>
+      <Text style={styles.note}>{reason ?? 'Choose a lane. Its last round is read once, for good.'}</Text>
       <View style={styles.row}>
         {owners.map((id) => (
           <Pressable
@@ -154,7 +154,7 @@ function Augury({
               setSent(true)
             }}
             accessibilityRole="button"
-            accessibilityLabel={`Read ${names.get(id) ?? ''}'s conduit`}
+            accessibilityLabel={`Inspect ${names.get(id) ?? ''}'s lane`}
             accessibilityState={{ disabled: reason !== null }}
             style={[styles.choice, reason !== null ? styles.disabled : null]}
           >
@@ -225,7 +225,7 @@ function Draw({
   }
 
   return (
-    <Section title="The Draw">
+    <Section title="Drain">
       <Animated.View style={[styles.pulse, pulseStyle]} />
 
       <Text style={styles.rowLabel}>Take from</Text>
@@ -259,7 +259,7 @@ function Draw({
               disabled={!ok}
               onPress={() => draw(id)}
               accessibilityRole="button"
-              accessibilityLabel={`Give to ${names.get(id) ?? ''}, ${costFor(id)} SKR`}
+              accessibilityLabel={`Give to ${names.get(id) ?? ''}, ${costFor(id)} energy`}
               accessibilityState={{ disabled: !ok }}
               style={[styles.choice, ok ? null : styles.carved]}
             >
@@ -273,7 +273,7 @@ function Draw({
         })}
       </View>
 
-      <Text style={styles.toll}>{`You have taken ${s.tollTaken} from the Heart`}</Text>
+      <Text style={styles.toll}>{`${s.tollTaken} energy destroyed`}</Text>
     </Section>
   )
 }

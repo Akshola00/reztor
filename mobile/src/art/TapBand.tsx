@@ -92,7 +92,7 @@ export function TapBand({ press, sparks, onTouchStart, onTouchEnd }: TapBandProp
       onTouchCancel={onTouchEnd}
       accessible
       accessibilityRole="button"
-      accessibilityLabel="Make an offering"
+      accessibilityLabel="Tap to fill your lane"
     >
       <Animated.View
         pointerEvents="none"

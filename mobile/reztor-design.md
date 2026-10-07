@@ -33,28 +33,31 @@ This is why sabotage looks like generosity. One conduit falls, another surges, a
 
 ### 1.1 Vocabulary
 
-Every player-facing string uses the left column. Code, logs, and message types keep the right column.
+**The owner's call, for the demo: clarity beats flavour in anything shown during a live match.** Every in-match string — the board, the controls, the sheets, the stage panels, the Reckoning's tables — leads with the plain word. The flavour word survives in three places only: the About sheet ("How the rite works"), the Reckoning's headline, and the role reveal. Even there, the About sheet names each mechanic by its plain word so it maps the story onto the controls. Code, logs and message types keep the right column.
 
-| Interface                      | Spec / code             |
-| :----------------------------- | :---------------------- |
-| the Rite                       | the match               |
-| the Heart / the vessel         | the board               |
-| conduit                        | lane                    |
-| the Threshold                  | win target (2400)       |
-| offering                       | tap                     |
-| lesser / greater offering      | tier 1 / tier 2         |
-| the Faithful                   | crew                    |
-| the Hollow                     | impostor                |
-| the Draw                       | siphon                  |
-| the toll                       | units destroyed         |
-| Augury                         | trace                   |
-| Offering / Council / Judgement | tap / chat / vote stage |
-| cast out                       | ejected                 |
-| cold (a conduit)               | dormant                 |
-| the Reckoning                  | match end screen        |
-| the Rite is broken             | match voided            |
+| In match (plain)       | Flavour (About, headline, role reveal) | Spec / code             |
+| :--------------------- | :------------------------------------- | :---------------------- |
+| the match / the rite   | the Rite                               | the match               |
+| the board              | the Heart / the vessel                 | the board               |
+| lane                   | conduit                                | lane                    |
+| the target             | the Threshold                          | win target (2400)       |
+| tap                    | offering                               | tap                     |
+| ×1 / ×3, with the cost | lesser / greater offering              | tier 1 / tier 2         |
+| Energy                 | —                                      | credits                 |
+| the Faithful           | the Faithful                           | crew                    |
+| the Hollow             | the Hollow                             | impostor                |
+| Drain                  | the Draw                               | siphon                  |
+| destroyed              | the toll                               | units destroyed         |
+| Inspect                | Augury                                 | trace                   |
+| Tap / Discuss / Vote   | Offering / Council / Judgement         | tap / chat / vote stage |
+| voted out              | cast out                               | ejected                 |
+| cold (a lane)          | cold                                   | dormant                 |
+| Results                | the Reckoning                          | match end screen        |
+| the Rite is broken     | the Rite is broken                     | match voided            |
 
-Augury results: `natural` → **"fed by its own hand"**, `received` → **"filled from elsewhere"**, `drained` → **"something was taken"**.
+**Hollow and Faithful are kept**, and glossed once, in the role reveal: the Hollow is "the impostor", the Faithful "one of the three honest players".
+
+Inspect results: `natural` → **"Filled by their own taps"**, `received` → **"Received from another lane"**, `drained` → **"Drained by someone"**. The Drain sheet's running count reads **"200 energy destroyed"**.
 
 ### 1.2 Voice
 

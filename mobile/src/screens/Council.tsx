@@ -102,7 +102,7 @@ export function Council({ config, seats, canSpeak }: CouncilProps) {
         onContentSizeChange={onContentSizeChange}
         maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
         keyboardShouldPersistTaps="handled"
-        ListEmptyComponent={<Text style={styles.empty}>The Council is silent.</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>No one has spoken yet.</Text>}
         renderItem={({ item }) => {
           const seat = seats[item.from]
           return (
@@ -152,7 +152,7 @@ function ChatInput() {
         value={text}
         onChangeText={setText}
         maxLength={CHAT_MAX}
-        placeholder="Speak to the Council"
+        placeholder="Message the others"
         placeholderTextColor={tokens.palette.boneDim}
         cursorColor={tokens.palette.bone}
         selectionColor={tokens.palette.stoneLit}
@@ -160,7 +160,7 @@ function ChatInput() {
         submitBehavior="submit"
         onSubmitEditing={send}
         style={styles.input}
-        accessibilityLabel="Message to the Council"
+        accessibilityLabel="Message to the others"
       />
       {left <= tokens.art.chatCountdownFrom ? (
         <Text style={styles.left} accessibilityLabel={`${left} characters left`}>
