@@ -15,8 +15,12 @@ module.exports = {
     android: {
       package: 'com.reztor.game',
       userInterfaceStyle: 'dark',
-      // The Council keyboard must never resize the board; the chat area scrolls instead.
-      softwareKeyboardLayoutMode: 'pan',
+      // The Council keyboard must never move or resize the board. 'resize' with edge-to-edge on
+      // (android/gradle.properties) leaves the window where it is and hands the app the
+      // keyboard's height, so the Council shrinks only its message list and keeps its input above
+      // the keyboard. 'pan' slid the whole window up and pushed the board off the top of the screen
+      // once the input moved to the bottom (part 2 of the owner's UI pass).
+      softwareKeyboardLayoutMode: 'resize',
       backgroundColor: VOID,
     },
     web: {

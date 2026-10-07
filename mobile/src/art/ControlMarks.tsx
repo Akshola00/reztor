@@ -65,3 +65,14 @@ export function DrainIcon({ colour, fill }: { colour: string; fill: string }) {
     </Svg>
   )
 }
+
+/** Send: an arrow rising. Gold while there is something to send (gold is emphasis, §3.1). */
+export function SendIcon({ colour }: { colour: string }) {
+  const size = tokens.art.icon
+  return (
+    <Svg width={size} height={size} viewBox={`0 0 ${BOX} ${BOX}`}>
+      <Path d="M 12 19.5 L 12 5" {...stroke(colour)} />
+      <Path d="M 6 11 L 12 5 L 18 11" {...stroke(colour)} />
+    </Svg>
+  )
+}

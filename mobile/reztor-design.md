@@ -141,7 +141,7 @@ Not on buttons, not on focus rings, not on the active tab, and not on the tap ba
 --seat-4: #6c7a99; /* slate */
 ```
 
-**A mask drawn small on bare ground takes a lightened mantle.** In chat rows, the Reckoning's tables and vote history, and the Reveal's marks, a 16dp mask is a stroke about 1dp wide, thinner than any glyph, and `--seat-3` is 2.33:1 on `--void`. Each text variant is its mantle mixed toward `--bone`, the way `tollText` was derived, by the smallest step that clears 4.5:1 on `--stone`. All four land within 0.1 of each other, so no seat's mask reads louder than another's. Tokens on a stone disc (the riding token, vote tokens, the lobby roster, the Hollow mark, the Marking) are 18dp and up and keep the mantle itself.
+**A mask drawn small on bare ground takes a lightened mantle.** In Discuss's masks and names and the Reckoning's tables and vote history, a 16dp mask is a stroke about 1dp wide, thinner than any glyph, and `--seat-3` is 2.33:1 on `--void`. Each text variant is its mantle mixed toward `--bone`, the way `tollText` was derived, by the smallest step that clears 4.5:1 on `--stone`. All four land within 0.1 of each other, so no seat's mask reads louder than another's. Tokens on a stone disc (the riding token, vote tokens, the lobby roster, the Hollow mark, the Marking) are 18dp and up and keep the mantle itself.
 
 ```css
 --seat-1-text: #7a9a91; /* 32% toward bone: 6.35:1 on void, 4.56:1 on stone */
@@ -152,7 +152,7 @@ Not on buttons, not on focus rings, not on the active tab, and not on the tap ba
 
 Each seat also carries a distinct carved mask (§5.2).
 
-**Gold is no longer SKR-only.** Since the owner's UI pass it is the accent for value and emphasis across the app: the energy mark, the chosen tap size, the tap band's gold rim. Payouts and refunds stay gold. Blue stays progress-only, unchanged — gold never marks progress. Identity is never carried by colour alone — this covers colourblind players and also solves a real problem, which is that four muted colours at thumb-size on a dim phone screen are genuinely hard to tell apart.
+**Gold is no longer SKR-only.** Since the owner's UI pass it is the accent for value and emphasis across the app: the energy mark, the chosen tap size, the tap band's gold rim, Send in Discuss, your vote — a gold ring round the mask you chose, or a gold edge round Skip — and the Reveal's marks. Payouts and refunds stay gold. Blue stays progress-only, unchanged — gold never marks progress. Identity is never carried by colour alone — this covers colourblind players and also solves a real problem, which is that four muted colours at thumb-size on a dim phone screen are genuinely hard to tell apart.
 
 ### 3.2 Typography
 
@@ -426,21 +426,27 @@ Confirmation is a single tap on the Give-to token; no separate confirm button. E
 
 **The sheet must dismiss cleanly if the stage changes underneath it**, and it must be fast to open and close, because the impostor is doing this while pretending to tap.
 
-### 7.5 Council
+### 7.5 Discuss (Council)
 
 Board freezes at the top, compressed to about 40% height, still showing final positions — arguments are about the board and it must stay visible. Chat fills the rest.
 
-Messages are plain rows: sigil, name in `--type-ui` medium, message in `--bone`. No bubbles, no avatars repeated per message, no read receipts. Cast-out players' inputs are removed entirely rather than disabled with an explanation.
+**A messenger, since part 2 of the owner's UI pass** ("this looks like a messaging session before CSS was invented"). **Every bubble is stone, and nothing about a bubble differs by role**; seat colour stays on the mask and the name. Your own messages sit on the right on the lighter stone step `--stone-edge` (bone on it 5.83:1). Everyone else's sit on the left in a `--stone` bubble, with their mask and name — in their seat's text colour (§3.1) — once at the head of each run of consecutive messages, and that run's bubbles stacked under it. Bubbles round at 16; the speaker's side is cut to 4 where bubbles stack, and only the run's last bubble rounds off at the bottom on that side — the owner's call over §3.3's chip radius, so the conversation reads as one. Newest at the bottom; the list follows a new message only when the reader is already at the bottom. No timestamps, no read receipts. Voted-out players' inputs are removed entirely rather than disabled with an explanation.
+
+**The input is at the bottom**, a pill-shaped field with Send as a round icon button beside it — a rising arrow, `--gold` while there is something to send. Item 4 had moved it to the top because the window was set to pan, and an input at the bottom slid the whole window — board and all — off the screen. The window now resizes with edge-to-edge on, which leaves the window where it is and reports the keyboard's height; the Discuss region pads its own bottom by that height on the UI thread, so only the message list shrinks. **Verified on the emulator: with the keyboard open, the lanes are byte-identical to the closed screen and their foot sits on the same pixel row.** Home, whose name field and code cells the pan used to slide into view, now shrinks its scroll view by the keyboard instead.
 
 The 45s timer runs as a thin line that shortens across the top of the chat, not as a number. Numbers make people rush; a line makes them aware.
 
-### 7.6 Judgement and The Reveal
+### 7.6 Vote (Judgement) and The Reveal
 
-Four (or three) vote tokens in a row: the player's sigil token and their name. Tap to place your mark. A Withhold option sits apart from the others, visually lower, because abstaining is a real choice and not a fifth player.
+**Since part 2 of the owner's UI pass the vote block sits in the vertical middle of the lower region**, so it balances the board above rather than hugging it: the stage name and one line of instruction, then four (or three) masks in a row with their names. Tap to place your mark. **Skip** stands apart below an _or_ divider as a wide control of its own — an outline cut into the dark, never a raised disc — because abstaining is a real choice and not a fifth player.
 
-Once cast, your own mark shows on your chosen token. **No other player's vote is visible in any form** — not a count, not "2 have voted", nothing. Simultaneous reveal is a hard requirement and any progress indicator leaks it.
+**Your mark is a gold ring round the chosen mask** (§3.1: gold is emphasis), standing off the disc with the ring's space held either way, so nothing moves when the mark does; the chosen name turns gold with it. A chosen Skip takes the same gold edge all the way round.
 
-At close, all marks flip in at once over 400ms, then resolve. If a majority is reached, the target's sigil token is marked for Cast Out. If not: _"No one is cast out."_ and the round advances.
+Once cast, your own mark shows on your chosen mask. **No other player's vote is visible in any form** — not a count, not "2 have voted", nothing. Simultaneous reveal is a hard requirement and any progress indicator leaks it.
+
+At close, all marks flip in at once over 400ms — each is the voter's own mask, in gold — then resolve. The Reveal is laid out like the vote block it replaces, each mask in a slot the size of the vote ring, so the masks stay where they were and only the marks arrive. If a majority is reached, the target's mask is marked for Cast Out. If not: _"No one is voted out."_ and the round advances.
+
+**Checked on the emulator (part 2): nothing about another player's vote reaches the screen before the reveal.** Bots held their votes six seconds into the stage; frames captured before and after those votes landed are byte-identical below the header — only the timer chip, which is the clock, changed — and the Reveal that followed showed all three votes.
 
 ### 7.7 Cast Out
 

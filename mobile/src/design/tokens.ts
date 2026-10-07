@@ -61,9 +61,9 @@ const palette = {
   seat2: '#A8813F',
   seat3: '#7A3B3B',
   seat4: '#6C7A99',
-  // §3.1 — the mantles for a mask drawn small on bare ground: chat rows, the Reckoning's tables and
-  // vote history, the Reveal's marks. A 16dp mask is a 1dp stroke, thinner than any glyph, and
-  // seat3 was 2.33:1 on void. Each is its mantle mixed toward `bone`, the way tollText was, by the
+  // §3.1 — the mantles for a mask drawn small on bare ground: Discuss's masks and names, the
+  // Reckoning's tables and vote history (the Reveal's marks are gold). A 16dp mask is a 1dp
+  // stroke, thinner than any glyph, and seat3 was 2.33:1 on void. Each is its mantle mixed toward `bone`, the way tollText was, by the
   // smallest step that clears 4.5:1 on `stone` — so it clears void with room, and all four land
   // within 0.1 of each other in contrast, so no seat's mask reads louder than another's. The
   // conduit tokens, vote tokens and the Marking sit on a stone disc at 18dp and up, and keep the
@@ -337,12 +337,16 @@ const art = {
   // the count appears with this many characters left.
   chatCountdownFrom: 40,
 
-  // §7.6's Judgement row. The vote token is a mid-size disc between the board's token (32) and
-  // the Marking's (120); the mark is the player's own, a small square on its point like the
-  // Marking's, in bone. In the Reveal each mark is the voter's own sigil at `sigilSmall`.
+  // §7.6's vote row. The vote token is a mid-size disc between the board's token (32) and the
+  // Marking's (120). In the Reveal each mark is the voter's own mask at `sigilSmall`, in gold.
+  // `voteMark` is the small square on its point that marks the Drain sheet's chosen source.
   voteDisc: 56,
   voteSigil: 30,
   voteMark: 10,
+  // Your vote, since part 2 of the owner's UI pass: a gold ring round the chosen mask, this thick,
+  // standing this far off the disc. Skip takes the same gold edge when chosen.
+  voteRing: 3,
+  voteRingGap: 3,
 
   // §7.4's sheet, chosen in item 5. The void behind it dims to this, so the board stays readable
   // above the sheet while it is open — the Hollow is pretending to watch it.
@@ -466,6 +470,17 @@ const art = {
   iconButtonWidth: 64,
   icon: 24,
   iconStroke: 1.75,
+
+  // Part 2 of the owner's UI pass: Discuss as a messenger. Bubbles are rounder than §3.3's chips —
+  // the owner's call, so the conversation reads as a conversation — with the speaker's side cut
+  // tight where bubbles stack. A bubble takes at most this share of the row; a mask beside
+  // someone else's group is this size.
+  chatBubbleRadius: 16,
+  chatBubbleJoint: 4,
+  chatBubbleMaxShare: 0.8,
+  chatMask: 20,
+  // The input bar: a pill-shaped field and a round Send button, both a touch target tall.
+  chatFieldRadius: 22,
 } as const
 
 // ---------------------------------------------------------------------------------------------

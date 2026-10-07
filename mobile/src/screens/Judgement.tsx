@@ -8,8 +8,9 @@ import { tokens } from '../design/tokens'
 import { match, session } from '../net/session'
 import { usePolled } from './Offering'
 
-// §7.6, the Judgement stage's lower region. The living players' tokens in a row; Withhold apart
-// and lower, because abstaining is a choice and not a fifth player. Tap to place your mark; tap
+// §7.6, the Vote stage's lower region, centred in the space below the board. The living players'
+// masks in a row; Skip apart, below a divider, as a control of its own, because abstaining is a
+// choice and not a fifth player. Tap to place your mark — a gold ring round the mask — and tap
 // again elsewhere to move it. The server keeps the last one.
 //
 // **This screen knows one vote: yours.** Nothing about anyone else's vote exists on the wire before
@@ -63,12 +64,15 @@ export function Judgement({ seats, round, canVote }: JudgementProps) {
 
   return (
     <View style={styles.root}>
-      <Text style={styles.title}>Vote</Text>
-      <Text style={styles.line}>Vote for who you think is the Hollow. You can change it until the vote closes.</Text>
+      <View style={styles.heading}>
+        <Text style={styles.title}>Vote</Text>
+        <Text style={styles.line}>Vote for who you think is the Hollow. You can change it until the vote closes.</Text>
+      </View>
 
       <View style={styles.row}>
         {shown.map((p) => {
           const ejected = p.status === 'ejected'
+          const marked = vote === p.id
           return (
             <Pressable
               key={p.id}
@@ -76,46 +80,57 @@ export function Judgement({ seats, round, canVote }: JudgementProps) {
               disabled={ejected}
               accessibilityRole="button"
               accessibilityLabel={`Vote for ${p.name}`}
-              accessibilityState={{ selected: vote === p.id }}
+              accessibilityState={{ selected: marked }}
               style={styles.choice}
             >
-              <SeatToken seat={seats[p.id]} disc={tokens.art.voteDisc} sigil={tokens.art.voteSigil} cold={ejected} />
-              <Text style={styles.name} numberOfLines={1}>
+              {/* Your mark: a gold ring round the mask you chose. Space is held either way, so
+                  nothing moves when the mark does. */}
+              <View style={[styles.ring, marked ? styles.ringMarked : null]}>
+                <SeatToken seat={seats[p.id]} disc={tokens.art.voteDisc} sigil={tokens.art.voteSigil} cold={ejected} />
+              </View>
+              <Text style={[styles.name, marked ? styles.nameMarked : null]} numberOfLines={1}>
                 {p.name}
               </Text>
-              <MarkSlot marked={vote === p.id} />
             </Pressable>
           )
         })}
       </View>
 
+      {/* Skip stands apart from the four, behind a divider: a choice not to choose, never a fifth
+          player. Marked the same way a mask is — a gold edge. */}
+      <View style={styles.divider}>
+        <View style={styles.rule} />
+        <Text style={styles.or}>or</Text>
+        <View style={styles.rule} />
+      </View>
       <Pressable
         onPress={() => cast('skip')}
         accessibilityRole="button"
         accessibilityLabel="Skip your vote"
         accessibilityState={{ selected: vote === 'skip' }}
-        style={styles.withhold}
+        style={[styles.skip, vote === 'skip' ? styles.skipMarked : null]}
       >
-        <View style={styles.withholdFace}>
-          <Text style={styles.withholdLabel}>Skip</Text>
-        </View>
-        <MarkSlot marked={vote === 'skip'} />
+        <Text style={[styles.skipLabel, vote === 'skip' ? styles.nameMarked : null]}>Skip this vote</Text>
       </Pressable>
     </View>
   )
 }
 
-/** Your mark: a small square on its point, the Marking's shape, in bone. Space is held either way. */
-function MarkSlot({ marked }: { marked: boolean }) {
-  return <View style={styles.markSlot}>{marked ? <View style={styles.mark} /> : null}</View>
-}
+// The vote ring: the token, then a gap of void, then the ring — so the ring reads as drawn round
+// the mask, not as the disc's edge.
+const ringOuter = tokens.art.voteDisc + (tokens.art.voteRingGap + tokens.art.voteRing) * 2
 
 const styles = StyleSheet.create({
+  // Centred in the lower region, so the block balances the board above rather than hugging it.
   root: {
     flex: 1,
-    paddingHorizontal: tokens.layout.screenGutter,
-    paddingTop: tokens.layout.stackGap,
-    gap: tokens.layout.stackGap,
+    justifyContent: 'center',
+    paddingHorizontal: tokens.space.lg,
+    paddingVertical: tokens.space.lg,
+    gap: tokens.space.lg,
+  },
+  heading: {
+    gap: tokens.space.xs,
   },
   title: {
     ...tokens.type.stage,
@@ -130,46 +145,68 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: tokens.layout.stackGap,
   },
   choice: {
     flex: 1,
     alignItems: 'center',
-    gap: tokens.art.namePlateGap,
+    gap: tokens.space.xs,
     minHeight: tokens.layout.minTouchTarget,
+  },
+  ring: {
+    width: ringOuter,
+    height: ringOuter,
+    borderRadius: ringOuter / 2,
+    borderWidth: tokens.art.voteRing,
+    borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // §3.1: gold is emphasis, and your mark is the one choice on this screen that is yours.
+  ringMarked: {
+    borderColor: tokens.palette.gold,
   },
   name: {
     ...tokens.type.label,
     color: tokens.palette.bone,
     maxWidth: '90%',
   },
-  // Apart from the row and lower than it: §7.6.
-  withhold: {
-    alignSelf: 'center',
-    alignItems: 'center',
-    gap: tokens.art.namePlateGap,
-    marginTop: tokens.layout.sectionGap,
+  nameMarked: {
+    color: tokens.palette.gold,
   },
-  withholdFace: {
-    ...tokens.material.raisedStoneFace,
-    borderRadius: tokens.radii.chip,
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.space.md,
+    paddingHorizontal: tokens.space.xl,
+  },
+  rule: {
+    flex: 1,
+    height: tokens.art.thresholdThickness,
+    backgroundColor: tokens.palette.stoneEdge,
+  },
+  or: {
+    ...tokens.type.label,
+    color: tokens.palette.boneDim,
+  },
+  // A real choice: a wide control of its own, an outline cut into the dark rather than a raised
+  // disc, so it can never be mistaken for a fifth player. One border colour on every side, so the
+  // gold of a chosen Skip runs all the way round.
+  skip: {
+    backgroundColor: tokens.palette.void,
+    alignSelf: 'stretch',
+    marginHorizontal: tokens.space.xl,
     minHeight: tokens.layout.minTouchTarget,
-    paddingHorizontal: tokens.layout.sectionGap,
+    borderRadius: tokens.radii.chip,
+    borderWidth: tokens.art.voteRing,
+    borderColor: tokens.palette.stoneEdge,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  withholdLabel: {
+  skipMarked: {
+    borderColor: tokens.palette.gold,
+  },
+  skipLabel: {
     ...tokens.type.control,
     color: tokens.palette.bone,
-  },
-  markSlot: {
-    height: tokens.art.voteMark * 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mark: {
-    width: tokens.art.voteMark,
-    height: tokens.art.voteMark,
-    backgroundColor: tokens.palette.bone,
-    transform: [{ rotate: '45deg' }],
   },
 })

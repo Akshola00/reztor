@@ -228,7 +228,7 @@ Cast-out players stay in the match screen as spectators. Remove their inputs ent
 - Portrait locked. Landscape is not supported.
 - `expo-keep-awake` active for the whole match — six minutes of tapping must not hit the screen timeout.
 - Hardware back during a match does not exit. First press shows a leave confirmation that states the stake is forfeit; second press leaves.
-- `android:windowSoftInputMode` must not resize the board when the Council keyboard opens. The chat area scrolls; the board stays put.
+- The Council keyboard must never move or resize the board. The window is `adjustResize` with edge-to-edge on, so it neither pans nor resizes; the Council pads its own bottom by the keyboard's height (Reanimated's `useAnimatedKeyboard`) and only the message list shrinks. Home uses a `KeyboardAvoidingView` so its fields stay in view. Do not go back to `adjustPan` — it slides the board off the top of the screen.
 - **The target device is the Galaxy S10 (SM-G973F, serial RF8MB3EKCHY, 411x869dp)** for testing, the playtest and the demo recording. `expo run:android --device` names it `SM_G973F`, as `adb devices -l` prints it.
 - The S10 is a flagship, so 60fps there does not prove 60fps on a budget phone. The performance floor is still 60fps while tapping on a phone most players actually own, and no device here measures it.
 - The layout was verified at 384dp on a borrowed Redmi 15 (items 3 and 4), which is gone.

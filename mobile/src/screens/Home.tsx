@@ -1,7 +1,16 @@
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useMemo, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native'
+import {
+  KeyboardAvoidingView,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import type { LobbyAck, Side } from '../../protocol/generated'
@@ -190,131 +199,136 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
 
   return (
     <View style={styles.root}>
-      <ScrollView keyboardShouldPersistTaps="handled">
-        {/* One screen tall, so the idle board takes whatever the controls leave. Dev tools sit
+      {/* The window is 'resize' with edge-to-edge (app.config.js), so the keyboard no longer pans
+          the screen: this shrinks the scroll view by the keyboard's height instead, and the
+          scroll view brings the focused field — the name, or the code cells — into view. */}
+      <KeyboardAvoidingView behavior="height" style={styles.fill}>
+        <ScrollView keyboardShouldPersistTaps="handled">
+          {/* One screen tall, so the idle board takes whatever the controls leave. Dev tools sit
             below it, out of every capture. */}
-        <View
-          style={[
-            styles.screen,
-            {
-              minHeight: window.height,
-              paddingTop: insets.top + tokens.layout.stackGap,
-              paddingBottom: insets.bottom + tokens.layout.sectionGap,
-            },
-          ]}
-        >
-          <Text style={styles.wordmark} accessibilityRole="header">
-            Reztor
-          </Text>
+          <View
+            style={[
+              styles.screen,
+              {
+                minHeight: window.height,
+                paddingTop: insets.top + tokens.layout.stackGap,
+                paddingBottom: insets.bottom + tokens.layout.sectionGap,
+              },
+            ]}
+          >
+            <Text style={styles.wordmark} accessibilityRole="header">
+              Reztor
+            </Text>
 
-          {wallet === null ? null : (
-            <WalletStrip
-              wallet={wallet}
-              busy={busy}
-              onDisconnect={disconnectWallet}
-              onFunded={() => setError(null)}
-              styles={styles}
-            />
-          )}
-
-          <View style={styles.boardSlot} onLayout={(e) => setBoardHeight(Math.floor(e.nativeEvent.layout.height))}>
-            {boardHeight < tokens.home.idleBoardMin ? null : (
-              <View style={styles.board}>
-                <IdleBoard
-                  width={window.width - tokens.layout.screenGutter * 2}
-                  height={boardHeight}
-                  sigils={look.sigils}
-                />
-              </View>
-            )}
-          </View>
-
-          {status === 'offline' ? (
-            <View style={styles.offline}>
-              <Text style={styles.notice} accessibilityLiveRegion="polite">
-                {`The server cannot be reached. It is expected at ${session.serverUrl}.`}
-              </Text>
-              <Button label="Try again" disabled={busy} onPress={retry} styles={styles} />
-            </View>
-          ) : null}
-
-          {wallet === null ? (
-            <View style={styles.group}>
-              <Primary label="Connect wallet" disabled={busy} onPress={connectWallet} styles={styles} />
-              <Text style={styles.para}>
-                {`Your stake of ${BUY_IN_SKR} SKR is paid from a Solana wallet on this phone. Connect one set to devnet.`}
-              </Text>
-            </View>
-          ) : (
-            <>
-              <View style={styles.group}>
-                <Text style={[styles.label, styles.labelCentred]}>Your name</Text>
-                <TextInput
-                  value={name}
-                  onChangeText={setName}
-                  maxLength={NAME_MAX}
-                  autoCorrect={false}
-                  placeholder="The name the others will see"
-                  placeholderTextColor={palette.boneDim}
-                  cursorColor={palette.bone}
-                  selectionColor={palette.stoneLit}
-                  style={styles.input}
-                  accessibilityLabel="Your name"
-                />
-              </View>
-
-              <Primary
-                label="Create a match"
-                disabled={!nameOk || busy || !online}
-                onPress={() => run(() => session.createLobby(trimmed, wallet))}
+            {wallet === null ? null : (
+              <WalletStrip
+                wallet={wallet}
+                busy={busy}
+                onDisconnect={disconnectWallet}
+                onFunded={() => setError(null)}
                 styles={styles}
               />
+            )}
 
+            <View style={styles.boardSlot} onLayout={(e) => setBoardHeight(Math.floor(e.nativeEvent.layout.height))}>
+              {boardHeight < tokens.home.idleBoardMin ? null : (
+                <View style={styles.board}>
+                  <IdleBoard
+                    width={window.width - tokens.layout.screenGutter * 2}
+                    height={boardHeight}
+                    sigils={look.sigils}
+                  />
+                </View>
+              )}
+            </View>
+
+            {status === 'offline' ? (
+              <View style={styles.offline}>
+                <Text style={styles.notice} accessibilityLiveRegion="polite">
+                  {`The server cannot be reached. It is expected at ${session.serverUrl}.`}
+                </Text>
+                <Button label="Try again" disabled={busy} onPress={retry} styles={styles} />
+              </View>
+            ) : null}
+
+            {wallet === null ? (
               <View style={styles.group}>
-                <Text style={[styles.label, styles.labelCentred]}>Or join with a code</Text>
-                <CodeCells code={code} onChange={setCode} styles={styles} />
-                <Button
-                  label="Join"
-                  disabled={!nameOk || !codeOk || busy || !online}
-                  onPress={() => run(() => session.joinLobby(code, trimmed, wallet))}
+                <Primary label="Connect wallet" disabled={busy} onPress={connectWallet} styles={styles} />
+                <Text style={styles.para}>
+                  {`Your stake of ${BUY_IN_SKR} SKR is paid from a Solana wallet on this phone. Connect one set to devnet.`}
+                </Text>
+              </View>
+            ) : (
+              <>
+                <View style={styles.group}>
+                  <Text style={[styles.label, styles.labelCentred]}>Your name</Text>
+                  <TextInput
+                    value={name}
+                    onChangeText={setName}
+                    maxLength={NAME_MAX}
+                    autoCorrect={false}
+                    placeholder="The name the others will see"
+                    placeholderTextColor={palette.boneDim}
+                    cursorColor={palette.bone}
+                    selectionColor={palette.stoneLit}
+                    style={styles.input}
+                    accessibilityLabel="Your name"
+                  />
+                </View>
+
+                <Primary
+                  label="Create a match"
+                  disabled={!nameOk || busy || !online}
+                  onPress={() => run(() => session.createLobby(trimmed, wallet))}
                   styles={styles}
                 />
-              </View>
-            </>
-          )}
 
-          {shownNotice === null ? null : (
-            <Text style={styles.notice} accessibilityLiveRegion="polite">
-              {shownNotice}
-            </Text>
-          )}
+                <View style={styles.group}>
+                  <Text style={[styles.label, styles.labelCentred]}>Or join with a code</Text>
+                  <CodeCells code={code} onChange={setCode} styles={styles} />
+                  <Button
+                    label="Join"
+                    disabled={!nameOk || !codeOk || busy || !online}
+                    onPress={() => run(() => session.joinLobby(code, trimmed, wallet))}
+                    styles={styles}
+                  />
+                </View>
+              </>
+            )}
 
-          {/* WALLET_UNFUNDED: the cure sits directly under the refusal. */}
-          {showUnfunded && wallet !== null ? (
-            <Faucet wallet={wallet} onFunded={() => setError(null)} styles={styles} />
+            {shownNotice === null ? null : (
+              <Text style={styles.notice} accessibilityLiveRegion="polite">
+                {shownNotice}
+              </Text>
+            )}
+
+            {/* WALLET_UNFUNDED: the cure sits directly under the refusal. */}
+            {showUnfunded && wallet !== null ? (
+              <Faucet wallet={wallet} onFunded={() => setError(null)} styles={styles} />
+            ) : null}
+
+            <Pressable
+              onPress={() => setRulesOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="How to play"
+              style={styles.about}
+            >
+              <View style={styles.aboutMark} />
+              <Text style={styles.aboutLabel}>How to play</Text>
+            </Pressable>
+          </View>
+
+          {DEV_TOOLS ? (
+            <DevTools
+              look={look}
+              styles={styles}
+              onRehearse={rehearse}
+              onPreview={setPreview}
+              bottom={insets.bottom + tokens.layout.sectionGap}
+            />
           ) : null}
-
-          <Pressable
-            onPress={() => setRulesOpen(true)}
-            accessibilityRole="button"
-            accessibilityLabel="How to play"
-            style={styles.about}
-          >
-            <View style={styles.aboutMark} />
-            <Text style={styles.aboutLabel}>How to play</Text>
-          </Pressable>
-        </View>
-
-        {DEV_TOOLS ? (
-          <DevTools
-            look={look}
-            styles={styles}
-            onRehearse={rehearse}
-            onPreview={setPreview}
-            bottom={insets.bottom + tokens.layout.sectionGap}
-          />
-        ) : null}
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {rulesOpen ? <RulesSheet onClose={() => setRulesOpen(false)} /> : null}
 
@@ -577,6 +591,9 @@ function makeStyles(primary: PrimaryStyle) {
   const { layout, home, palette, type, homeFaces: faces } = tokens
   return StyleSheet.create({
     root: {
+      flex: 1,
+    },
+    fill: {
       flex: 1,
     },
     screen: {

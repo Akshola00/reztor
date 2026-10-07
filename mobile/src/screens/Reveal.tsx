@@ -5,7 +5,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } fro
 
 import type { MatchConfig, PlayerId, RevealedVoteRound, VoteTarget } from '../../protocol/generated'
 import { SeatToken } from '../art/SeatToken'
-import { SEAT_TEXT_COLOURS, Sigil, type SeatNumber } from '../art/Sigil'
+import { Sigil, type SeatNumber } from '../art/Sigil'
 import { motion } from '../design/motion'
 import { tokens } from '../design/tokens'
 
@@ -17,6 +17,10 @@ import { tokens } from '../design/tokens'
 //   1400          resolve. Nobody: "No one is cast out.", held, done.
 //                 Someone: Cast Out, castOut long — their token settles into cold, the line
 //                 states the consequence, the warning haptic fires once.
+//
+// Laid out like the Vote block it replaces — centred, each token in a slot the size of the vote
+// ring — so the masks stay exactly where they were and only the marks arrive. Every mark is the
+// voter's own mask, in gold, and all of them flip in at once (§3.1: gold is emphasis).
 //
 // **Each mark is exactly what that player cast** (PROTOCOL.md §3), including a vote for a player
 // ejected before the stage closed, which the server tallied as a skip but reveals as cast.
@@ -99,7 +103,7 @@ export function Reveal({ result, seats, names, youId, alreadyCold, config, onRes
       <View style={styles.row}>
         {targets.map((id) => (
           <View key={id} style={styles.column}>
-            <View>
+            <View style={styles.slot}>
               {id === ejected ? (
                 <>
                   <Animated.View style={warmStyle}>
@@ -136,7 +140,7 @@ export function Reveal({ result, seats, names, youId, alreadyCold, config, onRes
   )
 }
 
-/** The voters' own sigils under what they cast for. All of them share one opacity: one flip. */
+/** The voters' own masks, in gold, under what they cast for. All of them share one opacity: one flip. */
 function Marks({
   voters,
   seats,
@@ -150,24 +154,30 @@ function Marks({
     <Animated.View style={[styles.marks, style]}>
       {voters.map((voter) =>
         seats[voter] === undefined ? null : (
-          <Sigil
-            key={voter}
-            seat={seats[voter]}
-            colour={SEAT_TEXT_COLOURS[seats[voter]]}
-            size={tokens.art.sigilSmall}
-          />
+          <Sigil key={voter} seat={seats[voter]} colour={tokens.palette.gold} size={tokens.art.sigilSmall} />
         ),
       )}
     </Animated.View>
   )
 }
 
+// The Vote block's ring slot, without a ring, so every token sits where it sat a moment before.
+const slot = tokens.art.voteDisc + (tokens.art.voteRingGap + tokens.art.voteRing) * 2
+
 const styles = StyleSheet.create({
+  // Centred, like the Vote block.
   root: {
     flex: 1,
-    paddingHorizontal: tokens.layout.screenGutter,
-    paddingTop: tokens.layout.sectionGap,
-    gap: tokens.layout.stackGap,
+    justifyContent: 'center',
+    paddingHorizontal: tokens.space.lg,
+    paddingVertical: tokens.space.lg,
+    gap: tokens.space.lg,
+  },
+  slot: {
+    width: slot,
+    height: slot,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   row: {
     flexDirection: 'row',
@@ -176,7 +186,7 @@ const styles = StyleSheet.create({
   column: {
     flex: 1,
     alignItems: 'center',
-    gap: tokens.art.namePlateGap,
+    gap: tokens.space.xs,
   },
   name: {
     ...tokens.type.label,
@@ -187,13 +197,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: tokens.art.namePlateGap,
+    gap: tokens.space.xs,
     minHeight: tokens.art.sigilSmall,
   },
   withhold: {
     alignItems: 'center',
-    gap: tokens.art.namePlateGap,
-    marginTop: tokens.layout.stackGap,
+    gap: tokens.space.xs,
   },
   withholdLabel: {
     ...tokens.type.label,
@@ -203,6 +212,5 @@ const styles = StyleSheet.create({
     ...tokens.type.stage,
     color: tokens.palette.bone,
     textAlign: 'center',
-    marginTop: tokens.layout.sectionGap,
   },
 })

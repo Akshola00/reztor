@@ -302,6 +302,9 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
     if (__DEV__) console.log('[ui] sheet', sheetOpen ? 'open' : 'closed')
   }, [sheetOpen])
   useEffect(() => {
+    if (__DEV__) console.log('[ui] stage', stageKey)
+  }, [stageKey])
+  useEffect(() => {
     if (__DEV__) console.log('[ui] rules', rulesOpen ? 'open' : 'closed')
   }, [rulesOpen])
 
@@ -376,7 +379,7 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
   } else if (stage === 'chat') {
     lowerKey = 'chat'
     // A cast-out player reads the Council but has no input at all.
-    lower = <Council config={config} seats={seats} canSpeak={alive} />
+    lower = <Council config={config} seats={seats} youId={youId} canSpeak={alive} />
   } else if (stage === 'vote') {
     lowerKey = `vote-${current.round}`
     lower = <Judgement seats={seats} round={current.round} canVote={alive} />
