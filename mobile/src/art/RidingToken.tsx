@@ -60,13 +60,32 @@ export function RidingToken({ seat, own, dormant, disconnected, units, capacity,
       <Sigil seat={seat} colour={sigilColour} size={sigil} />
     </View>
   )
+  const token = own ? (
+    <View style={[styles.ring, { width: outer, height: outer, borderRadius: outer / 2 }]}>{face}</View>
+  ) : (
+    face
+  )
+
+  // §5.3: the face dims but stays readable, and the outline, at full strength, says who is gone.
+  // Drawn outside the token so the ride geometry, which places `outer`, is unchanged.
+  const inset = -(art.disconnectedOutlineGap + art.disconnectedOutline)
+  const ringSize = outer - inset * 2
 
   return (
-    <Animated.View
-      pointerEvents="none"
-      style={[styles.wrap, rideStyle, dormant ? styles.dormant : null, disconnected ? styles.disconnected : null]}
-    >
-      {own ? <View style={[styles.ring, { width: outer, height: outer, borderRadius: outer / 2 }]}>{face}</View> : face}
+    <Animated.View pointerEvents="none" style={[styles.wrap, rideStyle, dormant ? styles.dormant : null]}>
+      {disconnected ? (
+        <View style={{ width: outer, height: outer }}>
+          <View style={styles.disconnected}>{token}</View>
+          <View
+            style={[
+              styles.outline,
+              { top: inset, left: inset, width: ringSize, height: ringSize, borderRadius: ringSize / 2 },
+            ]}
+          />
+        </View>
+      ) : (
+        token
+      )}
       {badge === undefined ? null : (
         <Badge units={units} capacity={capacity} height={height} outer={outer}>
           {badge}
@@ -132,8 +151,14 @@ const styles = StyleSheet.create({
   dormant: {
     opacity: tokens.art.coldTokenOpacity,
   },
-  // §5.3: nothing else marks the absence — no outline, no badge, no countdown on the board.
   disconnected: {
     opacity: tokens.art.disconnectedTokenOpacity,
+  },
+  // §5.3's mark of absence: boneFaint, never a seat colour or fire. No badge and no countdown on
+  // anyone else's token.
+  outline: {
+    position: 'absolute',
+    borderWidth: tokens.art.disconnectedOutline,
+    borderColor: tokens.palette.boneFaint,
   },
 })

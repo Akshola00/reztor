@@ -136,21 +136,31 @@ Not on buttons, not on focus rings, not on the active tab, and not on the tap ba
 --seat-4: #6c7a99; /* slate */
 ```
 
-Each seat also carries a distinct geometric sigil (§5.2). Identity is never carried by colour alone — this covers colourblind players and also solves a real problem, which is that four muted colours at thumb-size on a dim phone screen are genuinely hard to tell apart.
+**A mask drawn small on bare ground takes a lightened mantle.** In chat rows, the Reckoning's tables and vote history, and the Reveal's marks, a 16dp mask is a stroke about 1dp wide, thinner than any glyph, and `--seat-3` is 2.33:1 on `--void`. Each text variant is its mantle mixed toward `--bone`, the way `tollText` was derived, by the smallest step that clears 4.5:1 on `--stone`. All four land within 0.1 of each other, so no seat's mask reads louder than another's. Tokens on a stone disc (the riding token, vote tokens, the lobby roster, the Hollow mark, the Marking) are 18dp and up and keep the mantle itself.
+
+```css
+--seat-1-text: #7a9a91; /* 32% toward bone: 6.35:1 on void, 4.56:1 on stone */
+--seat-2-text: #af8e56; /* 14%: 6.32 / 4.53 */
+--seat-3-text: #a98b8f; /* 50%: 6.27 / 4.50 */
+--seat-4-text: #8893ac; /* 26%: 6.31 / 4.53 */
+```
+
+Each seat also carries a distinct carved mask (§5.2). Identity is never carried by colour alone — this covers colourblind players and also solves a real problem, which is that four muted colours at thumb-size on a dim phone screen are genuinely hard to tell apart.
 
 ### 3.2 Typography
 
 Two families, both from Google Fonts, both self-hosted and preloaded. **Since the owner's type-role remap, the display face is the interface**: Grenze Gotisch sets every short string on screen, and the sans is left with running text.
 
-**Display — Grenze Gotisch 700. Every short string.** Buttons and controls, labels, player names everywhere, headings and section titles, and every number — the code cells and the lobby's code, the stage timer, the credit counter, the tier face, the board percentage, the Reckoning table. **Floor: 14px**, overriding the old 20px floor. Each step was checked on the emulator: labels at 14, controls and names at 15, the timer at 20 and the code cells at 32 all read cleanly. One string was moved back to the sans, below.
+**Display — Grenze Gotisch 700. Every short string.** Buttons and controls, labels, player names everywhere, headings and section titles, and every number — the stage timer, the credit counter, the tier face, the board percentage, the Reckoning table. **Floor: 14px**, overriding the old 20px floor. Each step was checked on the emulator: labels at 14, controls and names at 15 and the timer at 20 all read cleanly. Two short strings are named exceptions and stay in the sans, below.
 
 **Grenze's figures.** Its default digits are old-style — 3, 4, 5, 7 and 9 descend about 0.1em — which muddies a 14px number. Its `tnum` feature substitutes tabular _lining_ figures, all 0.500em wide and 0.58em tall, so `tokens.tabularFigures` goes on every Grenze number: that one declaration makes it both fixed-width and lining, confirmed on the device. The board percentage takes them too, at the owner's call — old-style digits rising and falling four times a second read as jitter on the number people watch most — and keeps its fixed digit slots.
 
 **Running text — Barlow Semi Condensed 600.** Chat message bodies, the rules sheet's paragraphs, and sentence-length notices and errors — anything that reads as a sentence. Also the `--t-fine` step, which sits below Grenze's floor and is kept for one-line notes.
 
-**The one short string in the sans: the wallet address.** Base58 mixes cases, and Grenze's blackletter capitals (T, K) became pen forms that had to be decoded at 20px. It is checked character by character, like the role seed.
+**Named exceptions — short strings in the sans:**
 
-**Grenze's capitals in a gathering code.** At 32 they are crisp, but X, T, A, and the N–U minim pair are true blackletter forms, which is why the code was once kept in the sans: a code is read aloud across a room. Watch for misreadings at the playtest.
+1. **The gathering code**: the lobby's code at `--t-heart` and home's code cells at `--t-display`, at the owner's call. A code is read aloud across a room, and in a live lobby Grenze's X, T, A and the N–U minim pair were blackletter forms that had to be decoded ("BYXM"). A code nobody can say is a gathering nobody can join.
+2. **The wallet address.** Base58 mixes cases, and Grenze's blackletter capitals (T, K) became pen forms that had to be decoded at 20px. It is checked character by character, like the role seed.
 
 Neither face carries U+27E1 (SKR) or U+2192 (the tier face's arrow): both are drawn as SVG marks, never set as text.
 
@@ -163,8 +173,8 @@ Scale, mobile-first:
 
 | Token         | Size / line-height | Face    | Use                                                        |
 | :------------ | :----------------- | :------ | :--------------------------------------------------------- |
-| `--t-heart`   | 56 / 1.0           | display | Board percentage, wordmark, the lobby code                 |
-| `--t-display` | 32 / 1.1           | display | Role reveal, Reckoning verdict, code cells                 |
+| `--t-heart`   | 56 / 1.0           | display | Board percentage, wordmark (the lobby code: text)          |
+| `--t-display` | 32 / 1.1           | display | Role reveal, Reckoning verdict (code cells: text)          |
 | `--t-stage`   | 20 / 1.2           | display | Stage names, headings, the primary action, the stage timer |
 | `--t-control` | 15 / 1.5           | display | Buttons and controls, names at reading size                |
 | `--t-body`    | 15 / 1.5           | text    | Chat bodies, paragraphs, notices                           |
@@ -234,13 +244,13 @@ The token carries identity by shape first (§5.2), by position second — where 
 Four masks, drawn as flat strokes in the seat colour, no gradients, one stroke weight across all four so none reads as more important. **They are told apart by outer silhouette alone**, because the riding token draws them at 18dp:
 
 1. **Seat 1 — Horned.** Two points flaring out from the top corners. Eyes level.
-2. **Seat 2 — Beaked.** A round face whose chin narrows to one long wedge below it. Eyes downturned. The wedge is narrow: a full-width taper read as a map pin.
+2. **Seat 2 — Beaked.** A round face with a crow's beak off one side, its ridge running on from the brow and hooking down at the tip — the only mask that is not symmetrical. Eyes downturned. A single point below the chin read first as a map pin and then as a speech bubble's tail, beside the chat rows; a straight point off the side still read as a bubble. The curve and the hook are what make it a beak.
 3. **Seat 3 — Crested.** A row of three equal points along the top edge. Eyes upturned. The points are equal and low: a tall middle point read as a flame.
 4. **Seat 4 — Veiled.** A plain dome on straight sides to a flat hem, defined by having no projection. Eyes level and set wide, clear of the sides.
 
 Every mask has the same two eye voids, a short slit; only their angle and spacing vary, because an angle survives small sizes and an eye's shape does not. Seat colour is the stroke, so identity is always shape plus colour, never colour alone.
 
-**Checked on the emulator before wiring**: all four at 16, 18, 22, 30 and 48dp, and again at 18dp as solid filled silhouettes with no eyes. Each could be named from its outline alone at 18dp.
+**Checked on the emulator before wiring**: all four at 16, 18, 22, 30 and 48dp, and again at 18dp as solid filled silhouettes with no eyes. Each could be named from its outline alone at 18dp. The beak was re-checked the same way when it was reshaped, against the other three and beside a live chat row.
 
 Masks appear on the riding token, beside names in chat, on vote tokens, in the lobby roster, in the Reckoning's tables, vote history and Hollow mark, and in the Marking. They are the primary identity carrier everywhere. The geometric sigils remain behind a dev chip on home for comparison.
 
@@ -248,10 +258,12 @@ Masks appear on the riding token, beside names in chat, on vote tokens, in the l
 
 The five figure states are cut with the figures. Two survive, carried by the token:
 
-| State           | Treatment                                                                                           |
-| :-------------- | :-------------------------------------------------------------------------------------------------- |
-| Cold (cast out) | Disc at 40% opacity, sigil in `--bone-faint`. It stays that way for the rest of the match.          |
-| Disconnected    | Token at 25% opacity. Nothing else marks the absence — no outline, no badge, no countdown on-board. |
+| State           | Treatment                                                                                                                       |
+| :-------------- | :------------------------------------------------------------------------------------------------------------------------------ |
+| Cold (cast out) | Disc at 40% opacity, sigil in `--bone-faint`. It stays that way for the rest of the match.                                      |
+| Disconnected    | Token face at 60%, mask still readable, ringed by a thin `--bone-faint` outline. No badge, no countdown on anyone else's token. |
+
+**Disconnected was 25% opacity with nothing else marking it**, and on a lit conduit the token all but vanished. Who is missing is information the others need, so the mask stays readable and the outline carries the absence. The outline stands a little off the disc so it reads as a ring of its own, not as the disc's carved edge.
 
 **Starved is cut.** A conduit that lost ground already says so: the frontier descends, carrying its surface and its token down with it, and `--toll` embers rise from the new frontier (§6.3). That is the information, and a second channel for it would only risk implying a direction, which §6.3 forbids.
 

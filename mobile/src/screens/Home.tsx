@@ -723,9 +723,10 @@ function makeStyles(primary: PrimaryStyle) {
     stripId: {
       flex: 1,
     },
-    // The one short string left in the sans: a base58 address mixes cases, and Grenze's blackletter
-    // capitals (T, K) became pen forms that had to be decoded at this size. It is checked character
-    // by character, like the role seed, so it is set for checking.
+    // One of the two short strings left in the sans, with the gathering code: a base58 address mixes
+    // cases, and Grenze's blackletter capitals (T, K) became pen forms that had to be decoded at
+    // this size. It is checked character by character, like the role seed, so it is set for
+    // checking.
     address: {
       ...type.stage,
       fontFamily: tokens.fontFamily.uiMedium,

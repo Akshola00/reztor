@@ -58,6 +58,17 @@ const palette = {
   seat2: '#A8813F',
   seat3: '#7A3B3B',
   seat4: '#6C7A99',
+  // §3.1 — the mantles for a mask drawn small on bare ground: chat rows, the Reckoning's tables and
+  // vote history, the Reveal's marks. A 16dp mask is a 1dp stroke, thinner than any glyph, and
+  // seat3 was 2.33:1 on void. Each is its mantle mixed toward `bone`, the way tollText was, by the
+  // smallest step that clears 4.5:1 on `stone` — so it clears void with room, and all four land
+  // within 0.1 of each other in contrast, so no seat's mask reads louder than another's. The
+  // conduit tokens, vote tokens and the Marking sit on a stone disc at 18dp and up, and keep the
+  // mantle itself.
+  seat1Text: '#7A9A91', // 32%: 6.35:1 on void, 4.56:1 on stone
+  seat2Text: '#AF8E56', // 14%: 6.32:1 on void, 4.53:1 on stone
+  seat3Text: '#A98B8F', // 50%: 6.27:1 on void, 4.50:1 on stone
+  seat4Text: '#8893AC', // 26%: 6.31:1 on void, 4.53:1 on stone
 
   // §3.3 writes this inline as the lower bevel edge. Named here so no component carries it.
   bevelShadow: '#0A0C10',
@@ -152,15 +163,15 @@ const type = {
   label: { fontSize: 14, lineHeight: 16.8, fontFamily: fontFamily.display },
   // Button and control labels, and names set at reading size. The body step, in Grenze.
   control: { fontSize: 15, lineHeight: 22.5, fontFamily: fontFamily.display },
-  // §7.1: the lobby's invite code, "large enough to read aloud across a room". The t-heart step. It
-  // was in the interface face because blackletter capitals are shapes a reader confuses; since the
-  // remap it is Grenze like every other short string, checked against the server's alphabet on the
-  // device.
-  code: { fontSize: 56, lineHeight: 56, fontFamily: fontFamily.display },
+  // §7.1: the lobby's invite code, "large enough to read aloud across a room". The t-heart step.
+  // §3.2's named exception to the remap: the sans, because a code is read aloud and Grenze's X, T,
+  // A and N–U capitals had to be decoded in a live lobby. A code nobody can say is a gathering
+  // nobody can join.
+  code: { fontSize: 56, lineHeight: 56, fontFamily: fontFamily.uiMedium },
   // The home rebuild's steps. The wordmark is the t-heart step in the display face; a code cell
-  // holds one character of a gathering code at the t-display step.
+  // holds one character of a gathering code at the t-display step, in the sans like the code.
   wordmark: { fontSize: 56, lineHeight: 56, fontFamily: fontFamily.display },
-  codeCell: { fontSize: 32, lineHeight: 35.2, fontFamily: fontFamily.display },
+  codeCell: { fontSize: 32, lineHeight: 35.2, fontFamily: fontFamily.uiMedium },
 } as const
 
 // §3.2 / §10.1. React Native does not expose font-variant-numeric; this is the closest the
@@ -281,8 +292,14 @@ const art = {
   coldLightness: 0.55,
   // §6.2 / §7.7: a cold conduit's token drops to this opacity and its sigil goes boneFaint.
   coldTokenOpacity: 0.4,
-  // §5.3: a disconnected player's token drops to this, and nothing else marks the absence.
-  disconnectedTokenOpacity: 0.25,
+  // §5.3: a disconnected player's token face drops to this — dimmed, but the mask still names who is
+  // gone — and a thin boneFaint outline around it marks the absence. At 0.25 the face all but
+  // vanished on a lit conduit, and who is missing is information the others need.
+  disconnectedTokenOpacity: 0.6,
+  disconnectedOutline: 1.5,
+  // The outline stands this far off the disc, so it reads as a ring of its own and not as the
+  // disc's carved edge.
+  disconnectedOutlineGap: 2,
 
   // §7.2's Marking: the player's own token "larger than it will ever appear again", inside a mark
   // drawn stroke by stroke. Chosen in item 3. The mark is a square set on its point, four strokes

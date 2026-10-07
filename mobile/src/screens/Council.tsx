@@ -12,7 +12,7 @@ import {
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 
 import type { ChatMessage, MatchConfig, PlayerId } from '../../protocol/generated'
-import { SEAT_COLOURS, Sigil, type SeatNumber } from '../art/Sigil'
+import { SEAT_TEXT_COLOURS, Sigil, type SeatNumber } from '../art/Sigil'
 import { motion } from '../design/motion'
 import { tokens } from '../design/tokens'
 import { CHAT_MAX, match, session } from '../net/session'
@@ -108,7 +108,7 @@ export function Council({ config, seats, canSpeak }: CouncilProps) {
           return (
             <View style={styles.row}>
               {seat === undefined ? null : (
-                <Sigil seat={seat} colour={SEAT_COLOURS[seat]} size={tokens.art.sigilSmall} />
+                <Sigil seat={seat} colour={SEAT_TEXT_COLOURS[seat]} size={tokens.art.sigilSmall} />
               )}
               <Text style={styles.message}>
                 <Text style={styles.name}>{names.get(item.from) ?? ''}</Text>

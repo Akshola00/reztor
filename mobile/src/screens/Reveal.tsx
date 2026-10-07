@@ -5,7 +5,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } fro
 
 import type { MatchConfig, PlayerId, RevealedVoteRound, VoteTarget } from '../../protocol/generated'
 import { SeatToken } from '../art/SeatToken'
-import { SEAT_COLOURS, Sigil, type SeatNumber } from '../art/Sigil'
+import { SEAT_TEXT_COLOURS, Sigil, type SeatNumber } from '../art/Sigil'
 import { motion } from '../design/motion'
 import { tokens } from '../design/tokens'
 
@@ -151,7 +151,12 @@ function Marks({
     <Animated.View style={[styles.marks, style]}>
       {voters.map((voter) =>
         seats[voter] === undefined ? null : (
-          <Sigil key={voter} seat={seats[voter]} colour={SEAT_COLOURS[seats[voter]]} size={tokens.art.sigilSmall} />
+          <Sigil
+            key={voter}
+            seat={seats[voter]}
+            colour={SEAT_TEXT_COLOURS[seats[voter]]}
+            size={tokens.art.sigilSmall}
+          />
         ),
       )}
     </Animated.View>

@@ -6,7 +6,7 @@ import Svg, { Path } from 'react-native-svg'
 
 import type { MatchEndView, PlayerId, Settlement, VoteTarget, WinReason } from '../../protocol/generated'
 import { SeatToken } from '../art/SeatToken'
-import { SEAT_COLOURS, Sigil, type SeatNumber } from '../art/Sigil'
+import { SEAT_TEXT_COLOURS, Sigil, type SeatNumber } from '../art/Sigil'
 import { StillBoard } from '../art/StillBoard'
 import { tokens } from '../design/tokens'
 import { match, session } from '../net/session'
@@ -289,7 +289,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 function Who({ seat, name, cold }: { seat: SeatNumber; name: string; cold: boolean }) {
   return (
     <View style={styles.who}>
-      <Sigil seat={seat} colour={cold ? tokens.palette.boneFaint : SEAT_COLOURS[seat]} />
+      <Sigil seat={seat} colour={cold ? tokens.palette.boneFaint : SEAT_TEXT_COLOURS[seat]} />
       <Text style={styles.name} numberOfLines={1}>
         {name}
       </Text>

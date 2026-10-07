@@ -9,7 +9,7 @@ import { useLook } from '../screens/look'
 // worn by the Hollow. Flat strokes, one weight for all four, no gradients. They are told apart by
 // **outer silhouette alone**, because the riding token draws them at 18dp:
 //   1. Horned  — two points flaring out from the top corners.
-//   2. Beaked  — one long wedge descending below the face.
+//   2. Beaked  — a hooked beak curving off one side, the only mask that is not symmetrical.
 //   3. Crested — three points along the top edge, the middle one tallest.
 //   4. Veiled  — a plain dome on straight sides to a flat hem, defined by having no projection.
 // Every mask has the same two eye voids, a short slit, and only their angle varies — level,
@@ -41,9 +41,11 @@ const MID = BOX / 2
 export const MASK_OUTLINES: Record<SeatNumber, string> = {
   // Horned: a face with a rounded chin, and two horns rising out and away from its top corners.
   1: 'M 3 2 L 8 8 L 16 8 L 21 2 L 18 11 L 18 15 Q 18 21 12 21 Q 6 21 6 15 L 6 11 Z',
-  // Beaked: a round face whose chin narrows to one long wedge, well below it. The wedge is narrow on
-  // purpose — a full-width taper read as a map pin.
-  2: 'M 12 2.5 Q 18.5 2.5 18.5 9 L 18.5 12 Q 18.5 15.5 14.5 16 L 12 23 L 9.5 16 Q 5.5 15.5 5.5 12 L 5.5 9 Q 5.5 2.5 12 2.5 Z',
+  // Beaked: a round face with a crow's beak, its ridge running on from the brow and hooking down at
+  // the tip. To one side on purpose: a single point below the chin read as a speech bubble's tail,
+  // beside the chat rows, and a straight point off the side still did. The curve and the hook are
+  // what make it a beak.
+  2: 'M 12 3 Q 17 3 17.5 8 Q 21.5 9 22.5 15 Q 20.5 13 17.5 13.5 L 17.5 16 Q 17.5 21 11.5 21 Q 5.5 21 5.5 15 L 5.5 9 Q 5.5 3 12 3 Z',
   // Crested: a row of three equal points along the top edge, over a rounded chin. Equal and low on
   // purpose — a tall middle point read as a flame.
   3: 'M 6 9 L 8 5 L 10 8.5 L 12 5 L 14 8.5 L 16 5 L 18 9 L 18 15 Q 18 21 12 21 Q 6 21 6 15 Z',
@@ -58,9 +60,10 @@ const MASK_EYES: Record<SeatNumber, [number, number, number, number][]> = {
     [8.5, 13, 10.5, 13],
     [13.5, 13, 15.5, 13],
   ],
+  // Shifted towards the side the beak leaves, to sit centred in the face.
   2: [
-    [10.5, 8.5, 8.6, 9.9],
-    [13.5, 8.5, 15.4, 9.9],
+    [10, 10, 8.1, 11.4],
+    [13, 10, 14.9, 11.4],
   ],
   3: [
     [10.5, 14, 8.6, 12.6],
@@ -158,4 +161,12 @@ export const SEAT_COLOURS: Record<SeatNumber, string> = {
   2: tokens.palette.seat2,
   3: tokens.palette.seat3,
   4: tokens.palette.seat4,
+}
+
+/** §3.1: for a mask drawn small on bare void or stone, beside text. Tokens on a disc keep `SEAT_COLOURS`. */
+export const SEAT_TEXT_COLOURS: Record<SeatNumber, string> = {
+  1: tokens.palette.seat1Text,
+  2: tokens.palette.seat2Text,
+  3: tokens.palette.seat3Text,
+  4: tokens.palette.seat4Text,
 }
