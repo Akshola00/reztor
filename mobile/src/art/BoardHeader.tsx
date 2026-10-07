@@ -12,7 +12,6 @@ import Animated, {
 
 import { motion } from '../design/motion'
 import { tokens } from '../design/tokens'
-import { useLook } from '../screens/look'
 
 // §6.1's header band: the rules control and the round on the left, the board percentage centred,
 // the stage timer on the right. No vessel and no settings control.
@@ -29,14 +28,13 @@ import { useLook } from '../screens/look'
 // as deliberate rather than as a glitch. Transform and opacity only, on the UI thread (hard rule
 // 3). Under reduce motion it holds still and only the number changes.
 //
-// The percentage is set in Grenze Gotisch with `tabularFigures`, which switches its old-style default
-// digits (20.78px to 28.22px wide at 56, with 3, 4, 5, 7 and 9 dropping below the baseline) to its
-// tabular lining figures: all 28px wide, all on the baseline. The owner's call — old-style digits
-// rising and falling four times a second read as jitter on the number people watch most. Each digit
-// also keeps its fixed slot, which predates the lining figures and still pins it in place.
+// The percentage is set in Oswald 600, the owner's choice in the UI pass: condensed, tall and plain,
+// with lining digits, so the biggest number on screen reads at a glance mid-tap. Oswald has no
+// tabular figures, so each digit sits centred in a fixed slot (art.percentDigitSlot) and the number
+// never walks sideways while the player taps.
 //
-// Only the digits are slotted. "%" measures 50.23px at the same step, nearly twice a digit, so
-// forcing it into a digit slot would clip it — and it never changes, so it does not need one.
+// Only the digits are slotted. "%" is nearly twice a digit's width, so forcing it into a digit slot
+// would clip it — and it never changes, so it does not need one.
 // The row itself is three equal-flex cells, so the centre cell holds the screen's centre line
 // whatever the round and timer say.
 //
@@ -56,7 +54,7 @@ type BoardHeaderProps = {
 // The step for the percentage, judged on the phone in item 1b by capturing both candidates.
 // t-heart ships: at t-display (32) the number carries the same weight as the round and the timer,
 // and with no drawn Heart the percentage is the only readout of board state on screen, so it has
-// to outrank them. Its face is under review — tokens.percentFaces, chosen on the dev chip.
+// to outrank them.
 const percentType = tokens.type.heart
 
 function clock(totalSeconds: number): string {
@@ -71,7 +69,7 @@ export function BoardHeader({ round, percent, secondsLeft, crossed, onRules }: B
         <Pressable
           onPress={onRules}
           accessibilityRole="button"
-          accessibilityLabel="How the rite works"
+          accessibilityLabel="How to play"
           hitSlop={(tokens.layout.minTouchTarget - tokens.home.aboutMark) / 2}
           style={styles.rules}
         >
@@ -133,10 +131,9 @@ function Timer({ secondsLeft }: { secondsLeft: number }) {
  * state's dark one, which set it in other colours but must not set it differently.
  */
 export function Percent({ percent, colour }: { percent: number; colour: string }) {
-  const face = tokens.percentFaces[useLook().percent]
-  const slot = Math.round(percentType.fontSize * face.slot)
+  const slot = Math.round(percentType.fontSize * tokens.art.percentDigitSlot)
   const digits = String(percent).split('')
-  const glyphStyle = [styles.percentGlyph, { fontFamily: face.fontFamily, lineHeight: face.lineHeight, color: colour }]
+  const glyphStyle = [styles.percentGlyph, { color: colour }]
   // `accessible` collapses the digit slots into one announcement. Without it Android walks the
   // slots individually and a screen reader reads the percentage as "5", "8", "%" — the fixed-slot
   // layout is a typographic device and must not leak into the a11y tree.
@@ -221,7 +218,6 @@ const styles = StyleSheet.create({
   },
   percentGlyph: {
     ...percentType,
-    ...tokens.tabularFigures,
     textAlign: 'center',
   },
 })

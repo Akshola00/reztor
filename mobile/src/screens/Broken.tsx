@@ -40,10 +40,10 @@ function readBroken(): BrokenState | null {
   let cause: string
   let refundCredits: number
   if ('error' in s.end) {
-    cause = 'The rite could not be settled.'
+    cause = "The payout couldn't be completed."
     refundCredits = config.buyInSkr * config.creditsPerSkr
   } else if (s.end.reveal.resolution.kind === 'voided') {
-    cause = 'Two celebrants left the rite and did not return.'
+    cause = "Two players left and didn't come back."
     refundCredits = s.end.settlement.lines.find((l) => l.playerId === s.you.id)?.refund ?? 0
   } else {
     return null
@@ -109,7 +109,7 @@ export function Broken() {
         </View>
 
         <View style={styles.actions}>
-          <Action label="Kneel again" onPress={goHome} />
+          <Action label="Play again" onPress={goHome} />
           <Action label="Leave" onPress={goHome} />
         </View>
       </ScrollView>

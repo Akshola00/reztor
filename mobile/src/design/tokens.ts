@@ -127,26 +127,10 @@ const fontFamily = {
   // reach — it is a string to be checked character by character, not a label. Android's system
   // monospace face, so nothing new is bundled for one line. Chosen in item 6.
   mono: 'monospace',
-  // The board percentage's candidate faces, under review in the owner's UI pass (look.ts).
-  percentCinzel: 'Cinzel_700Bold',
-  percentOswald: 'Oswald_600SemiBold',
+  // The board percentage's face, the owner's choice in the UI pass over Grenze, Barlow and Cinzel:
+  // condensed, tall and plain, so the biggest number on screen reads at a glance mid-tap.
+  percent: 'Oswald_600SemiBold',
 } as const
-
-// The owner's UI pass: the board percentage is the biggest number on screen and the one that must
-// read at a glance mid-tap, and the owner does not like Grenze's. Four faces on a dev chip, all at
-// the t-heart step. Each digit sits in a fixed slot of fontSize x `slot`, just wider than that
-// face's widest digit, so the number never walks sideways: Cinzel and Oswald carry no `tnum`, and
-// Grenze's and Barlow's tabular figures measure 0.500em and 0.507em.
-const percentFaces = {
-  grenze: { fontFamily: fontFamily.display, slot: 0.52, lineHeight: 56 },
-  barlow: { fontFamily: fontFamily.uiMedium, slot: 0.52, lineHeight: 64 },
-  // Roman capitals, carved. Lining digits by default; its widest digit ("0") is 0.653em.
-  cinzel: { fontFamily: fontFamily.percentCinzel, slot: 0.67, lineHeight: 64 },
-  // Condensed, tall and plain. Widest digit ("0") 0.543em.
-  oswald: { fontFamily: fontFamily.percentOswald, slot: 0.56, lineHeight: 64 },
-} as const
-
-export type PercentFace = keyof typeof percentFaces
 
 // §3.2. `lineHeight` is the doc's ratio multiplied out and left unrounded, because React
 // Native wants an absolute value. Family per §3.2's roles as remapped by the owner: Grenze Gotisch
@@ -157,9 +141,11 @@ export type PercentFace = keyof typeof percentFaces
 // and 0.58em tall, which are what makes a 14px number readable.
 //
 // `heart` keeps its name from when the percentage sat under a drawn vessel. It is now §3.2's
-// board-percentage step and nothing else; renaming it would churn every call site for nothing.
+// board-percentage step and nothing else; renaming it would churn every call site for nothing. Set
+// in Oswald since the owner's UI pass; the line is taller than the size because Oswald's ascent
+// runs past 1em, and a 56 line clipped its tops.
 const type = {
-  heart: { fontSize: 56, lineHeight: 56, fontFamily: fontFamily.display },
+  heart: { fontSize: 56, lineHeight: 64, fontFamily: fontFamily.percent },
   display: { fontSize: 32, lineHeight: 35.2, fontFamily: fontFamily.display },
   stage: { fontSize: 20, lineHeight: 24, fontFamily: fontFamily.display },
   body: { fontSize: 15, lineHeight: 22.5, fontFamily: fontFamily.uiRegular },
@@ -398,6 +384,11 @@ const art = {
   namePlateSigil: 16,
   namePlateGap: 4,
 
+  // The percentage's digit slot, as a fraction of its size. Oswald carries no `tnum`: its digits run
+  // 0.384em ("1") to 0.543em ("0"), so a centred number would walk sideways each time a digit
+  // changed. Each digit is centred in a slot just wider than the widest.
+  percentDigitSlot: 0.56,
+
   // SKR is "⟡" (U+27E1). That codepoint is *not* in the sans (Barlow Semi Condensed): the shipped
   // TTF's cmap returns glyph 0 for it, so as text Android would silently substitute some other face.
   // It is drawn as SVG instead, on the faucet's coin (CoinMark).
@@ -409,11 +400,9 @@ const art = {
   skrGap: 4,
 
   // §7.3's tap band, redrawn in the owner's UI pass: filled, full-bleed, run to the bottom edge.
-  // Two treatments, compared on a dev chip (look.ts):
-  //   - slab: a raised stone slab, square-cornered, lit along its top edge and shaded down its face.
-  //   - plate: the same slab with its top corners rounded and a gold rim along its top edge, and a
-  //     carved ring where the thumb goes.
-  // Pressed, the face darkens by this much and its contents sink by `motion.bandPressDepth`.
+  // The plate, the owner's choice over a square slab: a raised stone face, its top corners rounded,
+  // a gold rim along its top edge, and a carved ring where the thumb goes. Pressed, the face darkens
+  // by this much and the ring sinks by `motion.bandPressDepth`.
   tapBandPressDarken: 0.5,
   tapBandEdge: 2,
   tapBandPlateRadius: 28,
@@ -682,7 +671,6 @@ export const tokens = {
   radii,
   fontFamily,
   type,
-  percentFaces,
   tabularFigures,
   space,
   layout,

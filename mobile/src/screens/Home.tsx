@@ -8,7 +8,7 @@ import type { LobbyAck, Side } from '../../protocol/generated'
 import { IdleBoard } from '../art/IdleBoard'
 import { Marking } from '../art/Marking'
 import { CoinMark } from '../art/CoinMark'
-import { tokens, type PercentFace, type PrimaryStyle } from '../design/tokens'
+import { tokens, type PrimaryStyle } from '../design/tokens'
 import { CODE_ALPHABET, CODE_LENGTH, DEV_TOOLS, NAME_MAX, session, type BootTarget } from '../net/session'
 import { BUY_IN_SKR, shortAddress } from '../solana/chain'
 import { requestFaucet, type FaucetResult } from '../solana/faucet'
@@ -29,7 +29,7 @@ type LobbyError = Extract<LobbyAck, { ok: false }>['error']
 // §1.2: errors do not apologise and are never vague.
 const ERRORS: Record<LobbyError, string> = {
   UNKNOWN_CODE: 'No gathering answers to that code.',
-  LOBBY_FULL: 'That gathering is full. Four already kneel.',
+  LOBBY_FULL: 'That match is full.',
   INVALID_PAYLOAD: 'The name or the code was refused. A name is 1 to 32 characters; a code is four.',
   ESCROW_FAILED: 'The stakes could not be held. Nothing was taken.',
   WALLET_UNFUNDED: `Your wallet cannot cover the stake. It needs ${BUY_IN_SKR} SKR, and a little SOL for fees.`,
@@ -74,8 +74,6 @@ type HomeParams = {
   primary?: string
   sigils?: string
   marks?: string
-  percent?: string
-  band?: string
   refusal?: string
 }
 
@@ -115,12 +113,8 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
     }
     if (params.sigils !== undefined) next.sigils = params.sigils !== '0'
     if (params.marks === 'masks' || params.marks === 'geometric') next.marks = params.marks
-    if (params.percent !== undefined && params.percent in tokens.percentFaces) {
-      next.percent = params.percent as PercentFace
-    }
-    if (params.band === 'slab' || params.band === 'plate') next.band = params.band
     looks.set(next)
-  }, [params.primary, params.sigils, params.marks, params.percent, params.band])
+  }, [params.primary, params.sigils, params.marks])
   // Dev only: a refusal named by the deep link, shown through the same lines a real one uses.
   const refusal = DEV_TOOLS ? params.refusal : undefined
   const devRefusal =
@@ -270,14 +264,14 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
               </View>
 
               <Primary
-                label="Open a gathering"
+                label="Create a match"
                 disabled={!nameOk || busy || !online}
                 onPress={() => run(() => session.createLobby(trimmed, wallet))}
                 styles={styles}
               />
 
               <View style={styles.group}>
-                <Text style={[styles.label, styles.labelCentred]}>Or join one by its code</Text>
+                <Text style={[styles.label, styles.labelCentred]}>Or join with a code</Text>
                 <CodeCells code={code} onChange={setCode} styles={styles} />
                 <Button
                   label="Join"
@@ -303,11 +297,11 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
           <Pressable
             onPress={() => setRulesOpen(true)}
             accessibilityRole="button"
-            accessibilityLabel="How the rite works"
+            accessibilityLabel="How to play"
             style={styles.about}
           >
             <View style={styles.aboutMark} />
-            <Text style={styles.aboutLabel}>How the rite works</Text>
+            <Text style={styles.aboutLabel}>How to play</Text>
           </Pressable>
         </View>
 
@@ -464,7 +458,7 @@ function CodeCells({ code, onChange, styles }: { code: string; onChange: (code: 
         autoComplete="off"
         importantForAutofill="no"
         style={styles.cellInput}
-        accessibilityLabel={`Gathering code, ${CODE_LENGTH} characters`}
+        accessibilityLabel={`Match code, ${CODE_LENGTH} characters`}
       />
     </View>
   )
@@ -557,18 +551,6 @@ function DevTools({
         ['litStone', 'A lit stone'],
         ['flame', 'B flame'],
         ['coldEdge', 'C cold edge'],
-      ])}
-      <Text style={styles.label}>Dev: board percentage</Text>
-      {chips('percent', [
-        ['grenze', 'Grenze'],
-        ['barlow', 'Barlow'],
-        ['cinzel', 'Cinzel'],
-        ['oswald', 'Oswald'],
-      ])}
-      <Text style={styles.label}>Dev: tap band</Text>
-      {chips('band', [
-        ['slab', 'A slab'],
-        ['plate', 'B plate'],
       ])}
       <Text style={styles.label}>Dev: seat marks</Text>
       {chips('marks', [

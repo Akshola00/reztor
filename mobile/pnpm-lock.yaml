@@ -11,9 +11,6 @@ importers:
       '@expo-google-fonts/barlow-semi-condensed':
         specifier: ^0.4.1
         version: 0.4.1
-      '@expo-google-fonts/cinzel':
-        specifier: ^0.4.2
-        version: 0.4.2
       '@expo-google-fonts/grenze-gotisch':
         specifier: ^0.4.2
         version: 0.4.2
@@ -573,9 +570,6 @@ packages:
 
   '@expo-google-fonts/barlow-semi-condensed@0.4.1':
     resolution: {integrity: sha512-L22y4aj2diDuSFDYIAxmP+PwhdNThE0XDjCUL3GLa8H4Ag6SsRem5j7WFl9qvrrtXeSygW9Az5YsS2oOgXOBRA==}
-
-  '@expo-google-fonts/cinzel@0.4.2':
-    resolution: {integrity: sha512-UAlyuHCGjmKpMt2MoCKYueHz8ZEzjHO1VEol2G7NcPW54UH+85SWIGzpor05YNqUvr/aoqS8Qrfnswxg1RsNMw==}
 
   '@expo-google-fonts/grenze-gotisch@0.4.2':
     resolution: {integrity: sha512-X9XzVqJWhvsazok9Lo5h1O8szq43P+G1xqCpu9+3VFVox0JXTPI9BDhREXg/MH/de5pFqSI6MSiblgIRWZQ5BA==}
@@ -5496,8 +5490,6 @@ snapshots:
       levn: 0.4.1
 
   '@expo-google-fonts/barlow-semi-condensed@0.4.1': {}
-
-  '@expo-google-fonts/cinzel@0.4.2': {}
 
   '@expo-google-fonts/grenze-gotisch@0.4.2': {}
 

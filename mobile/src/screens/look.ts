@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 
-import type { PercentFace, PrimaryStyle } from '../design/tokens'
+import type { PrimaryStyle } from '../design/tokens'
 
 // The home rebuild's open candidates: which primary button home draws, and whether the idle board
 // carries its sigil tokens, and whether seats wear masks or the old geometric sigils. Dev builds switch them from the chip rows on home (or a deep link, for
@@ -13,12 +13,9 @@ export type Look = {
   sigils: boolean
   /** Every seat's identity mark: the carved masks, or the geometric sigils they replaced. */
   marks: 'masks' | 'geometric'
-  /** The UI pass, part 1: the board percentage's face, and the tap band's two treatments. */
-  percent: PercentFace
-  band: 'slab' | 'plate'
 }
 
-let look: Look = { primary: 'flame', sigils: true, marks: 'masks', percent: 'grenze', band: 'slab' }
+let look: Look = { primary: 'flame', sigils: true, marks: 'masks' }
 const listeners = new Set<() => void>()
 
 export const looks = {

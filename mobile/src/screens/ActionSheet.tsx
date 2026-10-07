@@ -149,12 +149,14 @@ function Augury({
   // §1.2: a disabled Augury says why, plainly.
   let reason: string | null = null
   if (s.traceUsed || sent) reason = 'The lane is being inspected.'
-  else if (s.round === 1) reason = 'Inspect reads the last round. There is none yet.'
+  else if (s.round === 1) reason = 'Inspect opens in round 2.'
   else if (credits < cost) reason = `Inspect costs ${cost} energy. You have ${credits}.`
 
   return (
     <Section title="Inspect" cost={cost}>
-      <Text style={styles.note}>{reason ?? 'Choose a lane. Its last round is read once, for good.'}</Text>
+      <Text style={styles.note}>
+        {reason ?? 'Choose a lane to see how it filled last round. You can inspect once per match.'}
+      </Text>
       <View style={styles.row}>
         {owners.map((id) => (
           <Pressable
@@ -284,7 +286,7 @@ function Draw({
         })}
       </View>
 
-      <Text style={styles.toll}>{`${s.tollTaken} energy destroyed`}</Text>
+      <Text style={styles.toll}>{`You've destroyed ${s.tollTaken} progress.`}</Text>
     </Section>
   )
 }

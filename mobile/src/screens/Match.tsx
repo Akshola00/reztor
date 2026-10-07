@@ -26,7 +26,7 @@ import { Judgement } from './Judgement'
 import { LiveHeader, Offering, usePolled } from './Offering'
 import { ActionSheet, type SheetKind } from './ActionSheet'
 import { RulesSheet } from './RulesSheet'
-import { Reveal } from './Reveal'
+import { coldSpeed, Reveal } from './Reveal'
 
 // /match — one screen for the whole rite, driven by the server's stage. The board is mounted once
 // per match and never remounts: Offering, Council and Judgement change only the lower region, and
@@ -357,7 +357,7 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
     )
   } else if (ended) {
     lowerKey = 'ended'
-    lower = <Placeholder height={compact ? undefined : lowerHeight} title="The rite has ended." />
+    lower = <Placeholder height={compact ? undefined : lowerHeight} title="The match has ended." />
   } else if (!online) {
     lowerKey = 'offline'
     // §7.9: the board freezes — no update reaches it — and this says why, in the lower region
@@ -383,7 +383,13 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
   } else if (!alive) {
     lowerKey = 'cast-out'
     // Cast-out players stay as spectators, with their inputs removed rather than disabled.
-    lower = <Placeholder height={lowerHeight} title="You are voted out." line="Your lane is cold. The rite goes on." />
+    lower = (
+      <Placeholder
+        height={lowerHeight}
+        title="You are voted out."
+        line={`Your lane now fills at ${coldSpeed(config)}. The match goes on without you.`}
+      />
+    )
   } else {
     lowerKey = 'tap'
     lower = (
@@ -490,8 +496,8 @@ function LeaveConfirm({ onStay, onLeave }: { onStay: () => void; onLeave: () => 
     <View style={[StyleSheet.absoluteFill, styles.confirmRoot]} accessibilityViewIsModal>
       <Animated.View style={[StyleSheet.absoluteFill, styles.confirmBackdrop, backdrop]} />
       <Animated.View style={[styles.confirmPanel, panel]}>
-        <Text style={styles.confirmTitle}>Leave the rite?</Text>
-        <Text style={styles.confirmLine}>Your stake is forfeit. The rite goes on without you.</Text>
+        <Text style={styles.confirmTitle}>Leave the match?</Text>
+        <Text style={styles.confirmLine}>You&apos;ll lose your stake. The match goes on without you.</Text>
         <View style={styles.confirmRow}>
           <Pressable onPress={onStay} accessibilityRole="button" accessibilityLabel="Stay" style={styles.confirmButton}>
             <Text style={styles.confirmLabel}>Stay</Text>
@@ -499,7 +505,7 @@ function LeaveConfirm({ onStay, onLeave }: { onStay: () => void; onLeave: () => 
           <Pressable
             onPress={onLeave}
             accessibilityRole="button"
-            accessibilityLabel="Leave and forfeit the stake"
+            accessibilityLabel="Leave and lose your stake"
             style={styles.confirmButton}
           >
             <Text style={styles.confirmLabel}>Leave</Text>

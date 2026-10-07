@@ -12,16 +12,14 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg'
 
 import { motion } from '../design/motion'
 import { tokens } from '../design/tokens'
-import { useLook } from '../screens/look'
 
 // §7.3's tap band, redrawn in the owner's UI pass. It is the primary verb of the game, so it is
 // the most pressable thing on screen: a filled stone face, not an outline, running edge to edge and
 // down to the bottom edge, with no margins around it. The whole band is the touch target.
 //
-// Two treatments, on a dev chip (look.ts), both stone, never fire (§3.1):
-//   - slab: square-cornered, lit along its top edge and shaded down its face, with "Tap" carved in.
-//   - plate: its top corners rounded and a gold rim along its top edge — gold is emphasis now — with
-//     a carved ring where the thumb goes.
+// The plate, the owner's choice of two treatments: stone, never fire (§3.1), its top corners rounded,
+// a gold rim along its top edge — gold is emphasis now — light washing down its face, and a carved
+// ring where the thumb goes.
 //
 // The touch surface is a bare `View` with `onTouchStart` — the only candidate that matched the
 // kernel's finger-down count in item 2 phase 1. See CLAUDE.md hard rule 3 and BUILD-PLAN.md §6.
@@ -84,14 +82,11 @@ type TapBandProps = {
 
 export function TapBand({ press, sparks, onTouchStart, onTouchEnd }: TapBandProps) {
   const insets = useSafeAreaInsets()
-  const { band } = useLook()
-  const plate = band === 'plate'
   const { layout } = tokens
   const height = layout.tapBand + insets.bottom
 
   const shadeStyle = useAnimatedStyle(() => ({ opacity: press.get() * pressDarken }))
   const lightStyle = useAnimatedStyle(() => ({ opacity: 1 - press.get() }))
-  const sinkStyle = useAnimatedStyle(() => ({ transform: [{ translateY: press.get() * pressDepth }] }))
   const ringStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: press.get() * pressDepth }, { scale: 1 - press.get() * (1 - ringPressed) }],
   }))
@@ -106,7 +101,7 @@ export function TapBand({ press, sparks, onTouchStart, onTouchEnd }: TapBandProp
       accessibilityRole="button"
       accessibilityLabel="Tap to fill your lane"
     >
-      <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.face, plate ? styles.plate : styles.slab]}>
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.face]}>
         {/* The light down the face: what makes it read as raised. It falls away while pressed. */}
         <Animated.View style={[StyleSheet.absoluteFill, lightStyle]}>
           <FaceLight height={height} />
@@ -115,16 +110,9 @@ export function TapBand({ press, sparks, onTouchStart, onTouchEnd }: TapBandProp
       </View>
 
       <View pointerEvents="none" style={[styles.content, { paddingBottom: insets.bottom }]}>
-        {plate ? (
-          <Animated.View style={[styles.ring, ringStyle]}>
-            <Text style={styles.word}>Tap</Text>
-          </Animated.View>
-        ) : (
-          <Animated.View style={[styles.carving, sinkStyle]}>
-            <Text style={styles.word}>Tap</Text>
-            <Text style={styles.hint}>to fill your lane</Text>
-          </Animated.View>
-        )}
+        <Animated.View style={[styles.ring, ringStyle]}>
+          <Text style={styles.word}>Tap</Text>
+        </Animated.View>
       </View>
 
       {sparks.slots.map((slot, i) => (
@@ -165,12 +153,6 @@ const styles = StyleSheet.create({
   face: {
     backgroundColor: tokens.palette.stone,
     overflow: 'hidden',
-  },
-  slab: {
-    borderTopWidth: tokens.art.tapBandEdge,
-    borderTopColor: tokens.palette.stoneLit,
-  },
-  plate: {
     borderTopWidth: tokens.art.tapBandEdge,
     borderTopColor: tokens.palette.gold,
     borderTopLeftRadius: tokens.art.tapBandPlateRadius,
@@ -187,10 +169,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  carving: {
-    alignItems: 'center',
-    gap: tokens.space.xs,
   },
   // A ring cut into the plate: dark above, lit below, per §3.3's inward bevel.
   ring: {
@@ -209,10 +187,6 @@ const styles = StyleSheet.create({
   word: {
     ...tokens.type.display,
     color: tokens.palette.bone,
-  },
-  hint: {
-    ...tokens.type.label,
-    color: tokens.palette.boneDim,
   },
   // §3.1 item 5: the offering spark is the one fire outside a conduit during the Offering, and it
   // sits on the band, never in its face.

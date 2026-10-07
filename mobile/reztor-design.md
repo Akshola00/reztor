@@ -47,7 +47,7 @@ This is why sabotage looks like generosity. One conduit falls, another surges, a
 | the Faithful           | the Faithful                           | crew                    |
 | the Hollow             | the Hollow                             | impostor                |
 | Drain                  | the Draw                               | siphon                  |
-| destroyed              | the toll                               | units destroyed         |
+| progress destroyed     | the toll                               | units destroyed         |
 | Inspect                | Augury                                 | trace                   |
 | Tap / Discuss / Vote   | Offering / Council / Judgement         | tap / chat / vote stage |
 | voted out              | cast out                               | ejected                 |
@@ -57,7 +57,9 @@ This is why sabotage looks like generosity. One conduit falls, another surges, a
 
 **Hollow and Faithful are kept**, and glossed once, in the role reveal: the Hollow is "the impostor", the Faithful "one of the three honest players".
 
-Inspect results: `natural` → **"Filled by their own taps"**, `received` → **"Received from another lane"**, `drained` → **"Drained by someone"**. The Drain sheet's running count reads **"200 energy destroyed"**.
+Inspect results: `natural` → **"Filled by their own taps"**, `received` → **"Received from another lane"**, `drained` → **"Drained by someone"**. The Drain sheet's running count reads **"You've destroyed 200 progress."**
+
+**Energy and progress are kept apart, at the owner's call.** _Energy_ is strictly the spendable resource — what a tap, an Inspect or a Drain costs (spec: credits). _Progress_ is what a lane holds and the board adds up (spec: units); a drain destroys progress, never energy. No string uses one word for the other.
 
 ### 1.2 Voice
 
@@ -150,13 +152,13 @@ Not on buttons, not on focus rings, not on the active tab, and not on the tap ba
 
 Each seat also carries a distinct carved mask (§5.2).
 
-**Gold is no longer SKR-only.** Since the owner's UI pass it is the accent for value and emphasis across the app: the energy mark, the chosen tap size, the tap band's plate rim (treatment B). Payouts and refunds stay gold. Blue stays progress-only, unchanged — gold never marks progress. Identity is never carried by colour alone — this covers colourblind players and also solves a real problem, which is that four muted colours at thumb-size on a dim phone screen are genuinely hard to tell apart.
+**Gold is no longer SKR-only.** Since the owner's UI pass it is the accent for value and emphasis across the app: the energy mark, the chosen tap size, the tap band's gold rim. Payouts and refunds stay gold. Blue stays progress-only, unchanged — gold never marks progress. Identity is never carried by colour alone — this covers colourblind players and also solves a real problem, which is that four muted colours at thumb-size on a dim phone screen are genuinely hard to tell apart.
 
 ### 3.2 Typography
 
 Two families, both from Google Fonts, both self-hosted and preloaded. **Since the owner's type-role remap, the display face is the interface**: Grenze Gotisch sets every short string on screen, and the sans is left with running text.
 
-**Display — Grenze Gotisch 700. Every short string.** Buttons and controls, labels, player names everywhere, headings and section titles, and every number — the stage timer, the credit counter, the tier face, the board percentage, the Reckoning table. **Floor: 14px**, overriding the old 20px floor. Each step was checked on the emulator: labels at 14, controls and names at 15 and the timer at 20 all read cleanly. Two short strings are named exceptions and stay in the sans, below.
+**Display — Grenze Gotisch 700. Every short string.** Buttons and controls, labels, player names everywhere, headings and section titles, and every number — the stage timer, the energy readout, the tap-size toggle, the Reckoning table — except the board percentage, which is Oswald (below). **Floor: 14px**, overriding the old 20px floor. Each step was checked on the emulator: labels at 14, controls and names at 15 and the timer at 20 all read cleanly. Two short strings are named exceptions and stay in the sans, below.
 
 **Grenze's figures.** Its default digits are old-style — 3, 4, 5, 7 and 9 descend about 0.1em — which muddies a 14px number. Its `tnum` feature substitutes tabular _lining_ figures, all 0.500em wide and 0.58em tall, so `tokens.tabularFigures` goes on every Grenze number: that one declaration makes it both fixed-width and lining, confirmed on the device. The board percentage takes them too, at the owner's call — old-style digits rising and falling four times a second read as jitter on the number people watch most — and keeps its fixed digit slots.
 
@@ -169,7 +171,7 @@ Two families, both from Google Fonts, both self-hosted and preloaded. **Since th
 
 Neither face carries U+27E1 (SKR) or U+2192 (the tier face's arrow): both are drawn as SVG marks, never set as text.
 
-**The board percentage's face is under review** in the owner's UI pass: it is the biggest number on screen and the one that must read at a glance mid-tap, and the owner does not like Grenze's. Four faces are on a dev chip, all at `--t-heart` with fixed digit slots: Grenze Gotisch 700 (the current one), Barlow Semi Condensed 600 (already bundled), Cinzel 700 (carved Roman capitals) and Oswald 600 (condensed and plain). Cinzel and Oswald carry no `tnum`, so their slots are sized to their widest digit. Whichever two are not chosen come out with their packages.
+**The board percentage is Oswald 600**, the owner's choice in the UI pass over Grenze Gotisch, Barlow Semi Condensed and Cinzel: it is the biggest number on screen and the one that must read at a glance mid-tap, and Oswald is condensed, tall and plain, with lining digits. It is the third face in the product and sets nothing else. Oswald carries no `tnum` — its digits run 0.384em to 0.543em — so each digit sits centred in a fixed slot of 0.56em and the number never walks sideways; the `%` takes its own width. The line is 64 against a 56 size, because Oswald's ascent runs past 1em.
 
 ```css
 --type-display: 'Grenze Gotisch', Georgia, serif; /* every short string */
@@ -178,16 +180,16 @@ Neither face carries U+27E1 (SKR) or U+2192 (the tier face's arrow): both are dr
 
 Scale, mobile-first:
 
-| Token         | Size / line-height | Face    | Use                                                        |
-| :------------ | :----------------- | :------ | :--------------------------------------------------------- |
-| `--t-heart`   | 56 / 1.0           | display | Board percentage, wordmark (the lobby code: text)          |
-| `--t-display` | 32 / 1.1           | display | Role reveal, Reckoning verdict (code cells: text)          |
-| `--t-stage`   | 20 / 1.2           | display | Stage names, headings, the primary action, the stage timer |
-| `--t-control` | 15 / 1.5           | display | Buttons and controls, names at reading size                |
-| `--t-body`    | 15 / 1.5           | text    | Chat bodies, paragraphs, notices                           |
-| `--t-data`    | 14 / 1.2           | display | Credits, counts, the round                                 |
-| `--t-label`   | 14 / 1.2           | display | Labels, names in rows, table headings                      |
-| `--t-fine`    | 12 / 1.3           | text    | One-line notes                                             |
+| Token         | Size / line-height | Face    | Use                                                                     |
+| :------------ | :----------------- | :------ | :---------------------------------------------------------------------- |
+| `--t-heart`   | 56 / 1.0           | display | Wordmark; the board percentage (Oswald, 56 / 64); the lobby code (text) |
+| `--t-display` | 32 / 1.1           | display | Role reveal, Reckoning verdict (code cells: text)                       |
+| `--t-stage`   | 20 / 1.2           | display | Stage names, headings, the primary action, the stage timer              |
+| `--t-control` | 15 / 1.5           | display | Buttons and controls, names at reading size                             |
+| `--t-body`    | 15 / 1.5           | text    | Chat bodies, paragraphs, notices                                        |
+| `--t-data`    | 14 / 1.2           | display | Credits, counts, the round                                              |
+| `--t-label`   | 14 / 1.2           | display | Labels, names in rows, table headings                                   |
+| `--t-fine`    | 12 / 1.3           | text    | One-line notes                                                          |
 
 Body copy never exceeds 65 characters per line. No text is set in all caps — stage names use Grenze Gotisch in sentence case and get their weight from the typeface, not from letter-spacing.
 
@@ -208,7 +210,7 @@ Everything is carved, not stacked. Depth comes from a light edge on top and a da
 
 No `elevation` and no `shadowColor` anywhere. Android's elevation shadow is the single fastest way to make this look like a stock Material app.
 
-Corner radius encodes hierarchy rather than being applied uniformly: major panels are `2` (cut stone), interactive chips and buttons are `4`, and the conduits have no radius at all because they are apertures, not objects. The single exception is the tap band's plate treatment, whose top corners round at 28pt — §7.3. The slab treatment is square. Nothing else in the interface is a rounded card with a soft grey shadow.
+Corner radius encodes hierarchy rather than being applied uniformly: major panels are `2` (cut stone), interactive chips and buttons are `4`, and the conduits have no radius at all because they are apertures, not objects. The single exception is the tap band, whose top corners round at 28pt — §7.3. Nothing else in the interface is a rounded card with a soft grey shadow.
 
 A single grain texture sits above the background and below content — a small tiled PNG in an absolutely positioned `Image` with `resizeMode="repeat"` at 3% opacity and `pointerEvents="none"`. It does not animate.
 
@@ -288,7 +290,7 @@ There is no "Hollow" token state. The Hollow's conduit and token look exactly li
 
 **Hard rule 1 still stands: the lanes never touch.** A falling surface beside a rising one must not read as flow, or the Hollow is identified in round one. The seam is the row's own background showing between the lanes, so whatever the layout engine does when it rounds a fractional lane width, the remainder shows as seam and never as two surfaces meeting; each aperture keeps its own walls and clips its own surface and glow. Measured on the emulator, the seam renders as a solid dark run of 10px at 360dp and 8px at device width (448dp) — 4 to 6px on a real 360dp phone at 2–3× density.
 
-**The header.** The rules control is the About mark (a square on its point); it opens the rules sheet in every stage and sits out of thumb reach. The round reads _Round_ in `--bone-dim` at `--t-data` beside its number in `--bone` at `--t-stage`, so it carries weight against the percentage. The stage timer is `--t-stage` Grenze Gotisch with tabular lining figures, in `--bone`, on a small raised stone chip; while the stage runs the chip breathes — it swells and a `--stone-lit` face fades up inside it, quickening at 20, 10 and 5 seconds left — and the number itself never dims, so the pulse reads as deliberate rather than as a glitch. Under reduce motion it holds still. The percentage's face is under review (§3.2).
+**The header.** The rules control is the About mark (a square on its point); it opens the rules sheet in every stage and sits out of thumb reach. The round reads _Round_ in `--bone-dim` at `--t-data` beside its number in `--bone` at `--t-stage`, so it carries weight against the percentage. The stage timer is `--t-stage` Grenze Gotisch with tabular lining figures, in `--bone`, on a small raised stone chip; while the stage runs the chip breathes — it swells and a `--stone-lit` face fades up inside it, quickening at 20, 10 and 5 seconds left — and the number itself never dims, so the pulse reads as deliberate rather than as a glitch. Under reduce motion it holds still. The percentage is Oswald 600 (§3.2).
 
 ```
 ┌──────────────────────────────────┐
@@ -401,10 +403,9 @@ Per §6. Additional behaviour:
 
 **Inspect and Drain** are two icon buttons with their names under them: Inspect is a lens held over a lane, Drain two lanes with a line arcing out of one and into the other. **Both appear for every player, identical at rest** — see §7.4.
 
-**The tap band** is the primary verb of the game, so it is the most pressable thing on screen: a filled stone face, not an outline, running edge to edge and down to the bottom edge with no margins around it. The whole band is the touch target. It emits a small `--flame-cold` spark at the touch point, and must never trigger text selection, double-tap zoom, or pull-to-refresh. Pressed, the face darkens by half, its light falls away and its contents sink 4px — unmistakable at six taps a second, since each press lands instantly and releases over 80ms. The band is stone, never fire. Two treatments are on a dev chip for the owner:
+**The tap band** is the primary verb of the game, so it is the most pressable thing on screen: a filled stone face, not an outline, running edge to edge and down to the bottom edge with no margins around it. The whole band is the touch target. It emits a small `--flame-cold` spark at the touch point, and must never trigger text selection, double-tap zoom, or pull-to-refresh. Pressed, the face darkens by half, its light falls away and the ring sinks 4px and gives under the thumb — unmistakable at six taps a second, since each press lands instantly and releases over 80ms. The band is stone, never fire.
 
-- **A, slab**: square-cornered `--stone`, a 2pt `--stone-lit` top edge, `--stone-lit` washing down the top 60% of the face, with _Tap_ and _to fill your lane_ carved in.
-- **B, plate**: the same slab with its top corners rounded at 28pt and a 2pt `--gold` rim along its top edge, and a carved ring where the thumb goes with _Tap_ inside it. Its corners are §3.3's one radius exception.
+**The plate**, the owner's choice over a square slab: `--stone`, its top corners rounded at 28pt — §3.3's one radius exception — a 2pt `--gold` rim along its top edge, `--stone-lit` washing down the top 60% of the face, and a carved ring where the thumb goes with _Tap_ inside it.
 
 **Rate clamp feedback**: taps beyond 6/sec are dropped silently by the server, and the client must be silent too. No error, no shake, no toast. The band simply stops sparking beyond the clamp. Anything louder teaches players to tap slower, which is not the intent.
 
@@ -419,7 +420,7 @@ The closed screen is identical for every role. This is a secrecy requirement, no
 
 Inside the sheet, the Draw is two rows: **Take from** and **Give to**, each showing four seat tokens (sigil + mantle + current conduit height as a small bar). Sources at 0 units are disabled and visibly carved-out. Selecting self as sink shows the doubled cost plainly: `12` with the energy mark.
 
-A persistent, private running total — _"214 energy destroyed"_ — in toll. This is the impostor's only score and it should feel like a private sin.
+A persistent, private running total — _"You've destroyed 214 progress."_ — in toll. This is the impostor's only score and it should feel like a private sin.
 
 Confirmation is a single tap on the Give-to token; no separate confirm button. Each Draw fires immediately with a brief `--toll` pulse on the sheet edge, and the sheet stays open so the impostor can repeat or retarget.
 

@@ -1,5 +1,4 @@
 import { BarlowSemiCondensed_600SemiBold } from '@expo-google-fonts/barlow-semi-condensed'
-import { Cinzel_700Bold } from '@expo-google-fonts/cinzel'
 import { GrenzeGotisch_700Bold } from '@expo-google-fonts/grenze-gotisch'
 import { Oswald_600SemiBold } from '@expo-google-fonts/oswald'
 import { useFonts } from 'expo-font'
@@ -22,12 +21,10 @@ export default function RootLayout() {
   // 700 ships, so the 400 face is no longer loaded. The running-text face is Barlow Semi Condensed at
   // the one weight the owner judged, 600.
   //
-  // Cinzel and Oswald are candidates for the board percentage only, under review on a dev chip in
-  // the owner's UI pass. Whichever is not chosen comes out with its package.
+  // Oswald 600 sets the board percentage and nothing else — the owner's choice in the UI pass.
   const [fontsLoaded, fontError] = useFonts({
     GrenzeGotisch_700Bold,
     BarlowSemiCondensed_600SemiBold,
-    Cinzel_700Bold,
     Oswald_600SemiBold,
   })
 

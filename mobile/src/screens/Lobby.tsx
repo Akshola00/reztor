@@ -61,10 +61,10 @@ const STAKE_FAILED: Record<StakeFailure | 'unavailable', string> = {
 // §1.2: waiting states are instructions, not mood.
 const KNEELING = [
   'Taking your seat.',
-  'One kneels. Three seats are empty.',
-  'Two kneel. Two seats are empty.',
-  'Three kneel. One seat is empty.',
-  'Four kneel. The rite begins.',
+  '1 of 4 players here.',
+  '2 of 4 players here.',
+  '3 of 4 players here.',
+  'All 4 here. The match begins.',
 ]
 
 function clock(totalSeconds: number): string {
@@ -152,11 +152,11 @@ function Gathering({ code, you }: { code: string; you: string }) {
   return (
     <View style={[styles.root, { paddingTop: insets.top + tokens.layout.sectionGap, paddingBottom: insets.bottom }]}>
       <View style={styles.centre}>
-        <Text style={styles.label}>The gathering</Text>
-        <Text style={styles.code} accessibilityLabel={`Gathering code ${code.split('').join(' ')}`}>
+        <Text style={styles.label}>Match code</Text>
+        <Text style={styles.code} accessibilityLabel={`Match code ${code.split('').join(' ')}`}>
           {code}
         </Text>
-        <Text style={styles.line}>Read the code aloud. The rite begins when four kneel.</Text>
+        <Text style={styles.line}>Share this code. The match starts when 4 players join.</Text>
 
         <View style={styles.seats}>
           {SEATS.map((seat) => (
@@ -179,7 +179,7 @@ function Gathering({ code, you }: { code: string; you: string }) {
         )}
         {remaining === null ? null : (
           <Text style={[styles.line, styles.timer]}>
-            {remaining > 0 ? `The gathering dissolves in ${clock(remaining)}.` : 'The time to gather has run out.'}
+            {remaining > 0 ? `Lobby closes in ${clock(remaining)}.` : 'The time to gather has run out.'}
           </Text>
         )}
       </View>
@@ -254,7 +254,7 @@ function Funding({ funding, ownSeat, now }: { funding: FundingState; ownSeat: nu
     line = STAKE_FAILED[phase.why]
     action = { label: `Stake ${BUY_IN_SKR} SKR`, enabled: true }
   } else {
-    line = request === null ? 'Preparing your stake.' : `Four kneel. Stake ${BUY_IN_SKR} SKR to begin the rite.`
+    line = request === null ? 'Preparing your stake.' : `All 4 here. Pay your ${BUY_IN_SKR} SKR stake to start.`
     action = { label: `Stake ${BUY_IN_SKR} SKR`, enabled: request !== null }
   }
 

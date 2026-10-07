@@ -171,11 +171,11 @@ function ChatInput() {
         onPress={send}
         disabled={!canSend}
         accessibilityRole="button"
-        accessibilityLabel="Speak"
+        accessibilityLabel="Send"
         accessibilityState={{ disabled: !canSend }}
         style={styles.send}
       >
-        <Text style={[styles.sendLabel, canSend ? null : styles.sendLabelDisabled]}>Speak</Text>
+        <Text style={[styles.sendLabel, canSend ? null : styles.sendLabelDisabled]}>Send</Text>
       </Pressable>
     </View>
   )

@@ -23,7 +23,7 @@ export function RulesSheet({ onClose, closeOnBack = true }: { onClose: () => voi
         <>
           <View style={styles.top}>
             <Text style={styles.title} accessibilityRole="header">
-              How the rite works
+              How to play
             </Text>
             <Pressable onPress={close} accessibilityRole="button" accessibilityLabel="Close" style={styles.close}>
               <Text style={styles.closeLabel}>Close</Text>
@@ -32,7 +32,7 @@ export function RulesSheet({ onClose, closeOnBack = true }: { onClose: () => voi
           <ScrollView
             style={{ maxHeight: height * tokens.home.sheetMaxShare }}
             contentContainerStyle={styles.content}
-            accessibilityLabel="How the rite works"
+            accessibilityLabel="How to play"
           >
             <Heading>The Rite</Heading>
             <Para>
@@ -40,19 +40,20 @@ export function RulesSheet({ onClose, closeOnBack = true }: { onClose: () => voi
               of it, and the rite must bring it back before the night ends.
             </Para>
             <Para>
-              Each tap spends energy and rises through your lane into the Heart, which the match calls the board. When
-              the four lanes together reach the target, the Heart breathes on its own and the rite is complete.
+              Each tap spends energy and raises your lane. The four lanes together are the Heart, which the match calls
+              the board, and their progress rises into it. When the board reaches the target, the Heart breathes on its
+              own and the rite is complete.
             </Para>
             <Para>
-              Energy is bought with your stake, so every tap costs something real. A ×1 tap is cheap and gives a little.
-              A ×3 tap costs more and gives more, at a worse rate.
+              Energy is bought with your stake, so every tap costs something real. A ×1 tap costs little energy and adds
+              a little progress. A ×3 tap costs more and adds more, at a worse rate.
             </Para>
 
             <Heading>The Hollow</Heading>
             <Para>
               One of the four is Hollow, the impostor. It wears a celebrant&apos;s robe and cannot refuse the rite where
-              the others would see. So it drains one lane into another. Four parts in every ten are destroyed on the
-              way. They are gone.
+              the others would see. So it drains progress out of one lane and into another. Four parts in every ten are
+              destroyed on the way. They are gone.
             </Para>
             <Para>
               A lane that falls while another rises tells you something true and not enough. The two celebrants it

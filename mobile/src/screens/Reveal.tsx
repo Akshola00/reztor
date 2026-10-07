@@ -39,10 +39,9 @@ type RevealProps = {
 
 const resolveAt = motion.duration.voteReveal + motion.duration.revealHold
 
-function consequence(config: MatchConfig): string {
-  return config.dormantEfficiencyPct === 50
-    ? 'Taps into it are halved.'
-    : `Taps into it count for ${config.dormantEfficiencyPct} parts in a hundred.`
+/** How fast a cold lane fills, in words: taps into it count for `dormantEfficiencyPct`. */
+export function coldSpeed(config: MatchConfig): string {
+  return config.dormantEfficiencyPct === 50 ? 'half speed' : `${config.dormantEfficiencyPct}% speed`
 }
 
 export function Reveal({ result, seats, names, youId, alreadyCold, config, onResolve, onDone }: RevealProps) {
@@ -92,8 +91,8 @@ export function Reveal({ result, seats, names, youId, alreadyCold, config, onRes
     ejected === null
       ? 'No one is voted out.'
       : ejected === youId
-        ? `You are voted out. Your lane is cold. ${consequence(config)}`
-        : `${ejectedName} is voted out. Their lane is cold. ${consequence(config)}`
+        ? `You are voted out. Your lane now fills at ${coldSpeed(config)}.`
+        : `${ejectedName} is voted out. Their lane now fills at ${coldSpeed(config)}.`
 
   return (
     <View style={styles.root} accessibilityLiveRegion="polite">
@@ -128,7 +127,7 @@ export function Reveal({ result, seats, names, youId, alreadyCold, config, onRes
       </View>
 
       <View style={styles.withhold}>
-        <Text style={styles.withholdLabel}>Withheld</Text>
+        <Text style={styles.withholdLabel}>Skipped</Text>
         <Marks voters={withheld} seats={seats} style={marksStyle} />
       </View>
 

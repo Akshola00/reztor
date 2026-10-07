@@ -58,7 +58,7 @@ shoulder leaks it.
 Palette and type tokens in full. Both fonts. The carved material, no elevation, no
 shadows. Grain overlay. The conduits with their arced surfaces and riding sigil tokens,
 the Threshold marks, the sigils — all SVG. The tap band as tap target. The tier button,
-the credit counter, the shared action button. The Marking. Chat rows. Vote tokens and
+the credit counter, the Inspect and Drain buttons. The Marking. Chat rows. Vote tokens and
 simultaneous reveal. Cast Out. The Reckoning table. The void screen.
 
 ### Cut for MVP
@@ -78,11 +78,11 @@ simultaneous reveal. Cast Out. The Reckoning table. The void screen.
 - **The drawn Heart (§6.4).** The board has no vessel on it. The Heart stays the name of
   the board in the fiction and in §1.1's vocabulary, and the percentage in the header is
   how full it is. The conduits are the hero image instead.
-- **Augury and the Draw as separate controls (§7.1 #6, §7.4).** One action button on the
-  board, identical for every role in size, position and label, opening one bottom sheet:
-  Augury for the Faithful, Augury and the Draw for the Hollow. No confirmation step and
-  no impostor-only control. Same content, a quarter of the layout work, and faster to
-  dismiss — which §7.4 says is the point.
+- **An impostor-only Draw control (§7.1 #6, §7.4).** Since the owner's UI pass the board
+  carries two icon buttons, Inspect and Drain, identical for every role in size, position
+  and label, each opening one bottom sheet: Inspect for everyone; Drain for the Hollow,
+  and for the Faithful a panel saying it is not theirs. No confirmation step and no
+  impostor-only control.
 - **The Threshold crossing orchestration (§6.4).** 1400ms of choreography becomes a
   600ms `--flame-white` flood: the Threshold marks ignite across all four conduits and
   the percentage takes the flood. Same beat, less rigging.
@@ -112,8 +112,9 @@ Everything that is not a server stage lives inside `/match` as a component rathe
 route:
 
 - **The Marking overlay** — role reveal, 4s, no skip.
-- **The action sheet** — Augury for everyone, plus the Draw for the Hollow. One sheet, opened
-  from the board's single action button, so the closed board is identical for every role.
+- **The action sheet** — Inspect for everyone, Drain for the Hollow. One sheet, opened from
+  the board's Inspect and Drain buttons, which every player has, so the closed board is
+  identical for every role.
 - **The rules sheet** — openable at any time.
 - **The vote reveal and Cast Out** — brief overlays over the board.
 - **The leave confirmation** — states that the stake is forfeit.
@@ -157,8 +158,9 @@ real Android phone.
    lifting into the live board with reconciliation.
 4. **Council, Judgement, Reveal, Cast Out.** The stage machine inside `/match`.
 5. **The shared action sheet.** One sheet holding Augury for everyone and the Draw for the
-   Hollow, opened from the board's single action button, plus the trace result card. The
-   closed board must stay identical for every role.
+   Hollow, plus the trace result card. Built behind a single action button; the owner's UI
+   pass split it into Inspect and Drain buttons that every player has. The closed board must
+   stay identical for every role.
 6. **The Reckoning and the broken states.**
 7. **Playtest, four phones, four people.** Book this before you start item 0.
 

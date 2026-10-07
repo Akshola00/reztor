@@ -144,7 +144,7 @@ export function Reckoning() {
 
         <Section title="Taps">
           <Table
-            headings={['Spent', 'Tapped', 'Lane']}
+            headings={['Spent', 'Tapped', 'Final lane']}
             rows={reveal.players.map((p) => ({
               key: p.id,
               who: who(p.id),
@@ -161,7 +161,7 @@ export function Reckoning() {
               <>
                 {`${nameOf(hollow)} drained ${impostor.siphons} ${impostor.siphons === 1 ? 'time' : 'times'} and destroyed `}
                 <Text style={styles.toll}>{impostor.unitsDestroyed}</Text>
-                {' energy. '}
+                {' progress. '}
                 {impostor.selfSinks === 0
                   ? 'None of those drains fed their own lane.'
                   : `Of those, ${impostor.selfSinks} fed their own lane.`}
@@ -218,13 +218,13 @@ export function Reckoning() {
           {settlement.rakeCredits === 0 ? null : (
             <Text style={styles.body}>
               <Text style={styles.gold}>{skr(settlement.rakeCredits, perSkr)}</Text>
-              {' SKR is kept as rake.'}
+              {' SKR is kept as the house fee.'}
             </Text>
           )}
           {settlement.dustCredits === 0 ? null : (
             <Text style={styles.body}>
               <Text style={styles.gold}>{skr(settlement.dustCredits, perSkr)}</Text>
-              {' SKR could not be divided between the victors and is kept.'}
+              {' SKR left over after the split is kept.'}
             </Text>
           )}
           {settled === null || settled.matchId !== reveal.matchId ? null : (
@@ -246,11 +246,11 @@ export function Reckoning() {
           <Text style={styles.seed} selectable>
             {reveal.roleSeed}
           </Text>
-          <Text style={styles.fine}>The seed chose the Hollow. It can be checked against the assignment.</Text>
+          <Text style={styles.fine}>This seed picked the Hollow at random. Anyone can verify it.</Text>
         </Section>
 
         <View style={styles.actions}>
-          <Action label="Kneel again" onPress={goHome} />
+          <Action label="Play again" onPress={goHome} />
           <Action label="Leave" onPress={goHome} />
         </View>
       </ScrollView>

@@ -64,7 +64,7 @@ export function Judgement({ seats, round, canVote }: JudgementProps) {
   return (
     <View style={styles.root}>
       <Text style={styles.title}>Vote</Text>
-      <Text style={styles.line}>Place your mark. You may move it until the vote closes.</Text>
+      <Text style={styles.line}>Vote for who you think is the Hollow. You can change it until the vote closes.</Text>
 
       <View style={styles.row}>
         {shown.map((p) => {
@@ -75,7 +75,7 @@ export function Judgement({ seats, round, canVote }: JudgementProps) {
               onPress={ejected ? undefined : () => cast(p.id)}
               disabled={ejected}
               accessibilityRole="button"
-              accessibilityLabel={`Cast your mark on ${p.name}`}
+              accessibilityLabel={`Vote for ${p.name}`}
               accessibilityState={{ selected: vote === p.id }}
               style={styles.choice}
             >
@@ -92,12 +92,12 @@ export function Judgement({ seats, round, canVote }: JudgementProps) {
       <Pressable
         onPress={() => cast('skip')}
         accessibilityRole="button"
-        accessibilityLabel="Withhold your mark"
+        accessibilityLabel="Skip your vote"
         accessibilityState={{ selected: vote === 'skip' }}
         style={styles.withhold}
       >
         <View style={styles.withholdFace}>
-          <Text style={styles.withholdLabel}>Withhold</Text>
+          <Text style={styles.withholdLabel}>Skip</Text>
         </View>
         <MarkSlot marked={vote === 'skip'} />
       </Pressable>
