@@ -24,7 +24,7 @@ import { createOptimisticStore } from '../state/optimistic'
 import { Council } from './Council'
 import { Judgement } from './Judgement'
 import { LiveHeader, Offering, usePolled } from './Offering'
-import { ActionSheet } from './ActionSheet'
+import { ActionSheet, type SheetKind } from './ActionSheet'
 import { RulesSheet } from './RulesSheet'
 import { Reveal } from './Reveal'
 
@@ -275,9 +275,10 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
   // §7.4: the sheet belongs to the Offering it was opened in. It remembers which one, so any stage
   // change underneath it dismisses it cleanly — and reopening needs a new press.
   const stageKey = `${current.round}:${stage}`
-  const [sheetFor, setSheetFor] = useState<string | null>(null)
-  const sheetOpen = sheetFor === stageKey
-  const setSheetOpen = useCallback((open: boolean) => setSheetFor(open ? stageKey : null), [stageKey])
+  const [sheetFor, setSheetFor] = useState<{ stage: string; kind: SheetKind } | null>(null)
+  const sheetOpen = sheetFor !== null && sheetFor.stage === stageKey
+  const openSheet = useCallback((kind: SheetKind) => setSheetFor({ stage: stageKey, kind }), [stageKey])
+  const closeSheet = useCallback(() => setSheetFor(null), [])
 
   // CLAUDE.md, Android: back during a match does not exit. The first press asks, stating that the
   // stake is forfeit; a second press, or Leave, leaves. With the sheet open, back closes the sheet
@@ -307,13 +308,13 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (rulesOpen) setRulesOpen(false)
-      else if (sheetOpen) setSheetOpen(false)
+      else if (sheetOpen) closeSheet()
       else if (confirmLeave) leaveMatch()
       else setConfirmLeave(true)
       return true
     })
     return () => sub.remove()
-  }, [rulesOpen, sheetOpen, setSheetOpen, confirmLeave, leaveMatch])
+  }, [rulesOpen, sheetOpen, closeSheet, confirmLeave, leaveMatch])
 
   // Until the vote resolves on screen, the board must not announce it: BOARD_UPDATE marks the
   // ejected lane dormant on the same tick as VOTE_RESULT, so its conduit is held warm until the
@@ -331,7 +332,7 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
   const compact = reveal !== null || stage !== 'tap'
 
   // In the Offering the lower region keeps a fixed height, so the board never reflows while tapping.
-  const lowerHeight = tokens.layout.controls + tokens.layout.tapBandGap + tokens.layout.tapBand + insets.bottom
+  const lowerHeight = tokens.layout.controls + tokens.layout.tapBand + insets.bottom
 
   let lower
   let lowerKey: string
@@ -393,7 +394,8 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
         onPredicted={onPredicted}
         canTap={canTap}
         onTierPress={onTierPress}
-        onAction={() => setSheetOpen(true)}
+        onInspect={() => openSheet('inspect')}
+        onDrain={() => openSheet('drain')}
       />
     )
   }
@@ -428,14 +430,15 @@ function MatchLive({ initial }: { initial: MatchSnapshot }) {
 
       {DEV_TOOLS && rehearsal ? <RehearsalStrip /> : null}
 
-      {sheetShown ? (
+      {sheetShown && sheetFor !== null ? (
         <ActionSheet
+          kind={sheetFor.kind}
           config={config}
           youId={youId}
           seats={seats}
           laneUnits={laneUnits}
           prediction={prediction}
-          onClose={() => setSheetOpen(false)}
+          onClose={closeSheet}
         />
       ) : null}
 
@@ -642,13 +645,13 @@ const styles = StyleSheet.create({
   // Stone tones only, never fire.
   devStrip: {
     position: 'absolute',
-    left: tokens.art.conduitOuterMargin,
+    left: tokens.space.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: tokens.art.conduitGap,
+    gap: tokens.space.sm,
   },
   devChip: {
-    paddingHorizontal: tokens.art.conduitGap,
+    paddingHorizontal: tokens.space.sm,
     height: tokens.layout.minTouchTarget,
     justifyContent: 'center',
     borderRadius: tokens.radii.chip,

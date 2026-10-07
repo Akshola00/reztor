@@ -8,7 +8,7 @@ import type { LobbyAck, Side } from '../../protocol/generated'
 import { IdleBoard } from '../art/IdleBoard'
 import { Marking } from '../art/Marking'
 import { CoinMark } from '../art/CoinMark'
-import { tokens, type PrimaryStyle } from '../design/tokens'
+import { tokens, type PercentFace, type PrimaryStyle } from '../design/tokens'
 import { CODE_ALPHABET, CODE_LENGTH, DEV_TOOLS, NAME_MAX, session, type BootTarget } from '../net/session'
 import { BUY_IN_SKR, shortAddress } from '../solana/chain'
 import { requestFaucet, type FaucetResult } from '../solana/faucet'
@@ -74,6 +74,8 @@ type HomeParams = {
   primary?: string
   sigils?: string
   marks?: string
+  percent?: string
+  band?: string
   refusal?: string
 }
 
@@ -113,8 +115,12 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
     }
     if (params.sigils !== undefined) next.sigils = params.sigils !== '0'
     if (params.marks === 'masks' || params.marks === 'geometric') next.marks = params.marks
+    if (params.percent !== undefined && params.percent in tokens.percentFaces) {
+      next.percent = params.percent as PercentFace
+    }
+    if (params.band === 'slab' || params.band === 'plate') next.band = params.band
     looks.set(next)
-  }, [params.primary, params.sigils, params.marks])
+  }, [params.primary, params.sigils, params.marks, params.percent, params.band])
   // Dev only: a refusal named by the deep link, shown through the same lines a real one uses.
   const refusal = DEV_TOOLS ? params.refusal : undefined
   const devRefusal =
@@ -551,6 +557,18 @@ function DevTools({
         ['litStone', 'A lit stone'],
         ['flame', 'B flame'],
         ['coldEdge', 'C cold edge'],
+      ])}
+      <Text style={styles.label}>Dev: board percentage</Text>
+      {chips('percent', [
+        ['grenze', 'Grenze'],
+        ['barlow', 'Barlow'],
+        ['cinzel', 'Cinzel'],
+        ['oswald', 'Oswald'],
+      ])}
+      <Text style={styles.label}>Dev: tap band</Text>
+      {chips('band', [
+        ['slab', 'A slab'],
+        ['plate', 'B plate'],
       ])}
       <Text style={styles.label}>Dev: seat marks</Text>
       {chips('marks', [

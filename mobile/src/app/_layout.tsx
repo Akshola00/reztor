@@ -1,5 +1,7 @@
 import { BarlowSemiCondensed_600SemiBold } from '@expo-google-fonts/barlow-semi-condensed'
+import { Cinzel_700Bold } from '@expo-google-fonts/cinzel'
 import { GrenzeGotisch_700Bold } from '@expo-google-fonts/grenze-gotisch'
+import { Oswald_600SemiBold } from '@expo-google-fonts/oswald'
 import { useFonts } from 'expo-font'
 import { Stack } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
@@ -19,9 +21,14 @@ export default function RootLayout() {
   // One display weight: item 1 judged Grenze Gotisch 400 against 700 at t-heart on device and
   // 700 ships, so the 400 face is no longer loaded. The running-text face is Barlow Semi Condensed at
   // the one weight the owner judged, 600.
+  //
+  // Cinzel and Oswald are candidates for the board percentage only, under review on a dev chip in
+  // the owner's UI pass. Whichever is not chosen comes out with its package.
   const [fontsLoaded, fontError] = useFonts({
     GrenzeGotisch_700Bold,
     BarlowSemiCondensed_600SemiBold,
+    Cinzel_700Bold,
+    Oswald_600SemiBold,
   })
 
   // A ticket that survived a restart rejoins before anything renders, so a player the OS or a

@@ -20,7 +20,9 @@
   "version": "1.0.0",
   "dependencies": {
     "@expo-google-fonts/barlow-semi-condensed": "^0.4.1",
+    "@expo-google-fonts/cinzel": "^0.4.2",
     "@expo-google-fonts/grenze-gotisch": "^0.4.2",
+    "@expo-google-fonts/oswald": "^0.4.2",
     "@expo/metro-runtime": "~57.0.16",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@solana/kit": "^7.0.0",

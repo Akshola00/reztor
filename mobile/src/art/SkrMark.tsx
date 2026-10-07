@@ -1,19 +1,11 @@
-import Svg, { Path } from 'react-native-svg'
-
 import { tokens } from '../design/tokens'
 
-// §7.3 sets SKR as "⟡" (U+27E1) on the tier face and beside the credit counter. The interface
-// face (Barlow Semi Condensed) does not contain that codepoint — its cmap returns glyph 0 — so setting it as text hands the
-// glyph to whatever face Android substitutes, which is not a decision this product should leave
-// to the platform. It is drawn here instead, in the same square box and at the same stroke
-// weight as the sigils, so the two read as one family of carved marks.
+// SKR is "⟡" (U+27E1). The interface face (Barlow Semi Condensed) does not contain that codepoint —
+// its cmap returns glyph 0 — so setting it as text hands the glyph to whatever face Android
+// substitutes. Its outline is drawn instead, in the sigils' square box, and struck onto the faucet's
+// coin. Since the owner's UI pass the match counts energy, not SKR, so the coin is its only use.
 //
 // U+27E1 is a white concave-sided diamond: four points with sides that bow inward.
-
-type SkrMarkProps = {
-  colour: string
-  size?: number
-}
 
 const BOX = tokens.art.sigilBox
 const MID = BOX / 2
@@ -37,11 +29,3 @@ export const SKR_PATH = `${POINTS.map((point, i) => {
   const open = i === 0 ? `M ${point[0]} ${point[1]} ` : ''
   return `${open}Q ${cx} ${cy} ${next[0]} ${next[1]}`
 }).join(' ')} Z`
-
-export function SkrMark({ colour, size = tokens.art.skrMarkSize }: SkrMarkProps) {
-  return (
-    <Svg width={size} height={size} viewBox={`0 0 ${BOX} ${BOX}`}>
-      <Path d={SKR_PATH} fill="none" stroke={colour} strokeWidth={tokens.art.sigilStroke} strokeLinejoin="miter" />
-    </Svg>
-  )
-}

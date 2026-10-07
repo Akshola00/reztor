@@ -9,13 +9,16 @@ import { Conduit } from './Conduit'
 import { RidingToken } from './RidingToken'
 import type { SeatNumber } from './Sigil'
 
-// §6.1's composition. Four conduits fill the width between small outer margins, separated by
-// gaps of background — the background itself is the divider, and hard rule 1 requires the
-// conduits never touch. Nothing is drawn above them but a thin header; below them the stage puts
-// whatever it needs — during the Offering, the controls row and the tap band.
+// §6.1's composition, as the owner's UI pass amends it. Four conduits run edge to edge across the
+// screen, divided by a carved seam (`art.laneSeam`, in bevelShadow) instead of gaps of background,
+// so the board reads as one stone surface with cut divisions. Nothing is drawn above them but a
+// thin header; below them the stage puts whatever it needs — during the Offering, the controls row
+// and the tap band.
 //
-// There is no stone field and no vessel. The board is void plus grain, and the conduits are the
-// hero image.
+// **Hard rule 1: the lanes never touch.** The seam is drawn by the row itself — its background is
+// bevelShadow and the lanes sit `laneSeam` apart on it — so whatever Yoga does when it rounds a
+// fractional lane width to the pixel grid, the remainder shows as seam, never as two surfaces
+// meeting. Each aperture keeps its own walls and clips its own surface and glow.
 //
 // Capacity and win target arrive in `config` and are never hardcoded. The Threshold sits at
 // winTarget / laneCount / laneCapacity of each conduit's height — 2400/4/1000 = 0.60, which is
@@ -77,10 +80,9 @@ export function Board({
   const laneCount = lanes.length || 1
   const thresholdFraction = config.winTarget / laneCount / config.laneCapacity
 
-  // §6.1: derived, never fixed.
-  const columnWidth = Math.floor(
-    (screenWidth - art.conduitOuterMargin * 2 - art.conduitGap * (laneCount - 1)) / laneCount,
-  )
+  // §6.1: derived, never fixed. Left fractional: the lanes fill the screen exactly, and the seam
+  // behind them takes up any rounding.
+  const columnWidth = (screenWidth - art.laneSeam * (laneCount - 1)) / laneCount
 
   const onConduitLayout = (e: LayoutChangeEvent) => {
     const h = Math.round(e.nativeEvent.layout.height)
@@ -108,7 +110,7 @@ export function Board({
         ]}
         onLayout={onConduitLayout}
       >
-        <View style={[styles.columns, { gap: art.conduitGap }]}>
+        <View style={[styles.columns, { gap: art.laneSeam }]}>
           {lanes.map((lane, i) => {
             const own = lane.owner === youId
             const seat = (i + 1) as SeatNumber
@@ -150,8 +152,7 @@ export function Board({
 }
 
 const styles = StyleSheet.create({
-  // No background: the root layout's void and its grain show through, and the gaps between the
-  // conduits read as darkness rather than as drawn dividers.
+  // No background: the root layout's void and its grain show through around the board.
   root: {
     flex: 1,
   },
@@ -159,15 +160,14 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: tokens.layout.conduits,
     justifyContent: 'flex-end',
-    alignItems: 'center',
-    paddingHorizontal: tokens.art.conduitOuterMargin,
   },
   lowerCompact: {
     flex: 1,
   },
+  // The seam: the row's own background, showing between the lanes.
   columns: {
     flexDirection: 'row',
-    justifyContent: 'center',
     height: '100%',
+    backgroundColor: tokens.palette.bevelShadow,
   },
 })

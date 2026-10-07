@@ -1,4 +1,5 @@
-import { StyleSheet, useWindowDimensions, View, type GestureResponderEvent } from 'react-native'
+import { useId } from 'react'
+import { StyleSheet, Text, View, type GestureResponderEvent } from 'react-native'
 import Animated, {
   makeMutable,
   useAnimatedStyle,
@@ -7,12 +8,20 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg'
 
 import { motion } from '../design/motion'
 import { tokens } from '../design/tokens'
+import { useLook } from '../screens/look'
 
-// §7.3's tap band: the band runs from below the controls row to the bottom edge and all of it is
-// the touch target; the oval face is centred inside it, clear of the gesture bar.
+// §7.3's tap band, redrawn in the owner's UI pass. It is the primary verb of the game, so it is
+// the most pressable thing on screen: a filled stone face, not an outline, running edge to edge and
+// down to the bottom edge, with no margins around it. The whole band is the touch target.
+//
+// Two treatments, on a dev chip (look.ts), both stone, never fire (§3.1):
+//   - slab: square-cornered, lit along its top edge and shaded down its face, with "Tap" carved in.
+//   - plate: its top corners rounded and a gold rim along its top edge — gold is emphasis now — with
+//     a carved ring where the thumb goes.
 //
 // The touch surface is a bare `View` with `onTouchStart` — the only candidate that matched the
 // kernel's finger-down count in item 2 phase 1. See CLAUDE.md hard rule 3 and BUILD-PLAN.md §6.
@@ -20,9 +29,9 @@ import { tokens } from '../design/tokens'
 //
 // Everything that moves is driven by shared values the stage writes from its touch handler:
 //
-//   - `press`, 0..1. The face sinks by `plinthPressDepth` and a `stoneLit` layer inside it fades
-//     in. §7.3 asks the face to brighten to stoneLit; only transform and opacity may animate in a
-//     match, so the brightening is an opacity on a lit layer rather than a colour change.
+//   - `press`, 0..1. The face darkens by `tapBandPressDarken`, its light falls away, and its
+//     contents sink by `bandPressDepth` — unmistakable at six taps a second, since each press is set
+//     instantly and released over `plinthRelease`. Transform and opacity only.
 //   - a pool of sparks, pre-mounted and recycled round-robin, so nothing mounts per tap.
 //
 // Every child is `pointerEvents="none"`, so the band itself is always the touch target and a
@@ -61,8 +70,9 @@ export function emitSpark(pool: SparkPool, x: number, y: number) {
   )
 }
 
-// Captured by the worklets below as a plain number rather than the whole motion module.
-const pressDepth = motion.plinthPressDepth
+// Captured by the worklets below as plain numbers rather than whole modules.
+const pressDepth = motion.bandPressDepth
+const { tapBandPressDarken: pressDarken, tapBandRingPressed: ringPressed } = tokens.art
 
 type TapBandProps = {
   /** 1 while pressed, animated back to 0 on release. */
@@ -74,19 +84,21 @@ type TapBandProps = {
 
 export function TapBand({ press, sparks, onTouchStart, onTouchEnd }: TapBandProps) {
   const insets = useSafeAreaInsets()
-  const { width: screenWidth } = useWindowDimensions()
-  const { art, layout, material } = tokens
+  const { band } = useLook()
+  const plate = band === 'plate'
+  const { layout } = tokens
+  const height = layout.tapBand + insets.bottom
 
-  const faceHeight = art.tapBandFaceHeight
-  // The lit layer sits inside the face's rim, so its radius is the face's less the rim.
-  const litRadius = faceHeight / 2 - material.carvedBandFace.borderWidth
-
-  const faceStyle = useAnimatedStyle(() => ({ transform: [{ translateY: press.get() * pressDepth }] }))
-  const litStyle = useAnimatedStyle(() => ({ opacity: press.get() }))
+  const shadeStyle = useAnimatedStyle(() => ({ opacity: press.get() * pressDarken }))
+  const lightStyle = useAnimatedStyle(() => ({ opacity: 1 - press.get() }))
+  const sinkStyle = useAnimatedStyle(() => ({ transform: [{ translateY: press.get() * pressDepth }] }))
+  const ringStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: press.get() * pressDepth }, { scale: 1 - press.get() * (1 - ringPressed) }],
+  }))
 
   return (
     <View
-      style={[styles.band, { height: layout.tapBand + insets.bottom }]}
+      style={[styles.band, { height }]}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchEnd}
@@ -94,26 +106,47 @@ export function TapBand({ press, sparks, onTouchStart, onTouchEnd }: TapBandProp
       accessibilityRole="button"
       accessibilityLabel="Tap to fill your lane"
     >
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.face,
-          {
-            width: screenWidth - art.tapBandInset * 2,
-            height: faceHeight,
-            borderRadius: faceHeight / 2,
-            marginBottom: insets.bottom,
-          },
-          faceStyle,
-        ]}
-      >
-        <Animated.View style={[StyleSheet.absoluteFill, styles.lit, { borderRadius: litRadius }, litStyle]} />
-      </Animated.View>
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.face, plate ? styles.plate : styles.slab]}>
+        {/* The light down the face: what makes it read as raised. It falls away while pressed. */}
+        <Animated.View style={[StyleSheet.absoluteFill, lightStyle]}>
+          <FaceLight height={height} />
+        </Animated.View>
+        <Animated.View style={[StyleSheet.absoluteFill, styles.shade, shadeStyle]} />
+      </View>
+
+      <View pointerEvents="none" style={[styles.content, { paddingBottom: insets.bottom }]}>
+        {plate ? (
+          <Animated.View style={[styles.ring, ringStyle]}>
+            <Text style={styles.word}>Tap</Text>
+          </Animated.View>
+        ) : (
+          <Animated.View style={[styles.carving, sinkStyle]}>
+            <Text style={styles.word}>Tap</Text>
+            <Text style={styles.hint}>to fill your lane</Text>
+          </Animated.View>
+        )}
+      </View>
 
       {sparks.slots.map((slot, i) => (
         <Spark key={i} slot={slot} />
       ))}
     </View>
+  )
+}
+
+/** A static wash of stoneLit, strongest at the top edge and gone by `faceLightReach`. */
+function FaceLight({ height }: { height: number }) {
+  const id = useId().replace(/[^a-zA-Z0-9]/g, '')
+  return (
+    <Svg width="100%" height={height}>
+      <Defs>
+        <LinearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={tokens.palette.stoneLit} stopOpacity={tokens.art.tapBandLight} />
+          <Stop offset={String(tokens.art.tapBandLightReach)} stopColor={tokens.palette.stoneLit} stopOpacity={0} />
+        </LinearGradient>
+      </Defs>
+      <Rect x={0} y={0} width="100%" height={height} fill={`url(#${id})`} />
+    </Svg>
   )
 }
 
@@ -127,19 +160,59 @@ function Spark({ slot }: { slot: SparkSlot }) {
 
 const styles = StyleSheet.create({
   band: {
-    marginTop: tokens.layout.tapBandGap,
+    alignSelf: 'stretch',
+  },
+  face: {
+    backgroundColor: tokens.palette.stone,
+    overflow: 'hidden',
+  },
+  slab: {
+    borderTopWidth: tokens.art.tapBandEdge,
+    borderTopColor: tokens.palette.stoneLit,
+  },
+  plate: {
+    borderTopWidth: tokens.art.tapBandEdge,
+    borderTopColor: tokens.palette.gold,
+    borderTopLeftRadius: tokens.art.tapBandPlateRadius,
+    borderTopRightRadius: tokens.art.tapBandPlateRadius,
+  },
+  shade: {
+    backgroundColor: tokens.palette.bevelShadow,
+  },
+  content: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // §3.3's one permitted exception to the radius hierarchy — see §7.3. A face cut into the dark
-  // rather than a slab raised out of it, chosen on the phone in item 1c: the band must never be
-  // brighter than the fire, and `char` leaves the `stoneLit` pressed state room to read as
-  // brightening.
-  face: {
-    ...tokens.material.carvedBandFace,
+  carving: {
+    alignItems: 'center',
+    gap: tokens.space.xs,
   },
-  lit: {
-    backgroundColor: tokens.palette.stoneLit,
+  // A ring cut into the plate: dark above, lit below, per §3.3's inward bevel.
+  ring: {
+    width: tokens.art.tapBandRing,
+    height: tokens.art.tapBandRing,
+    borderRadius: tokens.art.tapBandRing / 2,
+    borderWidth: tokens.art.tapBandRingStroke,
+    borderTopColor: tokens.palette.bevelShadow,
+    borderLeftColor: tokens.palette.bevelShadow,
+    borderBottomColor: tokens.palette.stoneLit,
+    borderRightColor: tokens.palette.stoneLit,
+    backgroundColor: tokens.palette.char,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  word: {
+    ...tokens.type.display,
+    color: tokens.palette.bone,
+  },
+  hint: {
+    ...tokens.type.label,
+    color: tokens.palette.boneDim,
   },
   // §3.1 item 5: the offering spark is the one fire outside a conduit during the Offering, and it
   // sits on the band, never in its face.

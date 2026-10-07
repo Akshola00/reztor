@@ -112,7 +112,7 @@ These live in `src/design/tokens.ts` as a typed object. The CSS-variable form be
 --toll-smoke: #51242a; /* residue at a falling frontier */
 
 /* Settlement */
---gold: #d9b33b; /* SKR, payouts, refunds only */
+--gold: #d9b33b; /* value and emphasis; payouts and refunds */
 
 /* Type */
 --bone: #d8dbe2; /* primary text */
@@ -148,7 +148,9 @@ Not on buttons, not on focus rings, not on the active tab, and not on the tap ba
 --seat-4-text: #8893ac; /* 26%: 6.31 / 4.53 */
 ```
 
-Each seat also carries a distinct carved mask (§5.2). Identity is never carried by colour alone — this covers colourblind players and also solves a real problem, which is that four muted colours at thumb-size on a dim phone screen are genuinely hard to tell apart.
+Each seat also carries a distinct carved mask (§5.2).
+
+**Gold is no longer SKR-only.** Since the owner's UI pass it is the accent for value and emphasis across the app: the energy mark, the chosen tap size, the tap band's plate rim (treatment B). Payouts and refunds stay gold. Blue stays progress-only, unchanged — gold never marks progress. Identity is never carried by colour alone — this covers colourblind players and also solves a real problem, which is that four muted colours at thumb-size on a dim phone screen are genuinely hard to tell apart.
 
 ### 3.2 Typography
 
@@ -166,6 +168,8 @@ Two families, both from Google Fonts, both self-hosted and preloaded. **Since th
 2. **The wallet address.** Base58 mixes cases, and Grenze's blackletter capitals (T, K) became pen forms that had to be decoded at 20px. It is checked character by character, like the role seed.
 
 Neither face carries U+27E1 (SKR) or U+2192 (the tier face's arrow): both are drawn as SVG marks, never set as text.
+
+**The board percentage's face is under review** in the owner's UI pass: it is the biggest number on screen and the one that must read at a glance mid-tap, and the owner does not like Grenze's. Four faces are on a dev chip, all at `--t-heart` with fixed digit slots: Grenze Gotisch 700 (the current one), Barlow Semi Condensed 600 (already bundled), Cinzel 700 (carved Roman capitals) and Oswald 600 (condensed and plain). Cinzel and Oswald carry no `tnum`, so their slots are sized to their widest digit. Whichever two are not chosen come out with their packages.
 
 ```css
 --type-display: 'Grenze Gotisch', Georgia, serif; /* every short string */
@@ -204,7 +208,7 @@ Everything is carved, not stacked. Depth comes from a light edge on top and a da
 
 No `elevation` and no `shadowColor` anywhere. Android's elevation shadow is the single fastest way to make this look like a stock Material app.
 
-Corner radius encodes hierarchy rather than being applied uniformly: major panels are `2` (cut stone), interactive chips and buttons are `4`, and the conduits have no radius at all because they are apertures, not objects. The single exception is the tap band, which is an oval — §7.3 explains what earns it. Nothing else in the interface is a rounded card with a soft grey shadow.
+Corner radius encodes hierarchy rather than being applied uniformly: major panels are `2` (cut stone), interactive chips and buttons are `4`, and the conduits have no radius at all because they are apertures, not objects. The single exception is the tap band's plate treatment, whose top corners round at 28pt — §7.3. The slab treatment is square. Nothing else in the interface is a rounded card with a soft grey shadow.
 
 A single grain texture sits above the background and below content — a small tiled PNG in an absolutely positioned `Image` with `resizeMode="repeat"` at 3% opacity and `pointerEvents="none"`. It does not animate.
 
@@ -280,42 +284,38 @@ There is no "Hollow" token state. The Hollow's conduit and token look exactly li
 
 ### 6.1 Composition
 
-Four conduits fill the width of the screen between small outer margins, separated by narrow gaps of background. They fill upward from their bases. Each one's surface is a gentle convex arc rather than a flat line, and the owner's sigil token rides that surface. A short carved Threshold mark crosses each conduit at 60% of its height. A thin header sits above them — the rules control and the round, the percentage, the stage timer — and a controls row and the tap band sit below.
+**The owner's UI pass (part 1) rebuilt this screen for a judge's first impression: clarity beats flavour in anything shown during a live match.** Four lanes run edge to edge across the screen with no outer margins, divided by a **2pt carved seam in `--bevel-shadow`** rather than gaps of background, so the board reads as one stone surface with cut divisions rather than four panels. They fill upward from their bases. Each one's surface is a gentle convex arc rather than a flat line, and the owner's mask token rides that surface. A short carved target mark crosses each lane at 60% of its height. A header sits above them — the rules control and the round, the percentage, the stage timer — and the controls row and the tap band sit below.
 
-**The header's two additions, from the home rebuild's refinements.** The rules control is the About mark (a square on its point) beside the round; it opens the rules sheet in every stage and sits at the top, out of thumb reach during Offering. The stage timer is set at `--t-stage` in Grenze Gotisch with tabular lining figures, in `--bone`, and while the stage runs it beats — a swell in scale and a dip in opacity, transform and opacity only — quickening at 20, 10 and 5 seconds left. Under reduce motion it holds still.
+**Hard rule 1 still stands: the lanes never touch.** A falling surface beside a rising one must not read as flow, or the Hollow is identified in round one. The seam is the row's own background showing between the lanes, so whatever the layout engine does when it rounds a fractional lane width, the remainder shows as seam and never as two surfaces meeting; each aperture keeps its own walls and clips its own surface and glow. Measured on the emulator, the seam renders as a solid dark run of 10px at 360dp and 8px at device width (448dp) — 4 to 6px on a real 360dp phone at 2–3× density.
 
-This is the hero image of the product: four columns of cold fire in the dark, and the darkness between them is the background itself. Spend the boldness here and keep everything else quiet.
+**The header.** The rules control is the About mark (a square on its point); it opens the rules sheet in every stage and sits out of thumb reach. The round reads _Round_ in `--bone-dim` at `--t-data` beside its number in `--bone` at `--t-stage`, so it carries weight against the percentage. The stage timer is `--t-stage` Grenze Gotisch with tabular lining figures, in `--bone`, on a small raised stone chip; while the stage runs the chip breathes — it swells and a `--stone-lit` face fades up inside it, quickening at 20, 10 and 5 seconds left — and the number itself never dims, so the pulse reads as deliberate rather than as a glitch. Under reduce motion it holds still. The percentage's face is under review (§3.2).
 
 ```
 ┌──────────────────────────────────┐
-│ Round 2           58%       0:41 │  ← round · percentage · timer
+│ ◇ Round 2         58%     [0:41] │  ← round · percentage · timer chip
+│┌───────┬───────┬───────┬────────┐│
+││       │       │       │        ││  ← lanes edge to edge, carved seams
+││       │       │ ╭───╮ │        ││  ← surface: a convex arc
+││       │       │ │ ◈ │ │        ││  ← mask token rides the surface
+│├───────┼───────┤▓▓▓▓▓▓▓├────────┤│  ← target, carved per lane
+││ ╭───╮ │       │▓▓▓▓▓▓▓│ ╭───╮  ││
+││ │ ◇ │ │ ╭───╮ │▓▓▓▓▓▓▓│ │ ◻ │  ││
+││▓▓▓▓▓▓▓│▓▓▓▓▓▓▓│▓▓▓▓▓▓▓│▓▓▓▓▓▓▓▓││
+│└───────┴───────┴───────┴────────┘│
+│ [•×1|•••×3]  ⚡847   [Inspect][Drain]│  ← tap size · energy · two icon buttons
+│▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔│
+│               Tap                │  ← the tap band, full-bleed, to the bottom
 │                                  │
-│  ┌────┐ ┌────┐ ┌────┐ ┌────┐     │
-│  │    │ │    │ │    │ │    │     │
-│  │    │ │    │ │╭──╮│ │    │     │  ← surface: a convex arc
-│  │    │ │    │ ││ ◈││ │    │     │  ← sigil token rides the surface
-│  ├────┤ ├────┤ │▓▓▓▓│ ├────┤     │  ← Threshold, carved per conduit
-│  │    │ │    │ │▓▓▓▓│ │    │     │
-│  │╭──╮│ │    │ │▓▓▓▓│ │╭──╮│     │
-│  ││ ◇││ │╭──╮│ │▓▓▓▓│ ││ ◻││     │
-│  │▓▓▓▓│ ││ △││ │▓▓▓▓│ │▓▓▓▓│     │
-│  │▓▓▓▓│ │▓▓▓▓│ │▓▓▓▓│ │▓▓▓▓│     │
-│  └────┘ └────┘ └────┘ └────┘     │
-│                                  │
-│ [1 ⟡ → 1]      847 ⟡   [ Augury ]│  ← tier · credits · action
-│                                  │
-│      ╭────────────────────╮      │
-│     │                      │     │
-│     │      the tap band    │     │  ← whole band is the tap target
-│     │                      │     │
-└─────┴──────────────────────┴─────┘
+└──────────────────────────────────┘
 ```
 
-Conduit width is derived, never fixed: `(screen width − 2 × outer margin − 3 × gap) / 4`. The gap is background, not a drawn divider, and must stay clearly visible at 360pt.
+Lane width is derived, never fixed: `(screen width − 3 × seam) / 4`.
 
-Vertical budget on an 844pt viewport: header 48pt, conduits flexing to fill (280pt minimum), controls row 84pt, a clear 24pt gap, then the tap band at 240pt running to the bottom edge. The conduits take the slack, so they are always the largest thing on screen.
+**One spacing scale** (`tokens.space`: 2, 4, 8, 12, 16, 24, 32), applied to every inset, margin and gap on this screen: `16` is the edge of every text row, `8` the gap between controls and inside them, `4` between a mark and the number it qualifies. The audit found five unrelated values (10, 12, 16, 24, 28) on the old screen.
 
-**Your own conduit is marked by a larger sigil token with a `--bone-dim` ring**, not coloured differently. That is the only difference; everyone's conduit renders identically otherwise.
+Vertical budget on an 844pt viewport: header 64pt, lanes flexing to fill (280pt minimum), controls row 72pt (a 56pt control with 8pt above and below), then the tap band at 240pt running to the bottom edge with no gap. The lanes take the slack, so they are always the largest thing on screen. The header grew from 48pt because, with the lanes now starting right under it, a 56pt percentage in a 48pt band had its feet cut off.
+
+**Your own lane is marked by a larger mask token with a `--bone-dim` ring**, not coloured differently. That is the only difference; everyone's lane renders identically otherwise.
 
 ### 6.2 Conduit rendering
 
@@ -393,34 +393,33 @@ Both variants run for exactly the same duration with the same number of animatio
 
 Per §6. Additional behaviour:
 
-**The controls row** sits directly under the conduits: the tier button on the left, the credit counter centred, the action button on the right. Both buttons carry a raised stone face, chip radius `4`, and are at least 44pt. They are the same size and style as each other, so neither reads as the more important one.
+**The controls row**, redrawn in the owner's UI pass because nobody could tell what its controls did — the owner included. It sits directly under the lanes: the tap size on the left, energy in the middle, and two icon buttons on the right. Every control is 56pt tall, chip radius `4`. All marks are drawn as SVG — no emoji, no icon library.
 
-**The tier button** shows the current tier's cost and yield on its face (`1 ⟡ → 1`, or `4 ⟡ → 3` at greater). Pressing it cycles the tier; the face is the state, so there is no second chip to compare against and no selected/unselected pair. This control is private and must never render for other players.
+**The tap size** is a two-way toggle, both sizes always in view: each segment shows a drawn mark of the offering's size (one stone, or three), its label **×1** / **×3**, and its cost in energy. The chosen size is raised out of a track cut into the stone, its stones and energy mark in `--gold`; the other recedes in `--bone-dim`. Pressing the other size switches to it. This control is private and must never render for other players.
 
-**The action button** is labelled "Augury" and is identical for every role — see §7.4. It never changes size, position, or label based on role.
+**Energy** (the spec's credits) is a drawn bolt in `--gold`, the number at `--t-stage` with tabular figures, and the label _Energy_ under it, so it reads as a resource being spent. Each change ticks the number — a short drop and settle, transform and opacity only, at most ten times a second. Below 100 it shifts to toll — as `--toll-text` (`#b2646f`), not `--toll`. `--toll` measures 2.60:1 on `--void`, below the 4.5:1 floor for text that carries information; `--toll-text` is `--toll` mixed 34% toward `--bone`, the smallest step that clears it, at 4.58:1. It is for text only: embers, drains and every other toll mark keep `--toll`. Below 20 it pulses slowly — a crossfade between `--toll-text` and `--toll-text-bright` (`#bf8c95`, toll mixed 56% toward bone, 6.85:1), never a dimming, so every frame of the pulse stays above 4.5:1. There is no modal warning — the player is mid-tap and a modal would be hostile.
 
-**The credit counter** sits between the two buttons. It ticks down continuously with tabular figures. Below 100 credits it shifts to toll — as `--toll-text` (`#b2646f`), not `--toll`. `--toll` measures 2.60:1 on `--void`, below the 4.5:1 floor for text that carries information; `--toll-text` is `--toll` mixed 34% toward `--bone`, the smallest step that clears it, at 4.58:1. It is for text only: embers, drains and every other toll mark keep `--toll`. Below 20 it pulses slowly — a crossfade between `--toll-text` and `--toll-text-bright` (`#bf8c95`, toll mixed 56% toward bone, 6.85:1), never a dimming, so every frame of the pulse stays above 4.5:1. There is no modal warning — the player is mid-tap and a modal would be hostile.
+**Inspect and Drain** are two icon buttons with their names under them: Inspect is a lens held over a lane, Drain two lanes with a line arcing out of one and into the other. **Both appear for every player, identical at rest** — see §7.4.
 
-**The tap band** is the tap target — a large oval, centred, with the band running from below the controls row to the bottom edge. A clear gap separates it from the controls row so a thumb reaching for the band cannot catch a button. It depresses 2px on touch, releases over 80ms, and emits a small `--flame-cold` spark at the touch point. The band must never trigger text selection, double-tap zoom, or pull-to-refresh.
+**The tap band** is the primary verb of the game, so it is the most pressable thing on screen: a filled stone face, not an outline, running edge to edge and down to the bottom edge with no margins around it. The whole band is the touch target. It emits a small `--flame-cold` spark at the touch point, and must never trigger text selection, double-tap zoom, or pull-to-refresh. Pressed, the face darkens by half, its light falls away and its contents sink 4px — unmistakable at six taps a second, since each press lands instantly and releases over 80ms. The band is stone, never fire. Two treatments are on a dev chip for the owner:
 
-**Its resting face is `--char` with a stone bevel rim** — lit edge above, shadow below, stone sides — so the band reads as carved into the dark and can never be brighter than the fire. Item 1c judged this on the phone against a raised `--stone` slab, which on an empty board was the brightest object on screen and pulled the eye off the conduits. The pressed state brightens to `--stone-lit`, which only reads as brightening because the resting face is this dark.
-
-The oval is the one deliberate exception to §3.3's radius hierarchy: it is the only thing on screen shaped to a thumb rather than cut from stone, and that is what makes it read as the thing to hit. Nothing else in the product takes a radius above `4`.
+- **A, slab**: square-cornered `--stone`, a 2pt `--stone-lit` top edge, `--stone-lit` washing down the top 60% of the face, with _Tap_ and _to fill your lane_ carved in.
+- **B, plate**: the same slab with its top corners rounded at 28pt and a 2pt `--gold` rim along its top edge, and a carved ring where the thumb goes with _Tap_ inside it. Its corners are §3.3's one radius exception.
 
 **Rate clamp feedback**: taps beyond 6/sec are dropped silently by the server, and the client must be silent too. No error, no shake, no toast. The band simply stops sparking beyond the clamp. Anything louder teaches players to tap slower, which is not the intent.
 
-### 7.4 The action button and its sheet
+### 7.4 Inspect, Drain and the sheet
 
-**The Draw is not its own control.** Every player has the same action button in the same place, at the same size, with the same label. What it opens differs:
+**The owner's UI pass replaced the single action button with two icon buttons, Inspect and Drain, and both appear for every player, identical at rest** — same place, same size, same marks, same labels. What each opens:
 
-- **Faithful**: Augury.
-- **Hollow**: a sheet carrying Augury and the Draw.
+- **Inspect**: the Inspect sheet (spec: trace), the same for every role.
+- **Drain**: for the Hollow, the Drain sheet (spec: siphon). For the Faithful, a short panel: _"Only the Hollow can drain. The rite gives you no such hand."_
 
-The closed screen is identical for every role. This is a secrecy requirement, not a layout convenience — a Draw button that exists only for the impostor identifies them to anyone who glances at the screen, and it identifies the other three by its absence.
+The closed screen is identical for every role. This is a secrecy requirement, not a layout convenience — a Drain button that exists only for the impostor identifies them to anyone who glances at the screen, and identifies the other three by its absence. Role shows only once a sheet is open, on the screen of the player who opened it. **Proven by byte comparison**: with animation off so the timer chip holds still, a Faithful rehearsal and a Hollow rehearsal captured the closed screen below the status bar with the same SHA-256. Captures of the same role differed by a few pixels from run to run (at most 5 levels in 255, on glyph edges), so that noise is not role.
 
-Inside the sheet, the Draw is two rows: **Take from** and **Give to**, each showing four seat tokens (sigil + mantle + current conduit height as a small bar). Sources at 0 units are disabled and visibly carved-out. Selecting self as sink shows the doubled cost plainly: `12 ⟡`.
+Inside the sheet, the Draw is two rows: **Take from** and **Give to**, each showing four seat tokens (sigil + mantle + current conduit height as a small bar). Sources at 0 units are disabled and visibly carved-out. Selecting self as sink shows the doubled cost plainly: `12` with the energy mark.
 
-A persistent, private running total of the toll — _"You have taken 214 from the Heart"_ — in `--toll`. This is the impostor's only score and it should feel like a private sin.
+A persistent, private running total — _"214 energy destroyed"_ — in toll. This is the impostor's only score and it should feel like a private sin.
 
 Confirmation is a single tap on the Give-to token; no separate confirm button. Each Draw fires immediately with a brief `--toll` pulse on the sheet edge, and the sheet stays open so the impostor can repeat or retarget.
 

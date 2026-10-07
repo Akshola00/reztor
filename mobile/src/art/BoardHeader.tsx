@@ -12,6 +12,7 @@ import Animated, {
 
 import { motion } from '../design/motion'
 import { tokens } from '../design/tokens'
+import { useLook } from '../screens/look'
 
 // §6.1's header band: the rules control and the round on the left, the board percentage centred,
 // the stage timer on the right. No vessel and no settings control.
@@ -19,10 +20,14 @@ import { tokens } from '../design/tokens'
 // The rules control is the About mark — a square on its point — and opens §7.1's rules sheet. It is
 // the same for every role and every stage, and sits up here, out of thumb reach during Offering.
 //
-// The timer is Grenze Gotisch at the t-stage step with tabular lining figures, in bone, and while the
-// stage runs it beats: a swell in scale and a dip in opacity, quickening at each of
-// art.timerBeatThresholds. Transform and opacity only, on the UI thread (hard rule 3). Under reduce
-// motion it holds still and only the number changes.
+// The round's number is set at the t-stage step in bone, beside a quiet "Round", so it carries its
+// weight against the percentage — the owner's UI pass found it too faint at t-data in boneDim.
+//
+// The timer is Grenze Gotisch at the t-stage step with tabular lining figures, in bone, on a small
+// stone chip. While the stage runs the chip breathes: it swells and a stoneLit face fades up inside
+// it, quickening at each of art.timerBeatThresholds. The number itself never dims, so the beat reads
+// as deliberate rather than as a glitch. Transform and opacity only, on the UI thread (hard rule
+// 3). Under reduce motion it holds still and only the number changes.
 //
 // The percentage is set in Grenze Gotisch with `tabularFigures`, which switches its old-style default
 // digits (20.78px to 28.22px wide at 56, with 3, 4, 5, 7 and 9 dropping below the baseline) to its
@@ -51,7 +56,7 @@ type BoardHeaderProps = {
 // The step for the percentage, judged on the phone in item 1b by capturing both candidates.
 // t-heart ships: at t-display (32) the number carries the same weight as the round and the timer,
 // and with no drawn Heart the percentage is the only readout of board state on screen, so it has
-// to outrank them. Kept in one place so the two can be swapped and compared again cheaply.
+// to outrank them. Its face is under review — tokens.percentFaces, chosen on the dev chip.
 const percentType = tokens.type.heart
 
 function clock(totalSeconds: number): string {
@@ -72,7 +77,10 @@ export function BoardHeader({ round, percent, secondsLeft, crossed, onRules }: B
         >
           <View style={styles.rulesMark} />
         </Pressable>
-        <Text style={styles.meta}>{`Round ${round}`}</Text>
+        <Text style={styles.meta} accessibilityLabel={`Round ${round}`}>
+          {'Round '}
+          <Text style={styles.round}>{String(round)}</Text>
+        </Text>
       </View>
 
       <Percent percent={percent} colour={crossed ? tokens.palette.flameWhite : tokens.palette.bone} />
@@ -106,14 +114,13 @@ function Timer({ secondsLeft }: { secondsLeft: number }) {
     beat.set(withRepeat(withSequence(withTiming(1, half), withTiming(0, half)), -1))
   }, [beat, band, running, reduceMotion])
 
-  const { timerBeatScale, timerBeatOpacity } = tokens.art
-  const beatStyle = useAnimatedStyle(() => ({
-    opacity: 1 - beat.get() * (1 - timerBeatOpacity),
-    transform: [{ scale: 1 + beat.get() * (timerBeatScale - 1) }],
-  }))
+  const { timerBeatScale } = tokens.art
+  const chipStyle = useAnimatedStyle(() => ({ transform: [{ scale: 1 + beat.get() * (timerBeatScale - 1) }] }))
+  const litStyle = useAnimatedStyle(() => ({ opacity: beat.get() }))
 
   return (
-    <Animated.View style={[styles.timerWrap, beatStyle]}>
+    <Animated.View style={[styles.timerChip, chipStyle]}>
+      <Animated.View style={[StyleSheet.absoluteFill, styles.timerLit, litStyle]} />
       <Text style={styles.timer} accessibilityLabel={`${Math.max(0, Math.floor(secondsLeft))} seconds left`}>
         {clock(secondsLeft)}
       </Text>
@@ -126,9 +133,10 @@ function Timer({ secondsLeft }: { secondsLeft: number }) {
  * state's dark one, which set it in other colours but must not set it differently.
  */
 export function Percent({ percent, colour }: { percent: number; colour: string }) {
-  const slot = Math.round(percentType.fontSize * tokens.art.percentDigitSlotRatio)
+  const face = tokens.percentFaces[useLook().percent]
+  const slot = Math.round(percentType.fontSize * face.slot)
   const digits = String(percent).split('')
-  const glyphStyle = [styles.percentGlyph, { color: colour }]
+  const glyphStyle = [styles.percentGlyph, { fontFamily: face.fontFamily, lineHeight: face.lineHeight, color: colour }]
   // `accessible` collapses the digit slots into one announcement. Without it Android walks the
   // slots individually and a screen reader reads the percentage as "5", "8", "%" — the fixed-slot
   // layout is a typographic device and must not leak into the a11y tree.
@@ -155,7 +163,7 @@ const styles = StyleSheet.create({
     height: tokens.layout.header,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: tokens.art.conduitOuterMargin,
+    paddingHorizontal: tokens.space.lg,
   },
   // Equal flex on both sides keeps the percentage on the screen's centre line.
   side: {
@@ -164,7 +172,7 @@ const styles = StyleSheet.create({
   left: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: tokens.layout.stackGap,
+    gap: tokens.space.md,
   },
   rules: {
     width: tokens.home.aboutMark,
@@ -181,13 +189,26 @@ const styles = StyleSheet.create({
   },
   meta: {
     ...tokens.type.data,
-    ...tokens.tabularFigures,
     color: tokens.palette.boneDim,
   },
-  // Scales about its own right edge, so the beat never pushes the number off the screen's edge.
-  timerWrap: {
+  round: {
+    ...tokens.type.stage,
+    ...tokens.tabularFigures,
+    color: tokens.palette.bone,
+  },
+  // A small raised stone chip. Scales about its own right edge, so the beat never pushes it off
+  // the screen's edge.
+  timerChip: {
+    ...tokens.material.raisedStoneFace,
     alignSelf: 'flex-end',
     transformOrigin: 'right',
+    borderRadius: tokens.radii.chip,
+    paddingHorizontal: tokens.art.timerChipPadH,
+    paddingVertical: tokens.art.timerChipPadV,
+    overflow: 'hidden',
+  },
+  timerLit: {
+    backgroundColor: tokens.palette.stoneLit,
   },
   timer: {
     ...tokens.type.stage,

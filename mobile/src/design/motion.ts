@@ -69,6 +69,10 @@ const duration = {
   // §7.3's spark at the touch point. §8 names no duration for it; 400 matches the toll embers,
   // which is the other single-shot mark on the board, so the two read as one vocabulary.
   spark: 400,
+
+  // The owner's UI pass: the energy readout's tick when the number changes. A short drop and
+  // settle, so spending reads as something leaving.
+  energyTick: 160,
 } as const
 
 // §7.3 — below `art.creditsCritical` the counter "pulses slowly". §7.3 names no period, so this
@@ -85,6 +89,9 @@ const timerBeat = [2400, 1400, 800, 500] as const
 
 // §7.3 — px the tap band sinks while touched.
 const plinthPressDepth = 2
+// The owner's UI pass: the redrawn band's contents sink this far while pressed, deeper than the
+// old plinth, so the press reads at six taps a second.
+const bandPressDepth = 4
 
 // CLAUDE.md hard rule 3 — the credit counter updates at most 10x/sec, never per tap. The board
 // percentage and the crossing flag, which also follow the player's own taps, poll on the same
@@ -124,6 +131,7 @@ const transition = {
   idlePulse: { duration: idlePulsePeriod / 2, easing: easing.easeInOut },
   // §7.7, chosen in item 4: the ejected token settles into cold rather than blinking out.
   castOutCold: { duration: duration.castOutCold, easing: easing.easeInOut },
+  energyTick: { duration: duration.energyTick, easing: easing.easeOut },
 } as const
 
 export const motion = {
@@ -132,6 +140,7 @@ export const motion = {
   duration,
   transition,
   plinthPressDepth,
+  bandPressDepth,
   creditPulsePeriod,
   idlePulsePeriod,
   timerBeat,

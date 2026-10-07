@@ -13,7 +13,7 @@ import type { MatchConfig, PlayerId, TraceResult } from '../../protocol/generate
 import { SeatToken } from '../art/SeatToken'
 import type { SeatNumber } from '../art/Sigil'
 
-import { SkrMark } from '../art/SkrMark'
+import { EnergyMark } from '../art/ControlMarks'
 import { motion } from '../design/motion'
 import { tokens } from '../design/tokens'
 import { match, session } from '../net/session'
@@ -21,9 +21,11 @@ import type { OptimisticStore } from '../state/optimistic'
 import { usePolled } from './Offering'
 import { Sheet } from './Sheet'
 
-// §7.4's sheet, as BUILD-PLAN.md §2 amends it: one bottom sheet, opened from the board's single
-// action button, holding Augury for everyone and the Draw for the Hollow. The closed board is the
-// same for every role; only what this sheet holds differs, and only once it is open.
+// §7.4's sheet, as the owner's UI pass amends it: one bottom sheet, opened from either of the
+// controls row's two icon buttons. Inspect opens Augury, the same for every role. Drain opens the
+// Draw for the Hollow, and for the Faithful a short panel saying the rite gives them no such hand.
+// The closed board is identical for every role (hard rule 4) — both buttons are always there, alike
+// — so role shows only once a sheet is open, on the screen of the player who opened it.
 //
 // Every rule the server would refuse is checked here first, so neither TRACE nor SIPHON is ever
 // sent to be rejected: the round-1 Augury, a second Augury, short credits, a source below the
@@ -47,8 +49,12 @@ type ActionSheetProps = {
   seats: Record<PlayerId, SeatNumber>
   laneUnits: Record<PlayerId, SharedValue<number>>
   prediction: OptimisticStore
+  /** Which button opened it. */
+  kind: SheetKind
   onClose: () => void
 }
+
+export type SheetKind = 'inspect' | 'drain'
 
 // The lanes, owners' statuses and this player's readings, as one string, so the sheet re-renders
 // only when one of them changes — never per tap, at most every readout interval.
@@ -60,7 +66,7 @@ const readShape = () => {
   return `${s.round}|${lanes}|${away}|${s.traces.length}|${s.traceUsed ? 1 : 0}|${s.tollTaken}`
 }
 
-export function ActionSheet({ config, youId, seats, laneUnits, prediction, onClose }: ActionSheetProps) {
+export function ActionSheet({ config, youId, seats, laneUnits, prediction, kind, onClose }: ActionSheetProps) {
   usePolled(readShape)
   const readCredits = useCallback(() => prediction.snapshot().credits, [prediction])
   const credits = usePolled(readCredits)
@@ -73,8 +79,9 @@ export function ActionSheet({ config, youId, seats, laneUnits, prediction, onClo
 
   return (
     <Sheet onClose={onClose}>
-      <Augury config={config} owners={owners} seats={seats} names={names} credits={credits} />
-      {hollow ? (
+      {kind === 'inspect' ? (
+        <Augury config={config} owners={owners} seats={seats} names={names} credits={credits} />
+      ) : hollow ? (
         <Draw
           config={config}
           youId={youId}
@@ -84,7 +91,11 @@ export function ActionSheet({ config, youId, seats, laneUnits, prediction, onClo
           laneUnits={laneUnits}
           credits={credits}
         />
-      ) : null}
+      ) : (
+        <Section title="Drain">
+          <Text style={styles.note}>Only the Hollow can drain. The rite gives you no such hand.</Text>
+        </Section>
+      )}
     </Sheet>
   )
 }
@@ -266,7 +277,7 @@ function Draw({
               <DrawToken seat={seats[id]} units={laneUnits[id]} capacity={config.laneCapacity} />
               <View style={styles.cost}>
                 <Text style={[styles.costText, id === youId ? styles.costSelf : null]}>{String(costFor(id))}</Text>
-                <SkrMark colour={tokens.palette.boneDim} />
+                <EnergyMark colour={tokens.palette.gold} size={tokens.art.energyMarkSmall} />
               </View>
             </Pressable>
           )
@@ -318,7 +329,7 @@ function Section({ title, cost, children }: { title: string; cost?: number; chil
         {cost === undefined ? null : (
           <View style={styles.cost}>
             <Text style={styles.costText}>{String(cost)}</Text>
-            <SkrMark colour={tokens.palette.boneDim} />
+            <EnergyMark colour={tokens.palette.gold} size={tokens.art.energyMarkSmall} />
           </View>
         )}
       </View>

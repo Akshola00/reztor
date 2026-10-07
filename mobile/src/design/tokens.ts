@@ -2,8 +2,9 @@ import type { TextStyle } from 'react-native'
 
 // Every named value from reztor-design.md §3, and nothing that is not named there.
 //
-// The design doc defines no spacing scale, so this module has none. Spacing is an open
-// decision — do not invent one here, and do not put a magic margin in a component.
+// Spacing comes from one scale, `space`, set by the owner's UI pass (part 1) after he found the
+// match screen's borders and insets uneven. Every margin, padding and gap on the match screen is a
+// step of it; `layout`'s older names alias its steps.
 
 // §3.1, with the home rebuild's "lift" folded in (chosen by the owner, provisional until checked on
 // the S10). Against the doc's original values: void unchanged, and every step of ground above it
@@ -41,7 +42,9 @@ const palette = {
   // The pulse crossfades the two, so every frame of it clears 4.5:1.
   tollTextBright: '#BF8C95',
 
-  // Settlement
+  // Value and emphasis. §3.1, since the owner's UI pass: no longer SKR-only — gold is the accent
+  // for anything that is worth something or needs the eye — energy, the chosen tap size. Payouts
+  // and refunds stay gold. Never progress: that is still blue's alone.
   gold: '#D9B33B',
 
   // Type
@@ -93,18 +96,6 @@ const material = {
     borderBottomWidth: 1,
     borderBottomColor: palette.stoneLit,
   },
-  // §7.3's tap band face, chosen on the phone in item 1c over a raised stone slab: a face cut
-  // into the dark rather than a slab lifted out of it. The face is `char`, which is far darker
-  // than `stoneLit`, so item 2's pressed state still reads as the band brightening under the
-  // thumb. The rim carries §3.3's bevel — lit above, shadow below — with stone sides, so the
-  // band is carved and never brighter than the fire.
-  carvedBandFace: {
-    backgroundColor: palette.char,
-    borderWidth: 2,
-    borderColor: palette.stoneEdge,
-    borderTopColor: palette.stoneLit,
-    borderBottomColor: palette.bevelShadow,
-  },
 } as const
 
 // §3.3. Radius encodes hierarchy. The conduits are apertures, not objects. The tap band is the
@@ -136,7 +127,26 @@ const fontFamily = {
   // reach — it is a string to be checked character by character, not a label. Android's system
   // monospace face, so nothing new is bundled for one line. Chosen in item 6.
   mono: 'monospace',
+  // The board percentage's candidate faces, under review in the owner's UI pass (look.ts).
+  percentCinzel: 'Cinzel_700Bold',
+  percentOswald: 'Oswald_600SemiBold',
 } as const
+
+// The owner's UI pass: the board percentage is the biggest number on screen and the one that must
+// read at a glance mid-tap, and the owner does not like Grenze's. Four faces on a dev chip, all at
+// the t-heart step. Each digit sits in a fixed slot of fontSize x `slot`, just wider than that
+// face's widest digit, so the number never walks sideways: Cinzel and Oswald carry no `tnum`, and
+// Grenze's and Barlow's tabular figures measure 0.500em and 0.507em.
+const percentFaces = {
+  grenze: { fontFamily: fontFamily.display, slot: 0.52, lineHeight: 56 },
+  barlow: { fontFamily: fontFamily.uiMedium, slot: 0.52, lineHeight: 64 },
+  // Roman capitals, carved. Lining digits by default; its widest digit ("0") is 0.653em.
+  cinzel: { fontFamily: fontFamily.percentCinzel, slot: 0.67, lineHeight: 64 },
+  // Condensed, tall and plain. Widest digit ("0") 0.543em.
+  oswald: { fontFamily: fontFamily.percentOswald, slot: 0.56, lineHeight: 64 },
+} as const
+
+export type PercentFace = keyof typeof percentFaces
 
 // §3.2. `lineHeight` is the doc's ratio multiplied out and left unrounded, because React
 // Native wants an absolute value. Family per §3.2's roles as remapped by the owner: Grenze Gotisch
@@ -183,22 +193,38 @@ const type = {
 // tuple will not assign to a TextStyle.
 const tabularFigures: TextStyle = { fontVariant: ['tabular-nums'] }
 
+// The one spacing scale. Every inset, margin and gap on the match screen is one of these steps:
+// `lg` is the edge of every text row, `sm` the gap between controls and inside them, `xs` between
+// a mark and the number it qualifies. Nothing on the match screen sits on an off-scale value.
+const space = {
+  hairline: 2,
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  xxl: 32,
+} as const
+
 // §6.1's vertical budget on an 844pt viewport, plus the §10.4 touch floor. The conduits take
 // the slack, so they are always the largest thing on screen — they are the hero image now.
+//
+// The owner's UI pass: the controls row is a control's height plus `sm` above and below, and the
+// tap band follows it with no gap — the band's whole height is its face and its touch target, and
+// it runs to the bottom edge. The 36pt that came out of the lower region went to the conduits, less
+// 16 to the header: with the lanes running edge to edge right under it, a 56pt percentage in a 48pt
+// band had its feet cut off by the conduits.
 const layout = {
-  header: 48,
+  header: 64,
   conduits: 280,
-  controls: 84,
-  tapBandGap: 24,
+  controls: 72,
   tapBand: 240,
   minTouchTarget: 44,
 
-  // Item 3's screens outside the match: home and lobby. The design doc names no spacing, so these
-  // are chosen, and kept to three. The gutter matches §6.1's conduit margin so every screen
-  // shares one edge.
-  screenGutter: 16,
-  stackGap: 12,
-  sectionGap: 32,
+  // Item 3's screens outside the match: home and lobby. Steps of `space`, named for their use.
+  screenGutter: space.lg,
+  stackGap: space.md,
+  sectionGap: space.xxl,
 
   // §7.5: in Council and Judgement the board keeps "about 40%" of the screen — header and
   // conduits together — and the lower region takes the rest.
@@ -217,13 +243,16 @@ const grainOpacity = 0.03
 // token disc, the vertical grain inside unfilled char, sigil stroke weight, or glow falloff.
 // Everything in this group was chosen here so that no literal sits in a component file.
 const art = {
-  // §6.1: conduit width is derived, never fixed —
-  //   (screen width - 2 x conduitOuterMargin - 3 x conduitGap) / 4
-  // At the 360pt floor that gives a 74pt column against a ~450pt conduit area, about 1:6, so a
-  // filled column still reads as a channel rather than a slab. The gap is background, not a
-  // drawn divider: 10pt is 35px at this phone's 3.5x density, which is unmistakably a gap, and
-  // hard rule 1 requires the conduits never touch.
-  conduitOuterMargin: 16,
+  // §6.1, as the owner's UI pass amends it: the board bleeds to both screen edges, and the four
+  // lanes are divided by a carved seam rather than set apart by gaps of background, so the board
+  // reads as one stone surface with cut divisions. Lane width is derived, never fixed —
+  //   (screen width - 3 x laneSeam) / 4
+  // **Hard rule 1 still holds: the lanes never touch.** The seam is bevelShadow, the darkest value
+  // in the palette, and each aperture keeps its own walls, so a falling surface beside a rising one
+  // stays two separate surfaces. 2pt is 7px on this phone and 4-6px on a 360dp phone at 2-3x.
+  laneSeam: 2,
+  // The idle board on home and the still board in the Reckoning still stand apart by background,
+  // until parts 2 and 3 of the UI pass reach them.
   conduitGap: 10,
 
   // §6.2 names both of these.
@@ -369,44 +398,33 @@ const art = {
   namePlateSigil: 16,
   namePlateGap: 4,
 
-  // The percentage's digit slot. Set when Grenze Gotisch's default (old-style, proportional) digits
-  // were in use: they run 20.78px ("1") to 28.22px ("0") at the 56px t-heart step, so a centred
-  // percentage shifted sideways whenever a digit changed. Each digit gets a fixed slot of fontSize
-  // x this ratio and is centred inside it. The percentage now takes tabularFigures — lining
-  // figures, all 28px at 56 — so the slot is belt and braces, and the notes below on narrow
-  // digits describe the old figures.
-  //
-  // 0.52 gives 29.12px at 56 and 16.64px at 32, just clearing the widest digit ("0" at 28.22px)
-  // at either candidate step. It covers digits only, on purpose: "%" measures 50.23px at 56 —
-  // nearly twice a digit — so forcing it into the same slot would clip it. "%" never changes, so
-  // it takes its natural width and needs no slot.
-  //
-  // The cost is real and visible: a narrow digit ("1" at 20.78px) keeps ~8px of air inside its
-  // slot, so the number carries slight tracking, which §3.2 otherwise warns against. Fixed slots
-  // and a proportional face cannot both be had — and the number holding still while the player
-  // taps is worth more than the tracking costs.
-  percentDigitSlotRatio: 0.52,
-
-  // §7.3 writes SKR as "⟡" (U+27E1). That codepoint is *not* in the sans (Barlow Semi
-  // Condensed; IBM Plex Sans before it): the shipped TTF's cmap returns glyph 0 for it, so as text
-  // Android would silently substitute some other face in a product that otherwise controls both of
-  // its faces. It is drawn as SVG instead. Barlow has no "→" (U+2192) either, so the tier face's
-  // arrow is drawn too — see ArrowMark.
+  // SKR is "⟡" (U+27E1). That codepoint is *not* in the sans (Barlow Semi Condensed): the shipped
+  // TTF's cmap returns glyph 0 for it, so as text Android would silently substitute some other face.
+  // It is drawn as SVG instead, on the faucet's coin (CoinMark).
   //
   // U+27E1 is a concave-sided diamond: four points whose sides bow toward the centre by this
   // fraction of the distance in from the straight chord.
   skrConcavity: 0.45,
-  skrMarkSize: 12,
-  // Between a number and the SKR mark that qualifies it.
+  // Between a number and the mark that qualifies it.
   skrGap: 4,
-  // The drawn arrow's head: each stroke reaches back and out by this fraction of the box. Chosen in
-  // the font fold-in, to match the weight of the SKR mark beside it.
-  arrowHeadRatio: 0.3,
 
-  // §7.3's tap band. The face is an oval — the one deliberate exception to §3.3's radius
-  // hierarchy — so its radius comes from its own height rather than from `radii`.
-  tapBandInset: 28,
-  tapBandFaceHeight: 168,
+  // §7.3's tap band, redrawn in the owner's UI pass: filled, full-bleed, run to the bottom edge.
+  // Two treatments, compared on a dev chip (look.ts):
+  //   - slab: a raised stone slab, square-cornered, lit along its top edge and shaded down its face.
+  //   - plate: the same slab with its top corners rounded and a gold rim along its top edge, and a
+  //     carved ring where the thumb goes.
+  // Pressed, the face darkens by this much and its contents sink by `motion.bandPressDepth`.
+  tapBandPressDarken: 0.5,
+  tapBandEdge: 2,
+  tapBandPlateRadius: 28,
+  tapBandRing: 112,
+  tapBandRingStroke: 2,
+  // The ring's scale while pressed: it gives under the thumb.
+  tapBandRingPressed: 0.94,
+  // The light down the face: stoneLit at this opacity along the top edge, fading out this far
+  // down. What makes the face read as raised; it falls away while pressed.
+  tapBandLight: 0.5,
+  tapBandLightReach: 0.6,
 
   // §7.3's spark at the touch point. Small: it marks where the thumb landed, it is not an
   // effect. flameCold, because a spark is an offering entering the conduit — see §3.1.
@@ -426,11 +444,13 @@ const art = {
   // Chosen in item 6.
   hollowMarkSize: 88,
 
-  // The stage timer's heartbeat, chosen in the home rebuild's refinements: at each beat the clock
-  // swells to this scale and its opacity falls to this, then settles. Bone at 0.6 over void still
-  // measures above 4.5:1, so no frame of the beat drops the number under the text floor.
-  timerBeatScale: 1.12,
-  timerBeatOpacity: 0.6,
+  // The stage timer's heartbeat. Since the owner's UI pass the clock sits on a small stone chip and
+  // the chip breathes: at each beat it swells to this scale and a stoneLit face fades up inside it,
+  // then settles. The number never dims — bone on stoneLit is 4.51:1 — so the beat reads as the
+  // chip breathing, not as the clock flickering.
+  timerBeatScale: 1.08,
+  timerChipPadH: space.sm,
+  timerChipPadV: space.xs,
   // Seconds left at which the heartbeat quickens: above the first it is calm; at or under each it
   // takes the next, faster period in motion.timerBeat.
   timerBeatThresholds: [20, 10, 5],
@@ -439,6 +459,24 @@ const art = {
   // also pulses. The doc names both numbers.
   creditsLow: 100,
   creditsCritical: 20,
+
+  // The owner's UI pass: the controls row's drawn faces. Every control is `controlHeight` tall.
+  controlHeight: 56,
+  // The tier toggle's two segments, each a pip mark (one stone for ×1, three for ×3) over its
+  // label and cost. The pip is a small carved disc.
+  tierPip: 6,
+  tierPipGap: 2,
+  // Energy: a drawn bolt, gold, beside the number; the number ticks when it changes — a short drop
+  // and settle of this many points, transform and opacity only.
+  energyMark: 16,
+  // Beside a cost: in the tap-size toggle and the Drain sheet.
+  energyMarkSmall: 12,
+  energyTick: 3,
+  energyTickOpacity: 0.6,
+  // Inspect and Drain: two icon buttons, identical at rest for every role (hard rule 4).
+  iconButtonWidth: 64,
+  icon: 24,
+  iconStroke: 1.75,
 } as const
 
 // ---------------------------------------------------------------------------------------------
@@ -644,7 +682,9 @@ export const tokens = {
   radii,
   fontFamily,
   type,
+  percentFaces,
   tabularFigures,
+  space,
   layout,
   grainOpacity,
   art,
