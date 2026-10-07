@@ -5,6 +5,7 @@ import type { PlayerId, VoteTarget } from '../../protocol/generated'
 import { SeatToken } from '../art/SeatToken'
 import type { SeatNumber } from '../art/Sigil'
 import { tokens } from '../design/tokens'
+import { fit } from '../design/fit'
 import { match, session } from '../net/session'
 import { usePolled } from './Offering'
 
@@ -89,7 +90,7 @@ export function Judgement({ seats, round, canVote }: JudgementProps) {
                 <SeatToken seat={seats[p.id]} disc={tokens.art.voteDisc} sigil={tokens.art.voteSigil} cold={ejected} />
               </View>
               <Text style={[styles.name, marked ? styles.nameMarked : null]} numberOfLines={1}>
-                {p.name}
+                {fit(p.name)}
               </Text>
             </Pressable>
           )
@@ -100,7 +101,7 @@ export function Judgement({ seats, round, canVote }: JudgementProps) {
           player. Marked the same way a mask is — a gold edge. */}
       <View style={styles.divider}>
         <View style={styles.rule} />
-        <Text style={styles.or}>or</Text>
+        <Text style={styles.or}>{fit('or')}</Text>
         <View style={styles.rule} />
       </View>
       <Pressable
@@ -110,7 +111,7 @@ export function Judgement({ seats, round, canVote }: JudgementProps) {
         accessibilityState={{ selected: vote === 'skip' }}
         style={[styles.skip, vote === 'skip' ? styles.skipMarked : null]}
       >
-        <Text style={[styles.skipLabel, vote === 'skip' ? styles.nameMarked : null]}>Skip this vote</Text>
+        <Text style={[styles.skipLabel, vote === 'skip' ? styles.nameMarked : null]}>{fit('Skip this vote')}</Text>
       </Pressable>
     </View>
   )

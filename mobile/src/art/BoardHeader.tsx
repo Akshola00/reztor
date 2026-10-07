@@ -12,6 +12,7 @@ import Animated, {
 
 import { motion } from '../design/motion'
 import { tokens } from '../design/tokens'
+import { fit } from '../design/fit'
 
 // §6.1's header band: the rules control and the round on the left, the board percentage centred,
 // the stage timer on the right. No vessel and no settings control.
@@ -77,7 +78,7 @@ export function BoardHeader({ round, percent, secondsLeft, crossed, onRules }: B
         </Pressable>
         <Text style={styles.meta} accessibilityLabel={`Round ${round}`}>
           {'Round '}
-          <Text style={styles.round}>{String(round)}</Text>
+          <Text style={styles.round}>{fit(String(round))}</Text>
         </Text>
       </View>
 

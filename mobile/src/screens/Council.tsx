@@ -17,6 +17,7 @@ import { SendIcon } from '../art/ControlMarks'
 import { SEAT_TEXT_COLOURS, Sigil, type SeatNumber } from '../art/Sigil'
 import { motion } from '../design/motion'
 import { tokens } from '../design/tokens'
+import { fit } from '../design/fit'
 import { CHAT_MAX, match, session } from '../net/session'
 import { usePolled } from './Offering'
 
@@ -174,7 +175,11 @@ function Message({ row, seat, name }: { row: Row; seat: SeatNumber | undefined; 
         {first && seat !== undefined ? <Sigil seat={seat} colour={colour} size={tokens.art.chatMask} /> : null}
       </View>
       <View style={styles.column}>
-        {first ? <Text style={[styles.name, { color: colour }]}>{name}</Text> : null}
+        {first ? (
+          <Text style={[styles.name, { color: colour }]} numberOfLines={1}>
+            {fit(name)}
+          </Text>
+        ) : null}
         {bubble}
       </View>
     </View>

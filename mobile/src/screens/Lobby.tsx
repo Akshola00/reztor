@@ -7,6 +7,7 @@ import type { DissolveReason, LobbyUpdateMessage } from '../../protocol/generate
 import { SeatToken } from '../art/SeatToken'
 import type { SeatNumber } from '../art/Sigil'
 import { tokens } from '../design/tokens'
+import { fit } from '../design/fit'
 import { match, session, type FundingState } from '../net/session'
 import { classifyStakeError, signAndSendStake, type StakeFailure } from '../solana/buyIn'
 import { BUY_IN_SKR } from '../solana/chain'
@@ -152,7 +153,7 @@ function Gathering({ code, you }: { code: string; you: string }) {
   return (
     <View style={[styles.root, { paddingTop: insets.top + tokens.layout.sectionGap, paddingBottom: insets.bottom }]}>
       <View style={styles.centre}>
-        <Text style={styles.label}>Match code</Text>
+        <Text style={styles.label}>{fit('Match code')}</Text>
         <Text style={styles.code} accessibilityLabel={`Match code ${code.split('').join(' ')}`}>
           {code}
         </Text>
@@ -317,10 +318,10 @@ function SeatRow({
         )}
       </View>
       <Text style={styles.name} numberOfLines={1}>
-        {player.name}
+        {fit(player.name)}
       </Text>
       {staked === null ? null : (
-        <Text style={[styles.stakeMark, staked ? styles.staked : null]}>{staked ? 'Staked' : 'Not yet'}</Text>
+        <Text style={[styles.stakeMark, staked ? styles.staked : null]}>{fit(staked ? 'Staked' : 'Not yet')}</Text>
       )}
     </View>
   )

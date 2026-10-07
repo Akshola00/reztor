@@ -171,6 +171,8 @@ Two families, both from Google Fonts, both self-hosted and preloaded. **Since th
 
 Neither face carries U+27E1 (SKR) or U+2192 (the tier face's arrow): both are drawn as SVG marks, never set as text.
 
+**Grenze clips on Android unless it is given slack.** The text is measured, its box rounded to the pixel grid, and the line laid out again to draw; for some strings the drawing needs a fraction of a pixel more than the box, so the last word wraps onto a line the box hides — _"You won"_ drew as _"You"_. Every Grenze string in a box sized to its own content is passed through `fit()` (`src/design/fit.ts`), which adds a trailing hair space: it widens the box by about a pixel, and trailing whitespace never forces a break. A connecting word that reads as part of a sentence (_voted for_, _inspected_, _Paid on-chain_) is in the sans instead.
+
 **The board percentage is Oswald 600**, the owner's choice in the UI pass over Grenze Gotisch, Barlow Semi Condensed and Cinzel: it is the biggest number on screen and the one that must read at a glance mid-tap, and Oswald is condensed, tall and plain, with lining digits. It is the third face in the product and sets nothing else. Oswald carries no `tnum` — its digits run 0.384em to 0.543em — so each digit sits centred in a fixed slot of 0.56em and the number never walks sideways; the `%` takes its own width. The line is 64 against a 56 size, because Oswald's ascent runs past 1em.
 
 ```css

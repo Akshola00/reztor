@@ -16,6 +16,7 @@ import { DrainIcon, EnergyMark, InspectIcon, TierMark } from '../art/ControlMark
 import { createSparkPool, emitSpark, sparkPoolSize, TapBand } from '../art/TapBand'
 import { motion } from '../design/motion'
 import { tokens } from '../design/tokens'
+import { fit } from '../design/fit'
 import type { OptimisticStore } from '../state/optimistic'
 
 // §7.3, the Offering stage's lower region: the controls row and the tap band. The match screen
@@ -132,7 +133,7 @@ function TierToggle({ config, tier, onToggle }: { config: MatchConfig; tier: Tie
             style={[styles.segment, chosen ? styles.segmentChosen : null]}
           >
             <TierMark count={units} colour={chosen ? tokens.palette.gold : tokens.palette.boneFaint} />
-            <Text style={[styles.segmentLabel, chosen ? null : styles.dim]}>{`×${units}`}</Text>
+            <Text style={[styles.segmentLabel, chosen ? null : styles.dim]}>{fit(`×${units}`)}</Text>
             <View style={styles.cost}>
               <Text style={[styles.costText, chosen ? null : styles.dim]}>{String(cost)}</Text>
               <EnergyMark
@@ -151,7 +152,7 @@ function IconButton({ label, onPress, children }: { label: string; onPress: () =
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={styles.iconButton}>
       {children}
-      <Text style={styles.iconLabel}>{label}</Text>
+      <Text style={styles.iconLabel}>{fit(label)}</Text>
     </Pressable>
   )
 }
@@ -268,7 +269,7 @@ function EnergyReadout({ prediction }: { prediction: OptimisticStore }) {
           ) : null}
         </Animated.View>
       </View>
-      <Text style={styles.energyLabel}>Energy</Text>
+      <Text style={styles.energyLabel}>{fit('Energy')}</Text>
     </View>
   )
 }

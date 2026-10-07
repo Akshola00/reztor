@@ -16,6 +16,7 @@ import type { SeatNumber } from '../art/Sigil'
 import { EnergyMark } from '../art/ControlMarks'
 import { motion } from '../design/motion'
 import { tokens } from '../design/tokens'
+import { fit } from '../design/fit'
 import { match, session } from '../net/session'
 import type { OptimisticStore } from '../state/optimistic'
 import { usePolled } from './Offering'
@@ -173,7 +174,7 @@ function Augury({
           >
             <SeatToken seat={seats[id]} disc={tokens.art.tokenDisc} sigil={tokens.art.tokenSigil} />
             <Text style={styles.name} numberOfLines={1}>
-              {names.get(id) ?? ''}
+              {fit(names.get(id) ?? '')}
             </Text>
           </Pressable>
         ))}
@@ -327,7 +328,7 @@ function Section({ title, cost, children }: { title: string; cost?: number; chil
   return (
     <View style={styles.section}>
       <View style={styles.titleRow}>
-        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.title}>{fit(title)}</Text>
         {cost === undefined ? null : (
           <View style={styles.cost}>
             <Text style={styles.costText}>{String(cost)}</Text>

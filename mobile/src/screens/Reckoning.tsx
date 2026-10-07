@@ -12,6 +12,7 @@ import { SEAT_TEXT_COLOURS, Sigil, type SeatNumber } from '../art/Sigil'
 import { StillBoard } from '../art/StillBoard'
 import { motion } from '../design/motion'
 import { tokens } from '../design/tokens'
+import { fit } from '../design/fit'
 import { match, session } from '../net/session'
 import { explorerTx } from '../solana/chain'
 import { useLook } from './look'
@@ -382,7 +383,7 @@ function Outcome({
   const colour = won ? tokens.palette.gold : tokens.palette.tollText
   return (
     <View style={styles.outcome} accessibilityRole="header">
-      <Text style={[styles.outcomeTitle, { color: colour }]}>{won ? 'You won' : 'You lost'}</Text>
+      <Text style={[styles.outcomeTitle, { color: colour }]}>{fit(won ? 'You won' : 'You lost')}</Text>
       <Text style={styles.outcomeLine}>{sentence}</Text>
       <View
         style={styles.amountRow}
@@ -393,7 +394,7 @@ function Outcome({
         <Text style={[styles.amount, { color: colour }]}>
           {won || Number(net) === 0 ? (won ? received : net) : `−${net}`}
         </Text>
-        <Text style={[styles.amountUnit, { color: colour }]}>SKR</Text>
+        <Text style={[styles.amountUnit, { color: colour }]}>{fit('SKR')}</Text>
       </View>
       <Text style={styles.fine}>
         {won ? `Paid to your wallet, on a ${stake} SKR stake.` : `${refund} of your ${stake} SKR stake came back.`}
@@ -407,7 +408,7 @@ function Section({ title, note, children }: { title: string; note?: string; chil
     <View style={styles.group}>
       <View style={styles.headingRow}>
         <Text style={styles.heading} accessibilityRole="header">
-          {title}
+          {fit(title)}
         </Text>
         {note === undefined ? null : <Text style={styles.fine}>{note}</Text>}
       </View>
@@ -449,7 +450,7 @@ function Who({
         <Sigil seat={seat} colour={cold ? tokens.palette.boneFaint : SEAT_TEXT_COLOURS[seat]} />
       </View>
       <Text style={[styles.name, gold ? styles.goldText : null]} numberOfLines={1}>
-        {name}
+        {fit(name)}
       </Text>
     </View>
   )
@@ -526,7 +527,7 @@ function Disclosure({ open, label, onPress }: { open: boolean; label: string; on
       accessibilityState={{ expanded: open }}
       style={styles.disclosure}
     >
-      <Text style={styles.disclosureLabel}>{label}</Text>
+      <Text style={styles.disclosureLabel}>{fit(label)}</Text>
     </Pressable>
   )
 }
@@ -565,7 +566,7 @@ function Seed({ seed }: { seed: string }) {
           accessibilityLabel="Copy the seed"
           style={styles.copy}
         >
-          <Text style={styles.copyLabel}>{copied ? 'Copied' : 'Copy'}</Text>
+          <Text style={styles.copyLabel}>{fit(copied ? 'Copied' : 'Copy')}</Text>
         </Pressable>
       </View>
       <Text style={styles.fine}>This seed picked the Hollow at random. Anyone can verify it.</Text>
@@ -618,7 +619,9 @@ export function Action({ label, onPress, primary = false }: { label: string; onP
       accessibilityLabel={label}
       style={[styles.action, primary ? tokens.homeFaces.primary[face] : tokens.homeFaces.secondary]}
     >
-      <Text style={[styles.actionLabel, primary ? { color: tokens.homeFaces.primaryLabel[face] } : null]}>{label}</Text>
+      <Text style={[styles.actionLabel, primary ? { color: tokens.homeFaces.primaryLabel[face] } : null]}>
+        {fit(label)}
+      </Text>
     </Pressable>
   )
 }
@@ -763,12 +766,14 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     gap: tokens.space.md,
   },
+  // "Paid on-chain. View the transaction" reads as a sentence, so it is in the running-text sans
+  // (the clipping sweep).
   paidMark: {
-    ...tokens.type.label,
+    ...tokens.type.body,
     color: tokens.palette.gold,
   },
   link: {
-    ...tokens.type.control,
+    ...tokens.type.body,
     color: tokens.palette.bone,
     textDecorationLine: 'underline',
   },

@@ -18,6 +18,7 @@ import { IdleBoard } from '../art/IdleBoard'
 import { Marking } from '../art/Marking'
 import { CoinMark } from '../art/CoinMark'
 import { tokens, type PrimaryStyle } from '../design/tokens'
+import { fit } from '../design/fit'
 import { CODE_ALPHABET, CODE_LENGTH, DEV_TOOLS, NAME_MAX, session, type BootTarget } from '../net/session'
 import { BUY_IN_SKR, shortAddress } from '../solana/chain'
 import { requestFaucet, type FaucetResult } from '../solana/faucet'
@@ -314,7 +315,7 @@ export function Home({ initialNotice }: { initialNotice?: string }) {
               style={styles.about}
             >
               <View style={styles.aboutMark} />
-              <Text style={styles.aboutLabel}>How to play</Text>
+              <Text style={styles.aboutLabel}>{fit('How to play')}</Text>
             </Pressable>
           </View>
 
@@ -410,7 +411,7 @@ function Faucet({
         style={[styles.button, styles.faucet]}
       >
         <CoinMark colour={busy ? styles.disabledLabel.color : styles.gold.color} />
-        <Text style={[styles.buttonLabel, busy ? styles.disabledLabel : styles.gold]}>{label}</Text>
+        <Text style={[styles.buttonLabel, busy ? styles.disabledLabel : styles.gold]}>{fit(label)}</Text>
       </Pressable>
       {result === null ? null : (
         <Text style={styles.notice} accessibilityLiveRegion="polite">
@@ -498,7 +499,7 @@ function Primary({
       accessibilityState={{ disabled: disabled === true }}
       style={disabled ? styles.primaryDisabled : styles.primary}
     >
-      <Text style={disabled ? [styles.primaryLabel, styles.disabledLabel] : styles.primaryLabel}>{label}</Text>
+      <Text style={disabled ? [styles.primaryLabel, styles.disabledLabel] : styles.primaryLabel}>{fit(label)}</Text>
     </Pressable>
   )
 }
@@ -526,7 +527,7 @@ function Button({
       accessibilityState={{ disabled: disabled === true, selected }}
       style={[styles.button, selected ? styles.chipSelected : null, disabled ? styles.buttonDisabled : null]}
     >
-      <Text style={[styles.buttonLabel, disabled ? styles.disabledLabel : null]}>{label}</Text>
+      <Text style={[styles.buttonLabel, disabled ? styles.disabledLabel : null]}>{fit(label)}</Text>
     </Pressable>
   )
 }

@@ -17,6 +17,7 @@ import { Marking } from '../art/Marking'
 import type { SeatNumber } from '../art/Sigil'
 import { motion } from '../design/motion'
 import { tokens } from '../design/tokens'
+import { fit } from '../design/fit'
 import { BATCH_INTERVAL_MS } from '../net/outbox'
 import { DEV_TOOLS, match, session } from '../net/session'
 import type { MatchSnapshot } from '../state/match'
@@ -503,7 +504,7 @@ function LeaveConfirm({ onStay, onLeave }: { onStay: () => void; onLeave: () => 
         <Text style={styles.confirmLine}>You&apos;ll lose your stake. The match goes on without you.</Text>
         <View style={styles.confirmRow}>
           <Pressable onPress={onStay} accessibilityRole="button" accessibilityLabel="Stay" style={styles.confirmButton}>
-            <Text style={styles.confirmLabel}>Stay</Text>
+            <Text style={styles.confirmLabel}>{fit('Stay')}</Text>
           </Pressable>
           <Pressable
             onPress={onLeave}
@@ -511,7 +512,7 @@ function LeaveConfirm({ onStay, onLeave }: { onStay: () => void; onLeave: () => 
             accessibilityLabel="Leave and lose your stake"
             style={styles.confirmButton}
           >
-            <Text style={styles.confirmLabel}>Leave</Text>
+            <Text style={styles.confirmLabel}>{fit('Leave')}</Text>
           </Pressable>
         </View>
       </Animated.View>

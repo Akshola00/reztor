@@ -8,6 +8,7 @@ import { SeatToken } from '../art/SeatToken'
 import { Sigil, type SeatNumber } from '../art/Sigil'
 import { motion } from '../design/motion'
 import { tokens } from '../design/tokens'
+import { fit } from '../design/fit'
 
 // §7.6 and §7.7: the Reveal, then Cast Out. It fills the lower region while the board stays in
 // view above it.
@@ -123,7 +124,7 @@ export function Reveal({ result, seats, names, youId, alreadyCold, config, onRes
               )}
             </View>
             <Text style={styles.name} numberOfLines={1}>
-              {names.get(id) ?? ''}
+              {fit(names.get(id) ?? '')}
             </Text>
             <Marks voters={castFor.get(id) ?? []} seats={seats} style={marksStyle} />
           </View>
@@ -131,7 +132,7 @@ export function Reveal({ result, seats, names, youId, alreadyCold, config, onRes
       </View>
 
       <View style={styles.withhold}>
-        <Text style={styles.withholdLabel}>Skipped</Text>
+        <Text style={styles.withholdLabel}>{fit('Skipped')}</Text>
         <Marks voters={withheld} seats={seats} style={marksStyle} />
       </View>
 

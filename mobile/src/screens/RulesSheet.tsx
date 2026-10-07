@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 
 import { tokens } from '../design/tokens'
+import { fit } from '../design/fit'
 import { Sheet } from './Sheet'
 
 // §7.1's rules sheet: the one source for how the rite works, opened from home's About control and,
@@ -23,10 +24,10 @@ export function RulesSheet({ onClose, closeOnBack = true }: { onClose: () => voi
         <>
           <View style={styles.top}>
             <Text style={styles.title} accessibilityRole="header">
-              How to play
+              {fit('How to play')}
             </Text>
             <Pressable onPress={close} accessibilityRole="button" accessibilityLabel="Close" style={styles.close}>
-              <Text style={styles.closeLabel}>Close</Text>
+              <Text style={styles.closeLabel}>{fit('Close')}</Text>
             </Pressable>
           </View>
           <ScrollView

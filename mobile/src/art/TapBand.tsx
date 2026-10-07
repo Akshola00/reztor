@@ -12,6 +12,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg'
 
 import { motion } from '../design/motion'
 import { tokens } from '../design/tokens'
+import { fit } from '../design/fit'
 
 // §7.3's tap band, redrawn in the owner's UI pass. It is the primary verb of the game, so it is
 // the most pressable thing on screen: a filled stone face, not an outline, running edge to edge and
@@ -111,7 +112,7 @@ export function TapBand({ press, sparks, onTouchStart, onTouchEnd }: TapBandProp
 
       <View pointerEvents="none" style={[styles.content, { paddingBottom: insets.bottom }]}>
         <Animated.View style={[styles.ring, ringStyle]}>
-          <Text style={styles.word}>Tap</Text>
+          <Text style={styles.word}>{fit('Tap')}</Text>
         </Animated.View>
       </View>
 
