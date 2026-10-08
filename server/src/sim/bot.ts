@@ -54,6 +54,12 @@ export type BotOptions = {
   rpcUrl?: string
   // Ignore the STAKE_REQUEST, to let the funding stage time out.
   refuseStake?: boolean
+  // Chat lines sent per chat stage, 2.5s apart (the server allows one per 2s). Default 1.
+  chatPerStage?: number
+  // How long into a vote stage the vote is held back. Default 0.
+  voteDelayMs?: number
+  // Picks this round's vote by player name, or 'skip'. Undefined falls back to the random vote.
+  voteFor?: (round: number, living: readonly { id: string; name: string }[]) => string | undefined
   onLog?: (line: string) => void
 }
 
@@ -284,7 +290,17 @@ export async function createBot(options: BotOptions): Promise<Bot> {
   // The siphon bucket sustains 4/sec, so this paces just under it.
   const sabotageTimer = setInterval(sabotage, 280)
 
-  // Chat once per chat stage, vote once per vote stage.
+  // Chat chatPerStage times per chat stage, vote once per vote stage.
+  const chatPerStage = options.chatPerStage ?? 1
+  const voteDelayMs = options.voteDelayMs ?? 0
+  const pendingSends = new Set<ReturnType<typeof setTimeout>>()
+  const later = (ms: number, send: () => void): void => {
+    const id = setTimeout(() => {
+      pendingSends.delete(id)
+      if (running) send()
+    }, ms)
+    pendingSends.add(id)
+  }
   const perStage = setInterval(() => {
     if (board === null || !running) return
     const key = `${board.round}:${board.stage}`
@@ -292,14 +308,25 @@ export async function createBot(options: BotOptions): Promise<Bot> {
     stageKey = key
 
     if (board.stage === 'chat') {
-      socket.emit('CHAT', { text: pick(CHAT_LINES) ?? 'nothing to add' })
+      for (let i = 0; i < chatPerStage; i++) {
+        later(i * 2500, () => socket.emit('CHAT', { text: pick(CHAT_LINES) ?? 'nothing to add' }))
+      }
       return
     }
     if (board.stage !== 'vote') return
 
     const living = board.players.filter((player) => player.status !== 'ejected')
-    const target = Math.random() < SKIP_VOTE_CHANCE ? 'skip' : (pick(living)?.id ?? 'skip')
-    socket.emit('VOTE', { target })
+    const chosen = options.voteFor?.(board.round, living)
+    const named = chosen === undefined || chosen === 'skip' ? undefined : living.find((p) => p.name === chosen)
+    const target =
+      chosen === 'skip'
+        ? 'skip'
+        : named !== undefined
+          ? named.id
+          : Math.random() < SKIP_VOTE_CHANCE
+            ? 'skip'
+            : (pick(living)?.id ?? 'skip')
+    later(voteDelayMs, () => socket.emit('VOTE', { target }))
     stats.votes += 1
   }, 200)
 
@@ -309,6 +336,8 @@ export async function createBot(options: BotOptions): Promise<Bot> {
     clearInterval(heartbeat)
     clearInterval(sabotageTimer)
     clearInterval(perStage)
+    for (const id of pendingSends) clearTimeout(id)
+    pendingSends.clear()
   }
 
   const stop = (): void => {

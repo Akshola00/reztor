@@ -682,7 +682,13 @@ Tools, not product. They are allowed to be ugly; they are not allowed to grow fe
 pnpm serve                                      # dev server on :3000, client at /dev
 pnpm bots --code=ABCD --count=3 --strategy=optimal --rate=4
 pnpm soak                                       # one match at real duration, ~6 minutes
+pnpm demo:bots --code=ABCD                      # demo day: three bots join a phone's lobby on Render
 ```
+
+- **`scripts/demo-bots.ts`** seats three bots (masher, optimal, conserver) in a lobby a phone
+  opened, against the hosted server by default, staking from the contract's test wallets. It adds
+  only what a live demo needs on top of `createBot`: chat lines per stage, a vote delay, and a
+  scripted vote target. Steps in `scripts/DEMO.md`.
 
 - **`src/sim/bot.ts`** drives bots as real Socket.IO clients over a real port, never in
   process. A bot that can play proves `net/` can be played; an in-process bot would only
