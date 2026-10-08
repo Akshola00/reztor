@@ -608,9 +608,12 @@ function makeStyles(primary: PrimaryStyle) {
     },
     // The board is laid over its slot rather than sized by it, so the slot can shrink when a
     // notice takes room and the board follows it down.
+    // The board takes the slack, but never less than idleBoardMin: on a short screen with a wallet
+    // connected (the S10, 411x869dp) the slack came to about 84dp and the board was dropped,
+    // leaving a blank gap. Home scrolls a little there instead.
     boardSlot: {
       flexGrow: 1,
-      minHeight: 0,
+      minHeight: home.idleBoardMin,
     },
     board: {
       position: 'absolute',
