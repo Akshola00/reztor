@@ -174,6 +174,10 @@ const type = {
   // holds one character of a gathering code at the t-display step, in the sans like the code.
   wordmark: { fontSize: 56, lineHeight: 56, fontFamily: fontFamily.display },
   codeCell: { fontSize: 32, lineHeight: 35.2, fontFamily: fontFamily.uiMedium },
+  // The rules sheet, cut down for a ten-second read: each beat's line in the sans at the t-stage
+  // size, its detail a step above body. Larger than running text on purpose — it is read once, fast.
+  rulesLead: { fontSize: 20, lineHeight: 26, fontFamily: fontFamily.uiMedium },
+  rulesNote: { fontSize: 16, lineHeight: 22.4, fontFamily: fontFamily.uiRegular },
 } as const
 
 // §3.2 / §10.1. React Native does not expose font-variant-numeric; this is the closest the

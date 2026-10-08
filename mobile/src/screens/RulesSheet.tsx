@@ -10,10 +10,10 @@ import { Sheet } from './Sheet'
 // same way the action sheet does. It scrolls, and closes on its Close control, on a tap outside, or
 // on hardware back — which the match routes through its own back handler instead.
 //
-// §1's fiction in §1.2's voice: second person, present tense, no exclamation marks. This is one of
-// the three places §1.1's flavour survives, but every mechanic is named by its in-match word —
-// lane, tap, energy, target, Inspect, Drain — so the sheet maps the story onto the controls. No
-// rule numbers — those arrive with the match's config and are never hardcoded.
+// Cut down at the owner's call so a player with ten seconds learns the game: six beats, each one
+// large line with its key words in gold, over one small line of detail. Skimming only the gold
+// teaches the game. Every mechanic is named by its in-match word (lane, tap, energy, Inspect,
+// Drain), plain voice, no exclamation marks. No rule numbers but the ones the screen itself shows.
 
 export function RulesSheet({ onClose, closeOnBack = true }: { onClose: () => void; closeOnBack?: boolean }) {
   const { height } = useWindowDimensions()
@@ -35,44 +35,54 @@ export function RulesSheet({ onClose, closeOnBack = true }: { onClose: () => voi
             contentContainerStyle={styles.content}
             accessibilityLabel="How to play"
           >
-            <Heading>The Rite</Heading>
-            <Para>
-              Reztor is a dead god. You are one of four celebrants, each kneeling at your own lane beneath what is left
-              of it, and the rite must bring it back before the night ends.
-            </Para>
-            <Para>
-              Each tap spends energy and raises your lane. The four lanes together are the Heart, which the match calls
-              the board, and their progress rises into it. When the board reaches the target, the Heart breathes on its
-              own and the rite is complete.
-            </Para>
-            <Para>
-              Energy is bought with your stake, so every tap costs something real. A ×1 tap costs little energy and adds
-              a little progress. A ×3 tap costs more and adds more, at a worse rate.
-            </Para>
-
-            <Heading>The Hollow</Heading>
-            <Para>
-              One of the four is Hollow, the impostor. It wears a celebrant&apos;s robe and cannot refuse the rite where
-              the others would see. So it drains progress out of one lane and into another. Four parts in every ten are
-              destroyed on the way. They are gone.
-            </Para>
-            <Para>
-              A lane that falls while another rises tells you something true and not enough. The two celebrants it
-              touched are both Faithful.
-            </Para>
-
-            <Heading>A round</Heading>
-            <Para>Each round has three stages, and the rite lasts three rounds.</Para>
-            <Para>In Tap, you fill your lane. In Discuss, you talk. In Vote, you may vote one player out.</Para>
-            <Para>
-              Inspect reads one lane&apos;s last round and gives one answer: filled by their own taps, received from
-              another lane, or drained by someone. You may inspect once.
-            </Para>
-            <Para>
-              A celebrant who is voted out stays to watch, and their lane goes cold. The Faithful win when the board
-              reaches the target, or when the Hollow is voted out. The Hollow wins if the third round ends short of the
-              target, or when two of the Faithful have been voted out and it can no longer be outvoted.
-            </Para>
+            <Beat
+              lead={
+                <>
+                  <Gold>Tap</Gold> to fill your lane.
+                </>
+              }
+              note="Every tap spends Energy. The four lanes together make the board."
+            />
+            <Beat
+              lead={
+                <>
+                  Fill the board to <Gold>100%</Gold> to win.
+                </>
+              }
+              note="Three rounds, each one Tap, then Discuss, then Vote."
+            />
+            <Beat
+              lead={
+                <>
+                  One of you is the <Gold>Hollow</Gold>.
+                </>
+              }
+              note="The impostor secretly drains other lanes to keep the board short."
+            />
+            <Beat
+              lead={
+                <>
+                  Talk it out, then <Gold>vote the Hollow out</Gold>.
+                </>
+              }
+              note="Catch the Hollow and the Faithful win. Vote out two Faithful and the Hollow wins."
+            />
+            <Beat
+              lead={
+                <>
+                  <Gold>Inspect</Gold> one lane, once.
+                </>
+              }
+              note="It shows whether that lane filled itself, received from another, or was drained."
+            />
+            <Beat
+              lead={
+                <>
+                  Winners split the <Gold>pot</Gold>.
+                </>
+              }
+              note="Your unspent stake comes back to you either way."
+            />
           </ScrollView>
         </>
       )}
@@ -80,16 +90,19 @@ export function RulesSheet({ onClose, closeOnBack = true }: { onClose: () => voi
   )
 }
 
-function Heading({ children }: { children: ReactNode }) {
+/** One beat of the rules: a large line, its key words in gold, over one small line of detail. */
+function Beat({ lead, note }: { lead: ReactNode; note: string }) {
   return (
-    <Text style={styles.heading} accessibilityRole="header">
-      {children}
-    </Text>
+    <View style={styles.beat}>
+      <Text style={styles.lead}>{lead}</Text>
+      <Text style={styles.note}>{note}</Text>
+    </View>
   )
 }
 
-function Para({ children }: { children: ReactNode }) {
-  return <Text style={styles.para}>{children}</Text>
+/** The words a skimming player must not miss. Gold is emphasis (§3.1). */
+function Gold({ children }: { children: ReactNode }) {
+  return <Text style={styles.gold}>{children}</Text>
 }
 
 const styles = StyleSheet.create({
@@ -116,15 +129,22 @@ const styles = StyleSheet.create({
     color: tokens.palette.bone,
   },
   content: {
-    gap: tokens.layout.stackGap,
+    gap: tokens.space.xl,
+    paddingTop: tokens.space.md,
+    paddingBottom: tokens.space.lg,
   },
-  heading: {
-    ...tokens.type.stage,
+  beat: {
+    gap: tokens.space.xs,
+  },
+  lead: {
+    ...tokens.type.rulesLead,
     color: tokens.palette.bone,
-    marginTop: tokens.layout.stackGap,
   },
-  para: {
-    ...tokens.type.body,
+  gold: {
+    color: tokens.palette.gold,
+  },
+  note: {
+    ...tokens.type.rulesNote,
     color: tokens.palette.boneDim,
   },
 })
