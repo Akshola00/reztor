@@ -152,7 +152,7 @@ Not on buttons, not on focus rings, not on the active tab, and not on the tap ba
 
 Each seat also carries a distinct carved mask (§5.2).
 
-**Gold is no longer SKR-only.** Since the owner's UI pass it is the accent for value and emphasis across the app: the energy mark, the chosen tap size, the tap band's gold rim, Send in Discuss, your vote — a gold ring round the mask you chose, or a gold edge round Skip — and the Reveal's marks. Payouts and refunds stay gold. Blue stays progress-only, unchanged — gold never marks progress. Identity is never carried by colour alone — this covers colourblind players and also solves a real problem, which is that four muted colours at thumb-size on a dim phone screen are genuinely hard to tell apart.
+**Gold is no longer SKR-only.** Since the owner's UI pass it is the accent for value and emphasis across the app: the energy mark, the chosen tap size, Send in Discuss, your vote — a gold ring round the mask you chose, or a gold edge round Skip — and the Reveal's marks. Payouts and refunds stay gold. Blue stays progress-only, unchanged — gold never marks progress. Identity is never carried by colour alone — this covers colourblind players and also solves a real problem, which is that four muted colours at thumb-size on a dim phone screen are genuinely hard to tell apart.
 
 ### 3.2 Typography
 
@@ -212,7 +212,7 @@ Everything is carved, not stacked. Depth comes from a light edge on top and a da
 
 No `elevation` and no `shadowColor` anywhere. Android's elevation shadow is the single fastest way to make this look like a stock Material app.
 
-Corner radius encodes hierarchy rather than being applied uniformly: major panels are `2` (cut stone), interactive chips and buttons are `4`, and the conduits have no radius at all because they are apertures, not objects. There are two named exceptions. The tap band's top corners round at 28pt (§7.3). And Discuss is a modern messenger, at the owner's call: its bubbles round at 16 with the speaker's side cut to 4 where they stack, its input field is a pill (22) and its Send button is round (§7.5). Nothing else in the interface is a rounded card with a soft grey shadow.
+Corner radius encodes hierarchy rather than being applied uniformly: major panels are `2` (cut stone), interactive chips and buttons are `4`, and the conduits have no radius at all because they are apertures, not objects. There is one named exception: Discuss is a modern messenger, at the owner's call: its bubbles round at 16 with the speaker's side cut to 4 where they stack, its input field is a pill (22) and its Send button is round (§7.5). Nothing else in the interface is a rounded card with a soft grey shadow.
 
 A single grain texture sits above the background and below content — a small tiled PNG in an absolutely positioned `Image` with `resizeMode="repeat"` at 3% opacity and `pointerEvents="none"`. It does not animate.
 
@@ -405,9 +405,11 @@ Per §6. Additional behaviour:
 
 **Inspect and Drain** are two icon buttons with their names under them: Inspect is a lens held over a lane, Drain two lanes with a line arcing out of one and into the other. **Both appear for every player, identical at rest** — see §7.4.
 
-**The tap band** is the primary verb of the game, so it is the most pressable thing on screen: a filled stone face, not an outline, running edge to edge and down to the bottom edge with no margins around it. The whole band is the touch target. It emits a small `--flame-cold` spark at the touch point, and must never trigger text selection, double-tap zoom, or pull-to-refresh. Pressed, the face darkens by half, its light falls away and the ring sinks 4px and gives under the thumb — unmistakable at six taps a second, since each press lands instantly and releases over 80ms. The band is stone, never fire.
+**The tap band is the surface**, at the owner's call before the demo: the bottom of the phone, not an object sitting on the screen. No label, no border, no rim, no corner radius; it runs the full width and down to the bottom edge. Its face is `--band-face` (`#151820`, void mixed 35% toward stone), only slightly lighter than the background — 1.095:1 by value; measured on the S10's framebuffer, a flat 22/24/31 against the background's grained 14/16/21, a step of 8–10 levels. Enough to tell apart, not enough to read as a card, and well clear of the near-black levels an OLED panel can crush together.
 
-**The plate**, the owner's choice over a square slab: `--stone`, its top corners rounded at 28pt — §3.3's one radius exception — a 2pt `--gold` rim along its top edge, `--stone-lit` washing down the top 60% of the face, and a carved ring where the thumb goes with _Tap_ inside it.
+Above the face, in the space below the controls, a quiet hint: _Tap_ in `--bone-dim` over a short drawn arrow pointing down at the band. The whole band, hint included, is the touch target. It emits a small `--flame-cold` spark at the touch point, and must never trigger text selection, double-tap zoom, or pull-to-refresh.
+
+**The press carries all the feedback**, since nothing marks the band at rest: a `--stone-lit` layer flashes over the face at 70% — 2.0:1 against the resting face on the S10 — set instantly on the touch and released over 80ms, so every tap at six a second is a full flash. Opacity only. The band is stone, never fire.
 
 **Rate clamp feedback**: taps beyond 6/sec are dropped silently by the server, and the client must be silent too. No error, no shake, no toast. The band simply stops sparking beyond the clamp. Anything louder teaches players to tap slower, which is not the intent.
 

@@ -76,3 +76,13 @@ export function SendIcon({ colour }: { colour: string }) {
     </Svg>
   )
 }
+
+/** The tap hint's arrow: a short stem and head pointing down into the band. */
+export function DownArrow({ colour, size = tokens.art.tapHintArrow }: { colour: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox={`0 0 ${BOX} ${BOX}`}>
+      <Path d="M 12 3 L 12 20" {...stroke(colour)} strokeWidth={tokens.art.tapHintArrowStroke} />
+      <Path d="M 5 13 L 12 20 L 19 13" {...stroke(colour)} strokeWidth={tokens.art.tapHintArrowStroke} />
+    </Svg>
+  )
+}

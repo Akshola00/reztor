@@ -75,6 +75,12 @@ const palette = {
 
   // §3.3 writes this inline as the lower bevel edge. Named here so no component carries it.
   bevelShadow: '#0A0C10',
+
+  // §7.3: the tap band's face. Void mixed 35% toward stone — 1.095:1 against void, a step of 10, 11
+  // and 14 levels on R, G and B. The smallest step that stays clearly a different surface on an
+  // OLED panel, where a near-black step of 4-6 levels can crush to nothing; small enough that the
+  // band reads as the bottom of the phone, not a card laid on it.
+  bandFace: '#151820',
 } as const
 
 // §3.3. Everything is carved, not stacked: a light edge above, a dark edge below.
@@ -403,21 +409,16 @@ const art = {
   // Between a number and the mark that qualifies it.
   skrGap: 4,
 
-  // §7.3's tap band, redrawn in the owner's UI pass: filled, full-bleed, run to the bottom edge.
-  // The plate, the owner's choice over a square slab: a raised stone face, its top corners rounded,
-  // a gold rim along its top edge, and a carved ring where the thumb goes. Pressed, the face darkens
-  // by this much and the ring sinks by `motion.bandPressDepth`.
-  tapBandPressDarken: 0.5,
-  tapBandEdge: 2,
-  tapBandPlateRadius: 28,
-  tapBandRing: 112,
-  tapBandRingStroke: 2,
-  // The ring's scale while pressed: it gives under the thumb.
-  tapBandRingPressed: 0.94,
-  // The light down the face: stoneLit at this opacity along the top edge, fading out this far
-  // down. What makes the face read as raised; it falls away while pressed.
-  tapBandLight: 0.5,
-  tapBandLightReach: 0.6,
+  // §7.3's tap band is the surface: no border, no rim, no radius, full width to the bottom edge, its
+  // face `bandFace`. Nothing marks it at rest, so the press carries all the feedback: a stoneLit
+  // layer flashes over the face at this opacity — about 2:1 against the resting face — set on the
+  // touch and released over `plinthRelease`.
+  tapBandPressLight: 0.7,
+  // The hint above the face: "Tap" over a short drawn arrow pointing down into the band, boneDim.
+  tapHintHeight: 44,
+  tapHintArrow: 12,
+  // In the arrow's 24-unit box: 3 units is 1.5px at 12, the weight of the hint's letters.
+  tapHintArrowStroke: 3,
 
   // §7.3's spark at the touch point. Small: it marks where the thumb landed, it is not an
   // effect. flameCold, because a spark is an offering entering the conduit — see §3.1.

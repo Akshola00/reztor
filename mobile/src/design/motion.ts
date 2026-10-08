@@ -94,12 +94,6 @@ const idlePulsePeriod = 4800
 // 20s, then quickening at 20, 10 and 5 seconds left. Chosen in the home rebuild's refinements.
 const timerBeat = [2400, 1400, 800, 500] as const
 
-// §7.3 — px the tap band sinks while touched.
-const plinthPressDepth = 2
-// The owner's UI pass: the redrawn band's contents sink this far while pressed, deeper than the
-// old plinth, so the press reads at six taps a second.
-const bandPressDepth = 4
-
 // CLAUDE.md hard rule 3 — the credit counter updates at most 10x/sec, never per tap. The board
 // percentage and the crossing flag, which also follow the player's own taps, poll on the same
 // interval, so no readout re-renders the Offering screen per tap.
@@ -147,8 +141,6 @@ export const motion = {
   easing,
   duration,
   transition,
-  plinthPressDepth,
-  bandPressDepth,
   creditPulsePeriod,
   idlePulsePeriod,
   timerBeat,
