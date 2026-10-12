@@ -14,14 +14,16 @@ Read with: `CLAUDE.md` (conventions), `reztor-design.md` (everything visible),
 Item 0 corrected `CLAUDE.md` against the repository as it actually is. What was true at
 the start of item 0, and is now settled:
 
-- **The on-chain program does not exist.** `../contract/` has a spec and a playbook,
-  no program. Wallet connect and buy-in are stubbed for this build — see §4.
+- **The on-chain program did not exist at item 0.** It does now: `../contract/` is the
+  Anchor program, deployed to devnet (`contract/deployments/devnet.json`). Wallet connect
+  and buy-in are live — see §4.
 - **The template was the Expo Kit Anchor example**, not the Expo tabs template. None of
   the tabs-template cruft this section used to list ever existed here — no `explore.tsx`,
   no `app-tabs*`, no `themed-text.tsx`, no `src/constants/theme.ts`, no `assets/`.
   What was deleted instead: `src/features/*` (counter, account, network),
   `src/components/app-address-link.tsx`, `src/utils/*`, and `og-image.png`.
-- **The Solana stack is installed but unwired.** `@wallet-ui/react-native-kit`,
+- **The Solana stack was installed but unwired at item 0; it is wired now** (§4).
+  `@wallet-ui/react-native-kit`,
   `@solana/kit`, `react-native-quick-crypto`, `polyfill.js` and `index.js` are all
   present and stay present, so the one native build made in item 0 already contains
   them. Their providers were removed from the root layout; day 6 re-wraps the layout
@@ -33,8 +35,8 @@ the start of item 0, and is now settled:
   the `@project/anchor` path. It was the template's `hello_world` counter program.
   Reztor's program lives in `../contract/` and its client is generated from there.
 - **The package manager is pnpm.** `pnpm-lock.yaml` is the only lockfile. Never `npm`.
-- **`protocol/generated.ts` does not exist yet.** It is emitted from the server and is
-  never hand-edited. Nothing before item 3 needs it.
+- **`protocol/generated.ts` did not exist at item 0; it does now.** It is emitted from
+  the server and is never hand-edited. Nothing before item 3 needs it.
 
 ## 1. Two contradictions to resolve
 
@@ -121,7 +123,13 @@ route:
 
 ---
 
-## 4. The money, until day 6
+## 4. The money
+
+**Landed.** The Anchor program is on devnet and the app is wired to it: wallet connect in
+front of the entry screen, a 12 SKR stake signed through Mobile Wallet Adapter during the
+lobby's funding stage, and on-chain settlement with an explorer link on the Reckoning.
+Code in `src/solana/`; wire changes in `../docs/CHAIN-PROTOCOL-CHANGES.md`. The server
+runs it with `ESCROW_MODE=chain`. The original plan follows.
 
 No wallet, no signing, no chain. The server already has an `EscrowProvider` interface
 with an in-memory fake behind it, so a match is fully playable without any of it.

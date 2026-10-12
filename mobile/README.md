@@ -11,8 +11,10 @@ See `CLAUDE.md` for the stack and conventions, `BUILD-PLAN.md` for scope and bui
 - [react-native-svg](https://github.com/software-mansion/react-native-svg) — all game art
 - [react-native-reanimated](https://docs.swmansion.com/react-native-reanimated/) — all animation
 - [@solana/kit](https://www.solanakit.com/) and
-  [@wallet-ui/react-native-kit](https://wallet-ui.dev/) — installed, not wired; see
-  `CLAUDE.md` and BUILD-PLAN.md §4
+  [@wallet-ui/react-native-kit](https://wallet-ui.dev/) — wallet connect (Mobile Wallet
+  Adapter) and stake signing against the Reztor Anchor program on Solana devnet
+  (`4hAFR3JFKmE5GkJFDSVUHB1LwcsZkQBszCq9kwFu5MHZ`). Code in `src/solana/`; wire changes in
+  `../docs/CHAIN-PROTOCOL-CHANGES.md`
 
 This package uses **pnpm**. Do not install from the repository root.
 
