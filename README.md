@@ -86,12 +86,12 @@ checked each one. None is a defect in the program or the app:
   owner is the instruction's token program (`info.owner == token_program`). It then checks that
   the token account's mint is the match mint and that its owner is the player in that seat.
   That is the correct way to validate a token account passed in `remaining_accounts`.
-- **Dependency CVEs.** The five in the scan's "fix first" list (js-yaml, minimatch, nanoid,
-  serialize-javascript, toml) all come from `contract/`'s JS test tooling (mocha, ts-mocha and
-  their dependencies). None of them is in the program or the app. The rest come in indirectly
-  through the pinned Solana JS SDKs (`@solana/web3.js` 1.x, `@anchor-lang/core`,
-  `@solana/spl-token`). For example, bigint-buffer has no published fix. They need a malicious
-  RPC or code paths we don't call. Dependencies stay pinned for the submission.
+- **Dependency CVEs.** Most come from `contract/`'s JS test tooling: js-yaml, minimatch,
+  nanoid, serialize-javascript and diff are all dependencies of mocha and ts-mocha. None of them
+  is in the program or the app. The rest come in indirectly through the pinned Solana JS SDKs
+  (`@solana/web3.js` 1.x, `@anchor-lang/core`, `@solana/spl-token`). These include toml,
+  bigint-buffer (which has no published fix), stream-json and uuid. Exploiting them needs a
+  malicious RPC or code paths we don't call. Dependencies stay pinned for the submission.
 - The rest are Low/Info pattern matches that Anchor already enforces: owner checks on
   `Account<T>`, and CPI targets that come from `Interface<TokenInterface>`.
 
