@@ -22,12 +22,11 @@ the start of item 0, and is now settled:
   no `app-tabs*`, no `themed-text.tsx`, no `src/constants/theme.ts`, no `assets/`.
   What was deleted instead: `src/features/*` (counter, account, network),
   `src/components/app-address-link.tsx`, `src/utils/*`, and `og-image.png`.
-- **The Solana stack was installed but unwired at item 0; it is wired now** (§4).
+- **The Solana stack was installed but unwired at item 0; it is integrated now** (§4).
   `@wallet-ui/react-native-kit`,
   `@solana/kit`, `react-native-quick-crypto`, `polyfill.js` and `index.js` are all
-  present and stay present, so the one native build made in item 0 already contains
-  them. Their providers were removed from the root layout; day 6 re-wraps the layout
-  and changes nothing else.
+  present and stay present. The wallet provider is mounted in the root layout, and the
+  devnet flow is live; no day-6 wiring remains.
 - **Uniwind and Tailwind were removed** — `src/global.css`, `src/uniwind-types.d.ts`,
   the `withUniwindConfig` wrapper in `metro.config.js`, and both dependencies. They
   contradicted `CLAUDE.md`'s stack rule and put a Tailwind build in front of Metro.
@@ -90,17 +89,13 @@ simultaneous reveal. Cast Out. The Reckoning table. The void screen.
   the percentage takes the flood. Same beat, less rigging.
 - **Landscape letterboxing, the 600pt case, the mute control, transaction links.**
 
-### Deferred, not cut
-
-Wallet connect, buy-in, real settlement. See §4.
-
 ---
 
 ## 3. Screens — five routes, not twelve
 
 | Route           | Covers                                                                                        |
 | --------------- | --------------------------------------------------------------------------------------------- |
-| `/`             | Home: name, create or join by code, rules scroll below the actions. No wallet until day 6.    |
+| `/`             | Home: connect wallet, enter a name, create or join by code, rules scroll below the actions.   |
 | `/lobby/[code]` | The Gathering — invite code, seats filling, dissolve timer, leave                             |
 | `/match`        | **One screen, stage-driven.** Offering, Council, Judgement, Reveal, Cast Out. Never remounts. |
 | `/reckoning`    | The Reckoning, full post-mortem                                                               |
@@ -129,18 +124,7 @@ route:
 front of the entry screen, a 12 SKR stake signed through Mobile Wallet Adapter during the
 lobby's funding stage, and on-chain settlement with an explorer link on the Reckoning.
 Code in `src/solana/`; wire changes in `../docs/CHAIN-PROTOCOL-CHANGES.md`. The server
-runs it with `ESCROW_MODE=chain`. The original plan follows.
-
-No wallet, no signing, no chain. The server already has an `EscrowProvider` interface
-with an in-memory fake behind it, so a match is fully playable without any of it.
-
-The entry screen takes a name and joins. The Reckoning shows payouts and refunds in
-`--gold` from `matchEndPayload`, which is real settlement arithmetic against fake
-escrow — correct numbers, no transaction.
-
-If the Anchor program lands and integrates cleanly on day 6, wallet connect goes in
-front of the entry screen and nothing else changes. If it does not, the demo runs on the
-fake and you say so plainly rather than implying more than exists.
+runs it with `ESCROW_MODE=chain`.
 
 ---
 

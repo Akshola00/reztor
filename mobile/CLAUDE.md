@@ -4,7 +4,7 @@
 
 The Android client for Reztor, a four-player social deduction game on Solana. React Native + Expo, Android only.
 
-**the backend exists and is finished; the on-chain program does not exist yet — see BUILD-PLAN.md §4** This repository is the client. Do not write server logic, do not write Anchor programs, do not reimplement game rules locally. The server is authoritative for every rule in the mechanics spec — role assignment, unit accounting, the siphon toll, vote resolution, payouts. The client renders state and sends intent.
+**The server and on-chain program are implemented; the program is deployed to devnet, and wallet connect, buy-in, and chain settlement are integrated — see BUILD-PLAN.md §4.** This repository is the Android client. Do not write server logic, do not write Anchor programs, and do not reimplement game rules locally. The server is authoritative for every rule in the mechanics spec — role assignment, unit accounting, the siphon toll, vote resolution, payouts. The client renders state and sends intent.
 
 If a change appears to require a server change, stop and say so rather than working around it on the client.
 
@@ -120,7 +120,7 @@ src/
   state/
     match.ts             authoritative server state
     optimistic.ts        local prediction layer
-  solana/                day 6 — see BUILD-PLAN.md §4
+  solana/                wallet connection, buy-in, and chain config — see BUILD-PLAN.md §4
     wallet.tsx           MobileWalletProvider setup
     buyIn.ts
 ```
@@ -178,9 +178,9 @@ No control, button or layout element exists for one role and not another. Inspec
 
 No colour literal, duration, or easing curve appears in a component file. If something needs a value that isn't in `tokens.ts` or `motion.ts`, that is a design decision — add it there, or ask.
 
-## Solana integration — installed, not wired
+## Solana integration
 
-**Day 6 at the earliest.** These packages are installed and the existing native build already contains them, so nothing here needs a rebuild. Their providers were removed from the root layout in item 0; restore them on day 6 by wrapping the layout as this section describes. Everything below is correct for day 6 — see BUILD-PLAN.md §4.
+Wallet connect, buy-in, and on-chain settlement are wired into the app. The shipped flow and devnet status are documented in BUILD-PLAN.md §4.
 
 Use Wallet UI. Do not use `@solana-mobile/mobile-wallet-adapter-protocol-web3js` — that is the older setup and most model training data still points at it.
 
