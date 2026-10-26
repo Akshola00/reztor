@@ -53,9 +53,8 @@ player funds. Every SKR in a match sits in a vault owned by the match PDA.
 
 **Funds can't get stuck.** If the server disappears, any player who joined can call
 `void_match` once `void_timeout_secs` has passed, and everyone is refunded. The server's
-permission isn't needed. See
-[`void_match.rs`](contract/programs/reztor/src/instructions/void_match.rs).
-
+permission isn't needed.
+x
 ### Live devnet transactions
 
 One full match, all on devnet with mock SKR:
