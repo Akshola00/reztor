@@ -11,7 +11,7 @@ export type Level = 'info' | 'warn' | 'error'
 export type Logger = (level: Level, message: string, fields?: LogFields) => void
 
 export const consoleLogger: Logger = (level, message, fields = {}) => {
-  const line = JSON.stringify({ level, message, ...fields })
+  const line = JSON.stringify({ ...fields, level, message })
   if (level === 'error') console.error(line)
   else if (level === 'warn') console.warn(line)
   else console.log(line)
