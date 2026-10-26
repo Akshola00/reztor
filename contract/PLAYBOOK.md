@@ -1,8 +1,12 @@
 # Reztor Contract — Claude Code Playbook
 
+> Historical implementation playbook. The contract is implemented and deployed to devnet;
+> check `CLAUDE.md` for current rules and `docs/DEVNET.md` for deployment and smoke-test
+> details before using any phase prompt.
+
 ## How to run this
 
-1. Create the repo and drop in: `CLAUDE.md` (root), `docs/contract-spec.md`, and your game spec as `docs/reztor-mvp-spec.md`.
+1. Read `CLAUDE.md`, `docs/contract-spec.md`, and the game spec at `../docs/reztor-spec.md`.
 2. Paste **one phase prompt at a time** into Claude Code.
 3. When Claude Code stops and writes its phase report, paste the report (and any errors) back to me in chat. I'll review it and either give you a correction prompt or clear you for the next phase.
 4. Don't skip the gates. Phases 3 and 4 move money; a bug caught at the gate costs minutes, a bug caught in integration costs a day.
@@ -23,7 +27,7 @@
 ## Phase 0 — Recon and scaffold
 
 ```
-Read CLAUDE.md, docs/contract-spec.md, and docs/reztor-mvp-spec.md fully before doing anything.
+Read CLAUDE.md, docs/contract-spec.md, and ../docs/reztor-spec.md fully before doing anything.
 
 Phase 0 tasks:
 1. Report the installed versions of: rustc, cargo, solana CLI (agave), anchor CLI, avm, node, yarn/npm. If anchor is missing, install the latest stable via avm. Make sure the anchor-lang and anchor-spl crate versions match the CLI version.
