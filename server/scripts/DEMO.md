@@ -55,6 +55,8 @@ devnet SOL and test SKR. If a run fails with `WALLET_UNFUNDED`, top them up from
 - **Everyone skips (the Hollow can win on time):** `pnpm demo:bots --code ABCD --vote-for skip`.
 - **Vote you out in round 1:** `--vote-for "Your Name" --vote-from-round 1`.
 
-Other options: `--names A,B,C`, `--rate 5` (taps per second), `--chat 3`, `--vote-delay 6000`,
-`--url http://localhost:3001` for a local server. All of them are listed at the top of
-`scripts/demo-bots.ts`.
+For bots against a local server, start it from `server/` in a second terminal with
+`PORT=3001 pnpm serve`, then pass `--url http://localhost:3001` to `pnpm demo:bots`.
+
+Other options: `--names A,B,C`, `--rate 5` (taps per second), `--chat 3`, and `--vote-delay 6000`.
+All of them are listed at the top of `scripts/demo-bots.ts`.
