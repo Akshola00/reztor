@@ -36,6 +36,9 @@ This package uses **pnpm**. Do not install from the repository root.
    modules, so a custom development build is required. Once one is installed, `pnpm run dev`
    starts Metro against it.
 
+The server URL comes from `EXPO_PUBLIC_SERVER_URL` and defaults to `http://localhost:3000`.
+Release builds embed this value, so changing the server requires a new APK.
+
 ## Checks
 
 ```bash
