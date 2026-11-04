@@ -73,6 +73,10 @@ export function createGameServer(options: ServerOptions = {}): GameServer {
   // The throwaway browser client, served as one file with no build step. Socket.IO installs its
   // own handler for /socket.io/ ahead of this one and passes everything else through.
   const http: HttpServer = createHttpServer((request, response) => {
+    if (request.method === 'GET' && request.url === '/health') {
+      response.writeHead(200, { 'content-type': 'application/json; charset=utf-8' }).end(JSON.stringify({ status: 'ok' }))
+      return
+    }
     if (request.method === 'GET' && (request.url === '/dev' || request.url === '/dev/')) {
       try {
         response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
