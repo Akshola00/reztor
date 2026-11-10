@@ -23,7 +23,8 @@ before the clock runs out.
    moves 12 SKR into a program-owned escrow vault.
 2. **Roles.** Three players are crew and one is the impostor. Only you can see your role.
 3. **Tap.** 1 SKR buys 100 energy. Tapping spends energy to fill your own lane. The ×3 tier
-   is faster but costs more per unit. Crew wins when the whole board reaches 60%.
+   is faster but costs more per unit. Crew wins when the whole board reaches 60% of capacity,
+   which the app shows as 100%.
 4. **Drain.** The impostor can also pull progress out of one lane and give part of it to
    another, destroying the difference. The victim's lane drops and someone else's jumps,
    and neither of them is the impostor.
