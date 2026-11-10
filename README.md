@@ -10,10 +10,10 @@ before the clock runs out.
 - **Program (devnet):** [`4hAFR3JFKmE5GkJFDSVUHB1LwcsZkQBszCq9kwFu5MHZ`](https://explorer.solana.com/address/4hAFR3JFKmE5GkJFDSVUHB1LwcsZkQBszCq9kwFu5MHZ?cluster=devnet)
 
 <p>
-  <img src="reamde-images/home_screen.png" width="200" alt="Home screen">
-  <img src="reamde-images/drain_screen.png" width="200" alt="Impostor drain panel">
-  <img src="reamde-images/vote_screen.png" width="200" alt="Vote screen">
-  <img src="reamde-images/final_reveal_win_Screen.png" width="200" alt="Win reveal and payout">
+  <img src="readme-images/home_screen.png" width="200" alt="Home screen">
+  <img src="readme-images/drain_screen.png" width="200" alt="Impostor drain panel">
+  <img src="readme-images/vote_screen.png" width="200" alt="Vote screen">
+  <img src="readme-images/final_reveal_win_Screen.png" width="200" alt="Win reveal and payout">
 </p>
 
 ## How a match works
@@ -37,7 +37,7 @@ before the clock runs out.
 
 | Connect | Join | Drain | Chat | Vote | Result |
 | :-: | :-: | :-: | :-: | :-: | :-: |
-| <img src="reamde-images/connect_wallet_screen.png" width="120"> | <img src="reamde-images/join_game_Screen.png" width="120"> | <img src="reamde-images/drain_screen.png" width="120"> | <img src="reamde-images/chat_Screen.png" width="120"> | <img src="reamde-images/vote_screen.png" width="120"> | <img src="reamde-images/final_review_detail_screen.png" width="120"> |
+| <img src="readme-images/connect_wallet_screen.png" width="120"> | <img src="readme-images/join_game_Screen.png" width="120"> | <img src="readme-images/drain_screen.png" width="120"> | <img src="readme-images/chat_Screen.png" width="120"> | <img src="readme-images/vote_screen.png" width="120"> | <img src="readme-images/final_review_detail_screen.png" width="120"> |
 
 ## On-chain
 
